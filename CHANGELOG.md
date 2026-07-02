@@ -80,3 +80,30 @@ never one file per round.
 - `DESIGN.md` section 6: verbosity depends on who invokes a tool. A human-invoked
   tool never goes mute (rule 5); a hotkey, cron, or window-manager hook may fail
   in total silence.
+
+## Round 4
+
+### Changed
+- The network monitor filters to TLauncher's own PID tree. `monitor_network` used
+  to log every established connection on the system, so a browser, Discord, or a
+  system updater running in parallel dumped its IPs into `network.log` (Microsoft
+  52.111/52.112/52.123, Meta 31.13.71.49, Google 142.251.x seen in real sessions).
+  It now finds the firejail sandbox by its `mcbox` hostname, walks that PID tree
+  every cycle to catch the JRE/Minecraft/crash_assistant children, & keeps only
+  `ss -tnp` lines whose `pid=` is in the tree. Still no privileges: same-user
+  sockets show their pid.
+- Paths printed to a terminal show `~` instead of `/home/<user>`. usage(), the
+  configuration summary, the session analysis footer, & the path-carrying log
+  lines run through a new `disp_path` helper, so no home directory leaks into a
+  screenshot, a paste, or a CI log. Real filesystem operations still use absolute
+  paths.
+
+### Added
+- `--check-deps` (standalone, like `-K`/`-R`/`-c`/`-B`). It prints each dependency
+  (present or missing, required or optional, & what it's for), refreshes the state
+  file, & exits 0 when every required dep is present, 1 when one is missing.
+- `tlauncher-sandbox-deps.ini` under `XDG_DATA_HOME`. It records each dependency
+  once as `pre-existing` or `absent` with source & date, so a future uninstall
+  path can tell what the script added from what was already there. First record
+  wins; delete the file to re-inventory. `check_requirements` writes it too. No
+  auto-install in this round; installing packages is still the user's job.
