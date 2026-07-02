@@ -50,6 +50,21 @@ The IP baseline flags the local sandbox address. A `10.x` source IP shows up as
 already includes it. That's by design, & worth knowing before reading a first
 report.
 
+The network monitor's PID-tree filter (Round 4) hasn't run against real firejail.
+`monitor_network` now keeps only connections owned by the firejail sandbox tree,
+matched by the `mcbox` hostname & filtered on the `pid=` field of `ss -tnp`. The
+regex filter & the `pid=123` vs `pid=1234` boundary were validated with synthetic
+`ss` output, not a live sandbox. Two things need a real run: that `ss -tnp` shows
+a `pid=` for firejail's same-user children, & that `pgrep -f "firejail.*mcbox"`
+reaches the whole tree across firejail's PID namespace. Verify with a browser open
+during a session; no Google or Cloudflare IP unrelated to TLauncher should land in
+`network.log`.
+
+The deps state file records first-seen state & never overwrites. If a package was
+`absent` when first checked & later gets installed, `--check-deps` shows the live
+status as `present` but the registry line still reads `absent`. Delete
+`tlauncher-sandbox-deps.ini` to re-inventory.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.
