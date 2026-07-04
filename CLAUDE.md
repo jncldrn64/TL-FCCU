@@ -1,14 +1,14 @@
-# CLAUDE.md — project standard
+# CLAUDE.md: project standard
 
 - Read AGENTS.md first (purpose, hard constraints, repo map, known gaps), then
   DESIGN.md before writing code. This file just pins the doc/format standard.
 - Documentation lives at repo root: AGENTS.md, DESIGN.md, CHANGELOG.md. Do NOT
   create a new doc file without asking me first (this already lives in AGENTS.md).
-- Decisions and open items go in the "Known gaps" section of AGENTS.md — one place,
+- Decisions and open items go in the "Known gaps" section of AGENTS.md, one place,
   append-only, dated. Never scatter them.
 - CHANGELOG.md: Keep a Changelog. ONE file that grows by section, never one per round.
   Newest section on TOP (descending). Every section header is
-  "## vX.Y — YYYY-MM-DD", then ### Added / ### Changed / ### Fixed / ### Removed.
+  `## vX.Y — YYYY-MM-DD`, then ### Added / ### Changed / ### Fixed / ### Removed.
 - Dates: ISO 8601 (YYYY-MM-DD) everywhere I author them by hand.
 - Commits: "<type>: <short imperative summary>", type in {add, chg, fix, rmv, doc}.
   add=new capability, chg=behavior change, fix=bugfix, rmv=feature removed, doc=docs only.
@@ -23,8 +23,8 @@
   with `/plugin marketplace add realrossmanngroup/no_ai_slop_writing_rules` then
   `/plugin install no-ai-slop-writing-rules`. Upstream ships no LICENSE, so this repo
   references it at runtime instead of copying it (see Write scope, Third-party vendoring).
-- Em dash (—): banned in all prose (no-ai-slop rule 1). Allowed only as a format token
-  in CHANGELOG date headers (## vX.Y — YYYY-MM-DD). History is not normalized.
+- Em dash (`—`): banned in all prose (no-ai-slop rule 1). Allowed only as a format token
+  in CHANGELOG date headers (`## vX.Y — YYYY-MM-DD`). History is not normalized.
 - State honesty: never mark something "working/tested" without a real run in a real
   environment. If it wasn't verified, say so (this is already the AGENTS.md rule).
 
