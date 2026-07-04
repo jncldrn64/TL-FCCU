@@ -17,5 +17,11 @@
   commit message. (Keep the automatic Co-Authored-By / Claude-Session trailer.)
 - Prose (docs, comments): English, applying no-ai-slop-writing-rules:rossmann-voice
   and no-ai-slop-writing-rules:no-ai-slop. Keep the existing voice.
+- Prose-skill dependency: those two skills are NOT vendored here. They come from the
+  external plugin `no-ai-slop-writing-rules` (realrossmanngroup,
+  https://github.com/realrossmanngroup/no_ai_slop_writing_rules), installed per session
+  with `/plugin marketplace add realrossmanngroup/no_ai_slop_writing_rules` then
+  `/plugin install no-ai-slop-writing-rules`. Upstream ships no LICENSE, so this repo
+  references it at runtime instead of copying it (see Write scope, Third-party vendoring).
 - State honesty: never mark something "working/tested" without a real run in a real
   environment. If it wasn't verified, say so (this is already the AGENTS.md rule).
