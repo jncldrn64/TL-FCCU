@@ -41,3 +41,9 @@ This repo (TLauncher_FCCU) is the only write target. Any other repository cloned
 the session is read-only context: copy FROM it, never write INTO it. Do not carry
 another repo's conventions into this one (language, DECISIONS vs Known gaps, format).
 If unsure which repo you're writing to, stop and ask.
+
+## Displayed version
+
+The version the program prints (`run.sh -h`) is single-source with the CHANGELOG: always
+the latest CHANGELOG version. Bumped in the same PR as the code change that warrants it,
+never in a doc-only PR.
