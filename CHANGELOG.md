@@ -4,6 +4,20 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.8 — 2026-07-04
+
+Reconciliation with the MIDI-Scale-Trainer doc standard. Documentation only.
+
+### Added
+- Declared the `no-ai-slop-writing-rules` plugin (realrossmanngroup) as a session
+  dependency for prose in `CLAUDE.md`. The `no-ai-slop`/`rossmann-voice` skills are
+  installed at runtime through `/plugin`, not vendored, because upstream ships no
+  LICENSE & this repo is public.
+
+### Changed
+- `CLAUDE.md`: added an em-dash format-token rule (banned in prose, allowed only in
+  CHANGELOG date headers), plus "Third-party vendoring" & "Write scope" sections.
+
 ## v2.7 — 2026-07-02
 
 Round 4.
