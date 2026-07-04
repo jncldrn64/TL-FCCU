@@ -4,6 +4,14 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.8.1 — 2026-07-04
+
+### Fixed
+- `CLAUDE.md` broke its own em-dash rule: em dashes sat in plain prose (the title &
+  the Known-gaps bullet). Rewrote those to a colon & a comma, & wrapped the
+  remaining format-token em dashes in backticks. Every em dash left in the file now
+  sits inside backticks.
+
 ## v2.8 — 2026-07-04
 
 Reconciliation with the MIDI-Scale-Trainer doc standard. Documentation only.
