@@ -14,6 +14,10 @@ Reconciliation with the MIDI-Scale-Trainer doc standard. Documentation only.
   installed at runtime through `/plugin`, not vendored, because upstream ships no
   LICENSE & this repo is public.
 
+### Changed
+- `CLAUDE.md`: added an em-dash format-token rule (banned in prose, allowed only in
+  CHANGELOG date headers), plus "Third-party vendoring" & "Write scope" sections.
+
 ## v2.7 — 2026-07-02
 
 Round 4.
