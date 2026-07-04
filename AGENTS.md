@@ -65,6 +65,10 @@ The deps state file records first-seen state & never overwrites. If a package wa
 status as `present` but the registry line still reads `absent`. Delete
 `tlauncher-sandbox-deps.ini` to re-inventory.
 
+2026-07-04: `run.sh` still reads `VERSION="2.5"` while CHANGELOG.md assigns v2.6
+(Round 3) & v2.7 (Round 4). The bump changes `-h` output, so it's out of scope for
+a doc-only pass; fold it into the next code round.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.
