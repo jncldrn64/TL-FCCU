@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.5"
+VERSION="2.9"
 
 # Directory holding this script, used to find helpers like scripts/mitm_report.py.
 # Resolved once & survives being called through a symlink.
@@ -105,7 +105,9 @@ DEPS_CATALOG=(
     "inotifywait|inotify-tools|system|no|apt|filesystem monitor (-M)"
     "ss|iproute2|system|no|apt|network monitor (-M)"
     "pgrep|procps|system|no|apt|orphan-proof cleanup (-M)"
-    "mitmdump|mitmproxy|python|no|pip|HTTP(S) capture (-P)"
+    "mitmdump|mitmproxy|python|no|pip|HTTP(S) capture (-P) fallback"
+    "javac|default-jdk|system|no|apt|build the Java HTTP agent (one-time)"
+    "wget|wget|system|no|apt|download Byte Buddy for agent build"
 )
 
 # Monitoring
@@ -721,13 +723,32 @@ run_sandboxed() {
     local firejail_params
     mapfile -t firejail_params < <(build_firejail_params)
 
-    # Build the in-sandbox java command. With -P we add the JVM proxy system
-    # properties. The JVM doesn't read HTTP_PROXY/HTTPS_PROXY env vars by default,
-    # so the firejail --env settings alone wouldn't route Java traffic through
-    # mitmproxy. These -D properties are what actually route it.
+    # Build the in-sandbox java command. With -P we intercept the starter JVM's HTTP.
+    #
+    # WHY a Java agent instead of proxy props: TLauncher's requests go through Apache
+    # HttpClient5, which ignores -Dhttp.proxyHost & the HTTP_PROXY env vars, so
+    # mitmproxy captured zero. The agent (scripts/TLHttpAgent.java, built into the
+    # gitignored fat JAR by scripts/build-agent.sh) instruments
+    # InternalHttpClient.execute() in-process, after TLS decrypt. It never modifies
+    # traffic. Without the JAR we fall back to the old mitmproxy path.
     local java_opts=""
+    local agent_active=false
+    local agent_jar="${SCRIPT_DIR}/scripts/tl-http-agent.jar"
     if [ "$PROXY_ENABLED" = true ]; then
-        java_opts="-Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=${PROXY_PORT} -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=${PROXY_PORT}"
+        if [ -f "$agent_jar" ]; then
+            # Copy the agent into the sandbox: firejail --private walls the FS off, so
+            # the JVM can only load it from inside SANDBOX_DIR/bin. For the same reason
+            # the agent CAN'T write to SESSION_DIR; it writes to the whitelisted tmp/
+            # (relative to the JVM cwd = the sandbox home) & run.sh copies it out below.
+            cp "$agent_jar" "${SANDBOX_DIR}/bin/tl-http-agent.jar"
+            java_opts="-javaagent:bin/tl-http-agent.jar -Dtl.intercept.log=tmp/http-intercept.log"
+            agent_active=true
+            log_verbose "  → Java agent active; log → $(disp_path "${SESSION_DIR}/http-intercept.log")"
+        else
+            java_opts="-Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=${PROXY_PORT} -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=${PROXY_PORT}"
+            log_warn "Java agent JAR not found; run: bash scripts/build-agent.sh"
+            log_warn "Falling back to mitmproxy (captures env-proxy-aware traffic only; misses HttpClient5)."
+        fi
     fi
     local java_cmd="java ${java_opts} -jar bin/TLauncher.jar"
 
@@ -774,7 +795,9 @@ run_sandboxed() {
         log_msg "All monitors active (PIDs: ${MONITOR_PIDS[*]})"
     fi
 
-    if [ "$PROXY_ENABLED" = true ]; then
+    # mitmproxy only runs as the fallback: when the agent is handling -P there's
+    # nothing for it to do (HttpClient5 ignores the proxy anyway).
+    if [ "$PROXY_ENABLED" = true ] && [ "$agent_active" != true ]; then
         monitor_mitmproxy || true
     fi
 
@@ -827,6 +850,18 @@ run_sandboxed() {
         stop_monitors
 
         log_verbose "All monitors stopped"
+
+        # The Java agent writes inside the sandbox (firejail --private walls it off
+        # from SESSION_DIR); copy its log out so the report can read it. Keep it
+        # existing-but-empty when the agent was active but caught nothing, so the
+        # report can tell "agent active, no requests" from "agent not used".
+        if [ "$agent_active" = true ]; then
+            if [ -f "${SANDBOX_DIR}/tmp/http-intercept.log" ]; then
+                cp "${SANDBOX_DIR}/tmp/http-intercept.log" "${SESSION_DIR}/http-intercept.log"
+            else
+                : > "${SESSION_DIR}/http-intercept.log"
+            fi
+        fi
 
         # Take post-execution snapshot
         {
@@ -1037,6 +1072,43 @@ generate_summary() {
     log_verbose "Summary generated"
 }
 
+# Markdown section: the Java-agent HTTP capture (Round 5). This is the payload
+# source that actually sees HttpClient5 traffic. The log is written by
+# scripts/TLHttpAgent.java in blocks of four lines per request (request, STATUS,
+# BODY_OUT, BODY_IN). Three states: caught traffic, active-but-empty, not used.
+report_agent_capture() {
+    local session="$1"
+    local ilog="${session}/http-intercept.log"
+    printf "## Network payload (Java agent capture)\n\n"
+    if [ -f "$ilog" ] && [ -s "$ilog" ]; then
+        printf "_Intercepted in-process at the application layer, after TLS decrypt. Starter JVM only._\n\n"
+        # Request lines look like: [HH:MM:SS.mmm] METHOD HOST PATH
+        printf "| Method | Host | Path |\n|--------|------|------|\n"
+        grep -E '^\[[0-9:.]+\] (GET|POST|PUT|HEAD|DELETE|PATCH|OPTIONS) ' "$ilog" \
+            | sed -E 's/^\[[0-9:.]+\] //' \
+            | awk '{m=$1; h=$2; $1=""; $2=""; sub(/^ +/,""); print "| "m" | "h" | "$0" |"}' \
+            | sort -u | head -60
+        printf "\n### Flagged: POST/PUT with body\n\n"
+        if grep -qE '^\[[0-9:.]+\] (POST|PUT) ' "$ilog"; then
+            # Print each POST/PUT block: the request line, its BODY_OUT, its STATUS.
+            awk '
+                /^\[[0-9:.]+\] (POST|PUT) / { blk=1; printf "```\n%s\n", $0; next }
+                blk && /BODY_OUT:/ { print; next }
+                blk && /STATUS:/   { print; printf "```\n\n"; blk=0; next }
+            ' "$ilog"
+        else
+            printf "_No POST/PUT with a body observed._\n"
+        fi
+        printf "\n"
+    elif [ -f "$ilog" ]; then
+        printf "_Agent was active but intercepted no HTTP requests._\n"
+        printf "_TLauncher may wrap InternalHttpClient in a subclass the type filter misses, or made no outbound requests. See_ \`AGENTS.md\` _Known gaps._\n\n"
+    else
+        printf "_Java agent not active (JAR missing, or -P not used)._\n"
+        printf "_Build it once:_ \`bash scripts/build-agent.sh\`\n\n"
+    fi
+}
+
 # ==========================================
 # INCIDENT REPORT (aggregated, KB-sized)
 # ==========================================
@@ -1132,6 +1204,7 @@ generate_incident_report() {
         printf "\n"
 
         # --- Network payload summary (Task 2) + domain regression (Task 3) ---
+        report_agent_capture "$session"
         report_payload_summary "$session"
         report_regression_check "$session"
 
@@ -1558,21 +1631,19 @@ usage() {
     printf "  ${CYAN}without launching TLauncher. If several are given, the first wins.${NC}\n\n"
 
     printf "${YELLOW}NETWORK CAPTURE (opt-in, no sudo)${NC}\n"
-    printf "  ${BLUE}-P, --proxy [PORT]${NC}     Route sandbox HTTP(S) through mitmproxy on\n"
-    printf "                           127.0.0.1:PORT (default %d) and record mitm.flow.\n" "$PROXY_PORT"
-    printf "                           Implies a session dir (like -M) for the capture.\n"
-    printf "                           Requires 'mitmdump' (pip install mitmproxy\n"
-    printf "                           --break-system-packages). If missing, the flag is\n"
-    printf "                           skipped and the run continues normally.\n"
-    printf "                           The incident report then gets a 'Network payload\n"
-    printf "                           summary' with one line per request + flagged bodies.\n"
-    printf "                           ${CYAN}HTTPS note:${NC} the JVM must trust the mitmproxy CA.\n"
-    printf "                           After the first run, trust it inside the sandbox e.g.:\n"
-    printf "                             keytool -importcert -noprompt -alias mitmproxy \\\\\n"
-    printf "                               -file ~/.mitmproxy/mitmproxy-ca-cert.pem \\\\\n"
-    printf "                               -keystore \"\$SANDBOX/.mitm-truststore\" -storepass changeit\n"
-    printf "                           then add -Djavax.net.ssl.trustStore=... to the java cmd.\n"
-    printf "                           Without trust, HTTPS requests will fail TLS inside.\n\n"
+    printf "  ${BLUE}-P, --proxy [PORT]${NC}     Activate HTTP interception. Implies a session dir.\n"
+    printf "                           With ${CYAN}scripts/tl-http-agent.jar${NC} present: injects a Java\n"
+    printf "                           agent into the starter JVM & captures HTTP/HTTPS at the\n"
+    printf "                           application layer, where the payload is plain text, no\n"
+    printf "                           matter which HTTP library TLauncher uses. No CA trust\n"
+    printf "                           needed. Writes http-intercept.log to the session dir & a\n"
+    printf "                           'Network payload (Java agent capture)' section to the\n"
+    printf "                           report. Build the agent once: ${CYAN}bash scripts/build-agent.sh${NC}\n"
+    printf "                           Without the agent JAR: falls back to mitmproxy on\n"
+    printf "                           127.0.0.1:PORT (default %d), which captures env-proxy-aware\n" "$PROXY_PORT"
+    printf "                           traffic only & is confirmed to miss HttpClient5. The\n"
+    printf "                           fallback needs 'mitmdump' & the JVM to trust its CA\n"
+    printf "                           (keytool import into a truststore); see DESIGN/AGENTS.\n\n"
 
     printf "${YELLOW}SECURITY CHECKS${NC}\n"
     printf "  ${BLUE}-m, --mozilla${NC}          Add a .mozilla check to the analysis output\n"
@@ -1734,13 +1805,15 @@ main() {
         exit $?
     fi
 
-    # Proxy preflight: settle mitmdump availability now, before any session
-    # directory, firejail --env, or java -Dproxy setting derives from PROXY_ENABLED.
-    # Skip this & a missing mitmdump would still inject proxy settings pointing at a
-    # dead port, which breaks TLauncher's networking.
-    if [ "$PROXY_ENABLED" = true ] && ! command -v mitmdump >/dev/null 2>&1; then
-        log_warn "mitmdump not found; -P/--proxy disabled for this run."
-        log_warn "Install manually (no sudo for the script): pip install mitmproxy --break-system-packages"
+    # Proxy preflight: -P needs one of two backends. The Java agent (its built JAR)
+    # is the real one; mitmproxy is the fallback. Only disable -P when NEITHER is
+    # present, otherwise the fallback would inject proxy settings pointing at a dead
+    # port & break TLauncher's networking. With the agent JAR, mitmdump isn't needed.
+    if [ "$PROXY_ENABLED" = true ] \
+       && [ ! -f "${SCRIPT_DIR}/scripts/tl-http-agent.jar" ] \
+       && ! command -v mitmdump >/dev/null 2>&1; then
+        log_warn "-P/--proxy needs the Java agent JAR or mitmdump; neither is present."
+        log_warn "Build the agent: bash scripts/build-agent.sh   (or: pip install mitmproxy --break-system-packages)"
         PROXY_ENABLED=false
     fi
 
