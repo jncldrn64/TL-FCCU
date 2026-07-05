@@ -4,7 +4,37 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
-## v2.8.1 — 2026-07-04
+## v2.9 — 2026-07-05
+
+Java agent for HTTP interception.
+
+### Added
+- `scripts/TLHttpAgent.java`, a `java.lang.instrument` agent that logs TLauncher's
+  outbound HTTP. mitmproxy captured zero because Apache HttpClient5 ignores
+  `-Dhttp.proxyHost` & the `HTTP_PROXY` env vars. The agent instruments
+  `InternalHttpClient.execute()` in-process, after TLS decrypt, where the payload is
+  plain text, & reads every request/response through reflection so it compiles
+  against Byte Buddy alone. It never modifies a request or a response, & any
+  instrumentation error is swallowed so TLauncher runs unchanged.
+- `scripts/build-agent.sh`, which builds the fat JAR `scripts/tl-http-agent.jar`
+  with no sudo, Maven, or Gradle: javac plus a Byte Buddy 1.14.18 download pinned by
+  SHA256. `tl-http-agent.jar` is a build artifact, gitignored, never committed; only
+  the `.java` & the build script live in the repo, so nothing is written to any
+  other repository. The build bundles Byte Buddy (Apache-2.0) & adds a NOTICE for it
+  to the JAR.
+- `-P` now injects the agent into the starter JVM when the JAR is present, & writes
+  `http-intercept.log` to the session dir (the agent writes it inside the sandbox;
+  run.sh copies it out, since firejail `--private` walls the JVM off from the log dir).
+  A "Network payload (Java agent capture)" section in `INCIDENT_REPORT.md` shows a
+  per-request table & flags POST/PUT with a body. `--check-deps` now lists `javac` &
+  `wget` (optional, for the one-time build).
+
+### Changed
+- `-P` without the agent JAR falls back to the previous mitmproxy path, with a clear
+  warning that it misses HttpClient5. The proxy preflight keeps `-P` enabled when the
+  agent JAR is present even if mitmdump is absent.
+- `VERSION` jumped from 2.5 to 2.9 to match this CHANGELOG. `-h` & the CHANGELOG are
+  single-source again; the old desfase noted in AGENTS.md Known gaps is closed.
 
 ### Fixed
 - `CLAUDE.md` broke its own em-dash rule: em dashes sat in plain prose (the title &

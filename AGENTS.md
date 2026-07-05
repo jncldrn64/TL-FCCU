@@ -65,9 +65,35 @@ The deps state file records first-seen state & never overwrites. If a package wa
 status as `present` but the registry line still reads `absent`. Delete
 `tlauncher-sandbox-deps.ini` to re-inventory.
 
-2026-07-04: `run.sh` still reads `VERSION="2.5"` while CHANGELOG.md assigns v2.6
-(Round 3) & v2.7 (Round 4). The bump changes `-h` output, so it's out of scope for
-a doc-only pass; fold it into the next code round.
+2026-07-05: closed the VERSION desfase. run.sh printed `VERSION="2.5"` while the
+CHANGELOG had moved on; Round 5 is a code round, so it jumped straight to
+`VERSION="2.9"`, the current CHANGELOG version. `-h` & the CHANGELOG are single-source
+again (see CLAUDE.md "Displayed version").
+
+The Java agent (Round 5) instruments the STARTER JVM only. The Minecraft JRE the
+starter spawns is a separate process & is not instrumented. That's on purpose: the
+telemetry (`securelogger.net`, `advancedrepository.net`, `AdvertisingStatusObserver`
+POSTs, the domain checks) all come from the starter, which is the audit target.
+Minecraft gameplay traffic is out of scope.
+
+The agent matches `InternalHttpClient.execute()`. If `http-intercept.log` exists but
+is empty after a `-P` session, TLauncher may route through `doExecute()` or a
+HttpClient5 subclass the type filter doesn't match, so nothing fires. Check with
+`grep -c . http-intercept.log`, or look at `java-processes.log` for the actual
+client class. Broadening the matcher to `doExecute` is the likely follow-up.
+
+`tl-http-agent.jar` is a build artifact, gitignored, never committed; only
+`scripts/TLHttpAgent.java` & `scripts/build-agent.sh` live in the repo. Build it
+once with `bash scripts/build-agent.sh`. The build pins Byte Buddy 1.14.18 by
+SHA256 `52117af1696a53aa77c131353074ada25ccbdf2df511f2af33fad6704fa95104` (verified
+against Maven Central's published SHA1 `0081e9b9...901c2485`; the Round 5 spec's
+SHA256 was wrong). The fat JAR bundles Byte Buddy 1.14.18 (Apache-2.0); the build
+adds a NOTICE for it, so the attribution rides along if the JAR is ever shared.
+
+The agent build & JAR structure are verified (it compiles, the fat JAR carries the
+right MANIFEST & classes), but the capture itself is NOT: no real TLauncher ran here.
+Whether the agent actually logs a `securelogger.net` POST needs a live run. Verify
+with `-v -M -a -P` against real TLauncher & read `http-intercept.log`.
 
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
