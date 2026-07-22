@@ -44,7 +44,7 @@ own verification.
 
 ## Phase 1: the agent sees
 
-Status: `in progress`
+Status: `closed (2026-07-22)`
 
 Objective: capture the HTTP traffic that is lost today.
 
@@ -71,12 +71,17 @@ because `@SuperCall` has no super method under `RETRANSFORMATION`, and the sessi
 also revealed two HttpClient families, not one (4.x in the starter, 5.x in the
 launcher).
 
-v2.13 answers both: `Advice` instead of `MethodDelegation`, and both name families
-matched. Still `in progress`, because the acceptance is a real session: the author
-runs `-v -M -a -P` against real TLauncher & closes this when the GET to
-`starterUpdateV1.json` shows up in the report's table, or reads `agent-diag.log`
-(`SAW`/`HOOKED`/`ERROR` per JVM) when it doesn't. Nothing here is marked captured
-until then.
+Closing it took four passes past v2.12, each found by the diagnostic in a real session:
+v2.13 swapped `MethodDelegation` for `Advice` (the `@SuperCall` bind failed under
+retransformation) & matched both HttpClient families; v2.14 made the helpers public
+across the app/bootstrap loader boundary (`IllegalAccessError`); v2.15 split the agent
+into two jars so Byte Buddy loads once (`LinkageError` on `AgentBuilder$Listener`).
+
+The session on 2026-07-22 (`20260722_113644`, `-v -M -a -P`) captured: the report's
+table carried the GET to `starterUpdateV1.json`, & `agent-diag.log` showed `HOOKED` in
+all three JVMs across both HttpClient families. Acceptance met, phase closed. The
+diagnostic listener earned its place four times over; it is the reason each miss had a
+cause instead of a shrug.
 
 Blocks: Phase 2.
 
