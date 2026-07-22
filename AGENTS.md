@@ -24,6 +24,7 @@ using it. Visibility & isolation come first, usability second.
 - `scripts/mitm_report.py`: turns a `-P` mitmproxy capture into Markdown.
 - `DESIGN.md`: the conventions, read before coding.
 - `CHANGELOG.md`: what changed & when.
+- `ROADMAP.md`: the phased plan, read when the work belongs to a phase.
 
 ## Known gaps / not verified against real data
 
@@ -94,6 +95,37 @@ The agent build & JAR structure are verified (it compiles, the fat JAR carries t
 right MANIFEST & classes), but the capture itself is NOT: no real TLauncher ran here.
 Whether the agent actually logs a `securelogger.net` POST needs a live run. Verify
 with `-v -M -a -P` against real TLauncher & read `http-intercept.log`.
+
+2026-07-22: the project moved from loose rounds to numbered phases. Until now each
+feature landed as its own round with no plan tying them together; from here the work
+runs by phases with a written acceptance criterion each, tracked in `ROADMAP.md`. The
+blueprint is the MIDI-Scale-Trainer repo, copied for its phase discipline, not its
+folder structure.
+
+2026-07-22: the agent ran against real TLauncher (session_20260721_234406, `-v -M -a
+-m -P`, agent compiled) & captured zero. This supersedes the earlier "no real run"
+note above: it ran, & it missed. TLauncher starts three JVMs & only the first (the
+`run.sh` starter) carries `-javaagent`. That first JVM did make HTTP: `HttpServiceImpl`
+did a GET to `starterUpdateV1.json` at 23:44:12.694, & the agent logged nothing.
+Hypothesis to confirm: the starter jar ships HttpClient5 with the package relocated
+(shaded), so the exact name `org.apache.hc.client5.http.impl.classic.InternalHttpClient`
+doesn't exist in JVM 1; the `httpclient5-*.jar` on the classpath belong to JVM 3, the
+embedded JRE, not JVM 1. Widening to `HttpServiceImpl` & setting `JAVA_TOOL_OPTIONS`
+is ROADMAP Phase 1.
+
+2026-07-22: two state-honesty bugs in the current report output, both tracked as
+ROADMAP Phase 0, both verified against the code. `report_payload_summary` prints
+"Payload capture was **disabled** ... run without `-P/--proxy`" whenever there's no
+`mitm.flow`, which is exactly the agent path (mitmproxy skipped), so the report
+contradicts its own agent section. And `usage()` still heads its news block
+"WHAT'S NEW IN v2.5" while `VERSION="2.9"`. What did work in that session was the
+regression check, which flagged `advancedrepository.net`, `securelogger.net`,
+`securelogger.top`, `ruzone.securelogger.top`, & `repo.tl.vg` as a new domain; that
+comes from parsing `tlauncher.log`, not from the agent.
+
+2026-07-22: this doc PR advances the CHANGELOG to v2.10 but leaves `VERSION="2.9"`,
+because the Displayed-version rule forbids bumping in a doc-only PR. The desfase is
+intentional & closes in ROADMAP Phase 0, which audits `usage()` & the version string.
 
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or

@@ -15,6 +15,13 @@ Documentation only. No `run.sh` or `scripts/` change.
   about its own state corrupts everything built on top, so the report stops lying
   (Phase 0) before the agent is made to see (Phase 1) before binaries get archived.
 
+### Changed
+- `CLAUDE.md` now lists four canonical docs (adds `ROADMAP.md`) & extends the reading
+  order: `AGENTS.md`, then `DESIGN.md`, then `ROADMAP.md` for phase work.
+- `AGENTS.md` Known gaps records, dated, the shift from loose rounds to phases, the
+  real-session finding that the agent captured zero (JVM 1 made HTTP the agent didn't
+  see; shading hypothesis), & two verified state-honesty bugs now tracked as Phase 0.
+
 ## v2.9 — 2026-07-05
 
 Java agent for HTTP interception.
