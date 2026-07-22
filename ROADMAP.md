@@ -63,12 +63,20 @@ Scope:
 Acceptance: one real session captures the GET to `starterUpdateV1.json`. If it
 doesn't, diagnostic mode states why.
 
-Built in v2.12 & verifiable without TLauncher: `JAVA_TOOL_OPTIONS` with absolute
-in-sandbox paths, the second hook on `HttpServiceImpl`, the game-JVM self-disable,
-& the diagnostic listener. Still open, & the reason this stays `in progress`: the
-real session hasn't run. The author runs `-v -M -a -P` against real TLauncher &
-closes this when the GET shows up in the report, or reads `agent-diag.log` when it
-doesn't. Nothing here is marked captured until then.
+v2.12 built the injection: `JAVA_TOOL_OPTIONS` with absolute in-sandbox paths, the
+second hook, the game-JVM self-disable, & the diagnostic listener. The first real
+session then ran & the diagnostic earned its keep: the agent loaded into all three
+JVMs & saw both target classes, but the hook never bound. `MethodDelegation` failed
+because `@SuperCall` has no super method under `RETRANSFORMATION`, and the session
+also revealed two HttpClient families, not one (4.x in the starter, 5.x in the
+launcher).
+
+v2.13 answers both: `Advice` instead of `MethodDelegation`, and both name families
+matched. Still `in progress`, because the acceptance is a real session: the author
+runs `-v -M -a -P` against real TLauncher & closes this when the GET to
+`starterUpdateV1.json` shows up in the report's table, or reads `agent-diag.log`
+(`SAW`/`HOOKED`/`ERROR` per JVM) when it doesn't. Nothing here is marked captured
+until then.
 
 Blocks: Phase 2.
 
