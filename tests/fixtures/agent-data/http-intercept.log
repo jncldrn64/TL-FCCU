@@ -1,0 +1,8 @@
+[23:44:12.694] GET repo.tlauncher.org /starterUpdateV1.json
+[23:44:12.812] STATUS: 200 REQ: 0 RESP: 1534
+[23:44:12.812] BODY_OUT: empty
+[23:44:12.812] BODY_IN: <not buffered>
+[23:44:13.100] POST securelogger.net /collect
+[23:44:13.240] STATUS: 200 REQ: 42 RESP: 0
+[23:44:13.240] BODY_OUT: {"uuid":"REDACTED_UUID","event":"launch"}
+[23:44:13.240] BODY_IN: empty
