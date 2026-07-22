@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.15"
+VERSION="2.16"
 
 # Directory holding this script, used to find helpers like scripts/mitm_report.py.
 # Resolved once & survives being called through a symlink.
@@ -227,6 +227,20 @@ aggregate_agent_logs() {
         printf '# ---- JVM pid=%s ----\n' "$pid"
         cat "$f"
     done
+}
+
+# Clear the per-PID agent logs an EARLIER run left in the sandbox tmp, before this run's
+# JVMs write theirs.
+#
+# WHY: firejail --private reuses SANDBOX_DIR across sessions, so http-intercept-<pid>.log
+# & agent-diag-<pid>.log from old runs survive there. The aggregate globs by PID, so
+# without this a previous session's requests (a stale 01:30 block long after the current
+# run) leak into this report. Called at the start of an agent-active run, so the report
+# only ever describes the current session. $1 is the sandbox tmp dir.
+reset_agent_tmp() {
+    local tmp="$1"
+    mkdir -p "$tmp"
+    rm -f "$tmp"/http-intercept-*.log "$tmp"/agent-diag-*.log 2>/dev/null || true
 }
 
 log_error() {
@@ -775,6 +789,9 @@ run_sandboxed() {
         if [ -f "$agent_jar" ] && [ -f "$boot_jar" ]; then
             cp "$agent_jar" "${SANDBOX_DIR}/bin/tl-http-agent.jar"
             cp "$boot_jar" "${SANDBOX_DIR}/bin/tl-http-bootstrap.jar"
+            # Drop any per-PID logs an earlier run left in the reused sandbox tmp, so this
+            # session's aggregate & report describe only this run.
+            reset_agent_tmp "${SANDBOX_DIR}/tmp"
             local in_jar="${REAL_HOME}/bin/tl-http-agent.jar"
             local in_dir="${REAL_HOME}/tmp"
             agent_env=(--env="JAVA_TOOL_OPTIONS=-javaagent:${in_jar} -Dtl.intercept.dir=${in_dir}")

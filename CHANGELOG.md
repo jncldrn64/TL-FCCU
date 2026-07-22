@@ -4,6 +4,34 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.16 — 2026-07-22
+
+ROADMAP Phase 1 closed. The agent sees.
+
+### Fixed
+- The aggregated `agent-diag.log` & `http-intercept.log` no longer mix in an earlier
+  session's requests. firejail `--private` reuses the sandbox dir across runs, so the
+  agent's per-PID logs (`http-intercept-<pid>.log`, `agent-diag-<pid>.log`) survive
+  there, & the start-order aggregate globs by PID, so a stale block (a `01:30` line in
+  an afternoon run) leaked into the report. `run.sh` now clears those per-PID logs at
+  the start of every agent-active run (`reset_agent_tmp`), so a report only ever
+  describes its own session.
+
+### Added
+- A cross-contamination guard in `tests/report-states.sh`. The four state checks render
+  through `-R` from an already-aggregated log, so they never exercised the live
+  aggregation that reads the reused sandbox tmp. The new fifth check drives the real
+  `reset_agent_tmp` + `aggregate_agent_logs` on a tmp seeded with a stale previous-session
+  file & a fresh one, & fails if the stale line survives or the fresh one is missing.
+  5/5 checks pass. Remove the reset & it goes red.
+
+### Changed
+- ROADMAP Phase 1 is `closed (2026-07-22)`. The session `20260722_113644` (`-v -M -a -P`)
+  captured the GET to `starterUpdateV1.json` in the report's table, with `agent-diag.log`
+  showing `HOOKED` in all three JVMs across both HttpClient families. This is the first
+  entry in this changelog to record a real capture, not a build-verified path. `VERSION`
+  bumped 2.15 to 2.16.
+
 ## v2.15 — 2026-07-22
 
 ROADMAP Phase 1, fourth pass: one Byte Buddy, not two. The v2.14 access fix bound, then

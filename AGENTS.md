@@ -248,6 +248,23 @@ above, since the agent is now several `.java` files (one public top-level class 
 small logger jar lands there. Still NOT verified against real TLauncher: whether the split
 agent logs a request. The author's `-v -M -a -P` session is the proof.
 
+2026-07-22: the agent captured, for real. Session `20260722_113644` (`-v -M -a -P`, the
+split v2.15 agent) logged the GET to `starterUpdateV1.json` in the report's table, &
+`agent-diag.log` showed `HOOKED` in all three JVMs across both HttpClient families. This
+supersedes every "capture NOT verified / needs a live run" note above (the JAR-structure
+note & the earlier Phase 1 passes): the capture is now confirmed, not just the build.
+ROADMAP Phase 1 is closed. What remains unproven is narrower & lives in later phases: the
+POST bodies (`securelogger.net`) weren't exercised in that session, only the starter GET,
+so request-body capture for a non-repeatable POST is still unseen in the wild.
+
+2026-07-22 (v2.16): fixed a cross-run contamination bug found in that same session. The
+aggregated `agent-diag.log` carried `01:30` lines, from an earlier run: firejail
+`--private` reuses the sandbox dir, so the agent's per-PID logs survive there & the
+PID-globbing aggregate mixed old sessions into the report. `run.sh` now clears the per-PID
+logs at the start of every agent-active run (`reset_agent_tmp`). A fifth check in
+`tests/report-states.sh` guards it: it drives the real reset + aggregate on a tmp seeded
+with a stale file & a fresh one, & fails if the stale line survives. Runner is at 5/5.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.
