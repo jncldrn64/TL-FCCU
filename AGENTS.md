@@ -207,6 +207,30 @@ all-empty capture stays empty. The report parser ignores any line that isn't a r
 `STATUS`/`BODY` line, so banners pass through; the `agent-data` fixture carries banners to
 keep the regression net honest to the real shape.
 
+2026-07-22: Phase 1 third pass (v2.14). The v2.13 hook bound but threw before logging:
+`IllegalAccessError: AgentLogger is in unnamed module of loader 'bootstrap'; TLHttpAgent
+is in unnamed module of loader 'app'`. Cause: the helpers were package-private, & the
+bootstrap append (5.1) put them in the bootstrap loader while `premain` stayed in the app
+loader, so the same-named classes are different runtime packages & package-private access
+across them is denied. Fix: the helper classes & every member crossed at that boundary
+are public, & each helper is its own top-level file (no nested nest host to resolve twice
+across two loaders). Also reordered `premain` so the game-JVM self-disable runs before the
+bootstrap append, so the Forge JVM never gets Byte Buddy & its ASM on its bootstrap
+classpath ahead of Forge's own; the "skipped" line is written with a direct file append,
+not the helper. `bash scripts/build-agent.sh` compiles the whole `scripts/*.java` set now.
+Still NOT verified against real TLauncher: whether the public helpers actually log a
+request. The author's `-v -M -a -P` session is the proof; nothing here is captured until
+it runs.
+
+2026-07-22: open item, not fixed, deliberately deferred. Appending the entire fat JAR to
+the bootstrap classpath (the 5.1 fix) drags Byte Buddy & its ASM onto the bootstrap loader
+too, and puts the JVM's Class-Data Sharing (CDS) archive out of use for the run, since the
+bootstrap classpath no longer matches the one CDS was dumped against. It works, but it is
+heavier than it needs to be. The clean alternative is a small separate bootstrap JAR
+carrying only the logger (and whatever the `Advice` bodies call), appended in place of the
+fat JAR, leaving Byte Buddy on the agent's own loader. Not done in v2.14 to keep the change
+to the access fix; noted here so the next agent-side pass can pick it up.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.
