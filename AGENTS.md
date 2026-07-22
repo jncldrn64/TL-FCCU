@@ -129,6 +129,39 @@ audit found every documented flag present in the parser & no behavior mismatch; 
 stale "WHAT'S NEW IN v2.5" heading is gone, & the `-P` help no longer overpromises
 ("no matter which HTTP library") now that the shaded-class miss is known.
 
+2026-07-22: ROADMAP Phase 1 (v2.12) built, capture still unverified. The agent now
+loads into every JVM through `JAVA_TOOL_OPTIONS` & hooks `HttpServiceImpl`, so on
+paper it should catch the GET to `starterUpdateV1.json` that JVM 1 made & the old
+starter-only injection missed. That's the theory; no real TLauncher ran here. Phase 1
+stays `in progress` until a live `-v -M -a -P` session shows the GET in the report, or
+`agent-diag.log` names the class it saw instead. Don't record the capture as working
+before that run. The four traps this phase had to resolve, & the call made on each:
+
+- 2.1 Relative paths break in child JVMs. `JAVA_TOOL_OPTIONS` is inherited by JVMs
+  that start in a different cwd (`/home/ct/.tlauncher/starter/`), so the old
+  `bin/...`, `tmp/...` relative paths would find nothing there. Decision: absolute
+  paths inside the sandbox. firejail `--private` mounts the sandbox at the real home,
+  so the in-sandbox absolute paths are `${REAL_HOME}/bin/tl-http-agent.jar` &
+  `${REAL_HOME}/tmp`.
+- 2.2 Three JVMs writing one log interleave. Appending one `http-intercept.log` from
+  three processes splits the four-line request blocks the parser needs. Decision: one
+  log per process, `http-intercept-<pid>.log`, concatenated by `run.sh` on copy-out
+  into the single `http-intercept.log` the report & the Phase 0 fixtures already read.
+  A block is written by one process, so it stays whole; the fixtures didn't change,
+  since they mirror the post-aggregation file.
+- 2.3 The game JVM would also load the agent. `JAVA_TOOL_OPTIONS` reaches Minecraft
+  too, which would instrument gameplay. Decision: the agent self-disables. `premain`
+  reads `sun.java.command` & returns silently when it names a game process
+  (`bootstraplauncher`, `net.minecraft`, `--gameDir`, `--assetIndex`, Forge/FML,
+  `crash_assistant`). This is a heuristic on the command line, not a guarantee; if a
+  future TLauncher launches the game by some other signature it would slip through, &
+  the fix is to widen the list. Audit target stays the starter & launcher.
+- 2.4 `JAVA_TOOL_OPTIONS` prints `Picked up JAVA_TOOL_OPTIONS: ...` to stderr from
+  every JVM. Decision: accept it, don't filter. Filtering means parsing & rewriting
+  the child stderr stream, which risks dropping a real line; the noise is harmless &
+  its presence is a cheap confirmation that the env var reached the JVM. It stays in
+  the session logs as-is.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.

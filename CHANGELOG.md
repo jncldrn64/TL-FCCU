@@ -4,7 +4,50 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
-## v2.11 — 2026-07-22
+## v2.12 — 2026-07-22
+
+ROADMAP Phase 1, first half: make the agent see. The code path is built & checkable
+here; the capture itself waits on a real session (Phase 1 stays `in progress`).
+
+### Changed
+- The agent now reaches every JVM, not only the starter. `-P` used to inject
+  `-javaagent` into JVM 1 alone through the java command line; JVMs 2 & 3 (the
+  re-exec & the embedded JRE, where the real work happens) ran clean. Injection
+  moved to `JAVA_TOOL_OPTIONS` in the sandbox env, which every child JVM inherits.
+  The paths in it are absolute inside the sandbox (`${REAL_HOME}/bin/tl-http-agent.jar`,
+  `${REAL_HOME}/tmp`), because a child JVM starts with a different cwd
+  (`/home/ct/.tlauncher/starter/`) & the old relative paths would have missed the
+  JAR & disabled the agent in silence.
+- `scripts/TLHttpAgent.java` hooks `by.gdev.http.download.impl.HttpServiceImpl`
+  besides `InternalHttpClient`. That's TLauncher's own download class, named by hand
+  in the logs while it did the GET to `starterUpdateV1.json` the agent missed, so it
+  isn't relocated the way a shaded HttpClient5 package can be. Its signature isn't
+  `execute`'s, so the interceptor has its own extraction path: it scans the argument
+  list for the URL (direct string, or via `getUrl`/`getUri`) & logs the call as a GET.
+- The agent self-disables on the Minecraft JVM. `JAVA_TOOL_OPTIONS` would otherwise
+  instrument gameplay, drowning the audit in asset & skin traffic. `premain` reads
+  `sun.java.command` & returns silently when it names a game process
+  (`bootstraplauncher`, `net.minecraft`, `--gameDir`, `--assetIndex`, Forge/FML,
+  `crash_assistant`). The audit target is the starter & launcher only.
+- The log is now one file per process (`http-intercept-<pid>.log`), because three
+  JVMs appending one file would interleave lines & split the four-line request blocks
+  the report parser depends on. `run.sh` concatenates them on copy-out into a single
+  `http-intercept.log`, so each block stays whole & the Phase 0 fixtures & report
+  read the same aggregate as before.
+- `-P` without the agent JAR still falls back to mitmproxy; the build hint now names
+  the exact command & where to run it (`bash scripts/build-agent.sh` from the repo
+  root, the directory holding `run.sh`), since the old message didn't say the cwd
+  mattered. `VERSION` bumped 2.11 to 2.12 to match this section.
+
+### Added
+- Diagnostic mode in the agent, so "zero captures" is never ambiguous again. A Byte
+  Buddy `AgentBuilder.Listener` records every candidate class the agent saw
+  (`SAW <type>`), every one it hooked (`HOOKED`), & any transform error (`ERROR`) to
+  a per-process `agent-diag-<pid>.log`, aggregated to `agent-diag.log` on copy-out.
+  If the HTTP log is empty, the diag log names the actual (possibly shaded) class the
+  JVM loaded, which is the evidence the shading hypothesis needs.
+
+
 
 ROADMAP Phase 0: the report stops lying.
 
