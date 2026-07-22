@@ -47,7 +47,7 @@ here; the capture itself waits on a real session (Phase 1 stays `in progress`).
   If the HTTP log is empty, the diag log names the actual (possibly shaded) class the
   JVM loaded, which is the evidence the shading hypothesis needs.
 
-
+## v2.11 — 2026-07-22
 
 ROADMAP Phase 0: the report stops lying.
 
