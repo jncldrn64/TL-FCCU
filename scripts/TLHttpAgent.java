@@ -1,34 +1,53 @@
 /*
  * TLHttpAgent: a java.lang.instrument agent that logs TLauncher's outbound HTTP.
  *
- * WHY this exists: TLauncher's requests go through Apache HttpClient5, which ignores
+ * WHY this exists: TLauncher's requests go through Apache HttpClient, which ignores
  * -Dhttp.proxyHost & the HTTP_PROXY env vars (each client builds its own SSLContext
  * & connection chain), so mitmproxy captured zero. This agent loads before any app
- * class & instruments the request classes in-process, after the TLS decrypt, where
+ * class & instruments the request methods in-process, after the TLS decrypt, where
  * the payload is plain text. It never modifies a request or a response.
  *
- * It hooks two classes:
- *   - org.apache.hc.client5.http.impl.classic.InternalHttpClient.execute(): the
- *     standard HttpClient5 entry point. Missed when the jar ships a shaded copy under
- *     a relocated package name (the diagnostic log shows the real name when that
- *     happens).
- *   - by.gdev.http.download.impl.HttpServiceImpl: TLauncher's own download class,
- *     named by hand in the logs, so it is not relocated. Its methods don't share
- *     HttpClient5's execute() signature, so it gets its own generic URL extractor.
+ * WHY Advice, not MethodDelegation: the real session showed MethodDelegation binding
+ * fails on these targets. @SuperCall can't resolve under RETRANSFORMATION (the method
+ * is rewritten in place, so there is no "super" call to hand back), and with it the
+ * whole delegation signature fails to bind. Advice injects its body inline instead of
+ * delegating by signature, and works on inherited & overloaded methods. The diag log
+ * from that session carried the exact IllegalArgumentException for both targets.
  *
- * JAVA_TOOL_OPTIONS loads this into every JVM TLauncher starts, so it self-disables
- * on the Minecraft/mod JVM (not the audit target) & writes one log per process (PID
- * in the name) so three JVMs can't interleave a request block.
+ * It hooks:
+ *   - InternalHttpClient.doExecute(), both HttpClient families the JVMs load:
+ *       org.apache.hc.client5.http.impl.classic.InternalHttpClient  (5.x, launcher JVM)
+ *       org.apache.http.impl.client.InternalHttpClient              (4.x, starter JVMs)
+ *     The two JVM groups don't share a stack; covering one name alone misses the other.
+ *   - by.gdev.http.download.impl.HttpServiceImpl: TLauncher's own download class, named
+ *     by hand in the logs so it is never relocated. getRequestByUrlAndSave(String, Path)
+ *     takes the URL as argument 0, no request object to reflect through. It is the
+ *     shortest path to a real capture (it did the GET to starterUpdateV1.json).
+ *
+ * WHY the helper classes go on the bootstrap classpath: an Advice body is copied INTO
+ * the target class, so every class it names has to be visible to the target's own
+ * classloader. TLauncher loads these targets from its own jars, through classloaders
+ * that need not be children of the agent's. Appending the agent jar to the bootstrap
+ * search (the ancestor of every loader) before the first reference to a helper makes
+ * parent-first delegation define AgentLogger, Reflect & HttpTap once, in the bootstrap
+ * loader, so both premain and the inlined bodies see the same class. This is the fix
+ * for the NoClassDefFoundError that would otherwise fire at runtime inside TLauncher.
+ *
+ * JAVA_TOOL_OPTIONS loads this into every JVM TLauncher starts, so it self-disables on
+ * the Minecraft/mod JVM (not the audit target) & writes one log per process (PID in the
+ * name) so three JVMs can't interleave a request block. run.sh aggregates them in start
+ * order with a per-PID banner.
  *
  * Third-party: the fat JAR bundles Byte Buddy 1.14.18 (net.bytebuddy:byte-buddy),
  * Apache License 2.0. scripts/build-agent.sh adds a NOTICE for it to the JAR.
  *
- * Compiled against Byte Buddy only (no HttpClient5 on the classpath), so every
+ * Compiled against Byte Buddy only (no HttpClient on the classpath), so every
  * request/response object is read through reflection, never imported.
  */
 package com.github.tlsandbox.agent;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -37,23 +56,25 @@ import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.security.CodeSource;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.concurrent.Callable;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.jar.JarFile;
 
 import net.bytebuddy.agent.builder.AgentBuilder;
+import net.bytebuddy.asm.Advice;
 import net.bytebuddy.description.type.TypeDescription;
 import net.bytebuddy.dynamic.DynamicType;
-import net.bytebuddy.implementation.MethodDelegation;
-import net.bytebuddy.implementation.bind.annotation.AllArguments;
-import net.bytebuddy.implementation.bind.annotation.Origin;
-import net.bytebuddy.implementation.bind.annotation.RuntimeType;
-import net.bytebuddy.implementation.bind.annotation.SuperCall;
+import net.bytebuddy.implementation.bytecode.assign.Assigner;
 import net.bytebuddy.matcher.ElementMatchers;
 import net.bytebuddy.utility.JavaModule;
 
 public class TLHttpAgent {
+
+    static final String HC5 = "org.apache.hc.client5.http.impl.classic.InternalHttpClient";
+    static final String HC4 = "org.apache.http.impl.client.InternalHttpClient";
+    static final String HSVC = "by.gdev.http.download.impl.HttpServiceImpl";
 
     public static void premain(String args, Instrumentation inst) {
         // No log dir means the launcher wasn't run with -P. Return in silence; the
@@ -62,6 +83,10 @@ public class TLHttpAgent {
         if (dir == null || dir.isEmpty()) {
             return;
         }
+        // Put the helpers on the bootstrap classpath BEFORE the first reference to any
+        // of them, so parent-first delegation defines them in the bootstrap loader &
+        // the inlined Advice bodies can reach them from any target classloader.
+        appendSelfToBootstrap(inst);
         try {
             AgentLogger.init(dir);
         } catch (Throwable t) {
@@ -82,19 +107,21 @@ public class TLHttpAgent {
             new AgentBuilder.Default()
                     .with(AgentBuilder.RedefinitionStrategy.RETRANSFORMATION)
                     .with(new DiagListener())
-                    .type(ElementMatchers.named(
-                            "org.apache.hc.client5.http.impl.classic.InternalHttpClient"))
+                    .type(ElementMatchers.named(HC5).or(ElementMatchers.named(HC4)))
                     .transform((builder, type, loader, module, domain) ->
-                            builder.method(ElementMatchers.named("execute"))
-                                    .intercept(MethodDelegation.to(HttpInterceptor.class)))
-                    .type(ElementMatchers.named(
-                            "by.gdev.http.download.impl.HttpServiceImpl"))
+                            builder.visit(Advice.to(HttpAdvice.class).on(
+                                    ElementMatchers.named("doExecute")
+                                            .or(ElementMatchers.named("execute"))
+                                            .and(ElementMatchers.not(ElementMatchers.isAbstract()))
+                                            .and(ElementMatchers.not(ElementMatchers.isStatic())))))
+                    .type(ElementMatchers.named(HSVC))
                     .transform((builder, type, loader, module, domain) ->
-                            builder.method(ElementMatchers.isPublic()
-                                    .and(ElementMatchers.not(ElementMatchers.isStatic()))
-                                    .and(ElementMatchers.not(ElementMatchers.takesArguments(0)))
-                                    .and(ElementMatchers.not(ElementMatchers.isDeclaredBy(Object.class))))
-                                    .intercept(MethodDelegation.to(HttpServiceInterceptor.class)))
+                            builder.visit(Advice.to(ServiceAdvice.class).on(
+                                    ElementMatchers.isMethod()
+                                            .and(ElementMatchers.isPublic())
+                                            .and(ElementMatchers.not(ElementMatchers.isStatic()))
+                                            .and(ElementMatchers.not(ElementMatchers.takesArguments(0)))
+                                            .and(ElementMatchers.not(ElementMatchers.isDeclaredBy(Object.class))))))
                     .installOn(inst);
             Runtime.getRuntime().addShutdownHook(new Thread(AgentLogger::close));
         } catch (Throwable t) {
@@ -105,6 +132,24 @@ public class TLHttpAgent {
             } catch (Throwable ignore) {
                 // nothing left to do
             }
+        }
+    }
+
+    // Append our own jar to the bootstrap search. Best-effort: if it fails, the agent
+    // still runs, it just can't reach helpers from a foreign target loader, & those
+    // Advice bodies suppress their own throwables, so TLauncher is never broken.
+    private static void appendSelfToBootstrap(Instrumentation inst) {
+        try {
+            CodeSource cs = TLHttpAgent.class.getProtectionDomain().getCodeSource();
+            if (cs == null || cs.getLocation() == null) {
+                return;
+            }
+            File jar = new File(cs.getLocation().toURI());
+            if (jar.isFile()) {
+                inst.appendToBootstrapClassLoaderSearch(new JarFile(jar));
+            }
+        } catch (Throwable t) {
+            System.err.println("[tl-http-agent] bootstrap append failed: " + t);
         }
     }
 
@@ -128,8 +173,10 @@ public class TLHttpAgent {
 /*
  * A Byte Buddy listener so "zero captures" is never ambiguous: it records, in the
  * diag log, every HttpClient/HttpService type the agent saw & every type it hooked.
- * If InternalHttpClient is shaded, its relocated name shows up here as SAW without a
- * matching HOOKED, which is the signal to add that name to the matcher.
+ * If a target is shaded, its relocated name shows up here as SAW without a matching
+ * HOOKED, which is the signal to add that name to the matcher. A binding or transform
+ * failure lands as ERROR with the throwable, which is how the MethodDelegation break
+ * was diagnosed in the first place.
  */
 class DiagListener extends AgentBuilder.Listener.Adapter {
 
@@ -162,16 +209,48 @@ class DiagListener extends AgentBuilder.Listener.Adapter {
 }
 
 /*
- * Delegation target for InternalHttpClient.execute(). Byte Buddy passes the original
- * call as a Callable & the arguments as an Object[]. Everything about the HttpClient5
- * request/response is read reflectively. Any instrumentation error is swallowed; the
- * real call still runs & its own exceptions still propagate to TLauncher unchanged.
+ * Advice for InternalHttpClient.doExecute() (both HttpClient families). The body is
+ * inlined into the target method; it does nothing but hand the arguments, return value
+ * & any throwable to HttpTap, which is bootstrap-visible. suppress = Throwable.class is
+ * MANDATORY: without it an exception in this body would propagate into TLauncher. All
+ * reading happens on exit, after the real call ran, so nothing here changes the request.
  */
-class HttpInterceptor {
+class HttpAdvice {
 
-    @RuntimeType
-    public static Object intercept(@SuperCall Callable<?> superCall,
-                                   @AllArguments Object[] args) throws Exception {
+    @Advice.OnMethodExit(onThrowable = Throwable.class, suppress = Throwable.class)
+    static void exit(@Advice.AllArguments Object[] args,
+                     @Advice.Return(typing = Assigner.Typing.DYNAMIC, readOnly = true) Object ret,
+                     @Advice.Thrown Throwable thrown) {
+        HttpTap.clientCall(args, ret, thrown);
+    }
+}
+
+/*
+ * Advice for HttpServiceImpl's public instance methods. Same contract: inline, suppress
+ * throwables, read on exit only. The method name arrives through @Advice.Origin("#m").
+ */
+class ServiceAdvice {
+
+    @Advice.OnMethodExit(onThrowable = Throwable.class, suppress = Throwable.class)
+    static void exit(@Advice.Origin("#m") String method,
+                     @Advice.AllArguments Object[] args,
+                     @Advice.Return(typing = Assigner.Typing.DYNAMIC, readOnly = true) Object ret,
+                     @Advice.Thrown Throwable thrown) {
+        HttpTap.serviceCall(method, args, ret, thrown);
+    }
+}
+
+/*
+ * All the interception logic, out of the inlined Advice bodies & in one bootstrap-
+ * visible place. It reads HttpClient request/response objects reflectively (no imported
+ * type), never modifies them, and only reads a body that is repeatable (a streaming
+ * body would be consumed by reading it, which could break the download). A four-line
+ * request block is written under a single lock so it can never be split.
+ */
+class HttpTap {
+
+    // InternalHttpClient.doExecute(HttpHost, request, HttpContext) -> response.
+    static void clientCall(Object[] args, Object ret, Throwable thrown) {
         String method = "?";
         String host = "?";
         String path = "?";
@@ -181,98 +260,89 @@ class HttpInterceptor {
         try {
             Object request = findRequest(args);
             if (request != null) {
-                method = str(invoke(request, "getMethod"));
-                Object uri = invoke(request, "getUri");
-                if (uri != null) {
-                    host = str(invoke(uri, "getHost"));
-                    path = str(invoke(uri, "getPath"));
-                }
-                byte[] rb = readRequestBody(request);
+                method = methodOf(request);
+                String[] hp = hostPath(request, args);
+                host = hp[0];
+                path = hp[1];
+                byte[] rb = repeatableRequestBody(request);
                 if (rb != null) {
                     reqBytes = rb.length;
-                    bodyOut = preview(rb);
+                    bodyOut = Reflect.preview(rb);
+                } else if (Reflect.invoke(request, "getEntity") != null) {
+                    bodyOut = "<not repeatable>";
                 }
             }
         } catch (Throwable t) {
             bodyOut = "<unreadable>";
         }
 
-        // Run the real request. If it throws, that's TLauncher's own failure: log it,
-        // then rethrow so TLauncher's error handling behaves exactly as before.
-        Object response;
-        try {
-            response = superCall.call();
-        } catch (Exception e) {
-            safeLog(method, host, path, -1, reqBytes, -1, bodyOut, "<request-threw>");
-            throw e;
-        }
-
         int status = -1;
         long respBytes = -1;
-        String bodyIn = "<not buffered>";
-        try {
-            Object code = invoke(response, "getCode");
-            if (code instanceof Integer) {
-                status = (Integer) code;
-            }
-            Object entity = invoke(response, "getEntity");
-            if (entity != null) {
-                Object len = invoke(entity, "getContentLength");
-                if (len instanceof Long) {
-                    respBytes = (Long) len;
-                }
-                // Only read a response that can be re-read. A streaming response would
-                // be consumed by reading it here, which could break TLauncher; skip it.
-                Object rep = invoke(entity, "isRepeatable");
-                if (rep instanceof Boolean && (Boolean) rep) {
-                    Object in = invoke(entity, "getContent");
-                    if (in instanceof InputStream) {
-                        byte[] rb = readStream((InputStream) in, 4096);
-                        if (rb != null) {
-                            bodyIn = preview(rb);
+        String bodyIn = thrown != null ? "<request-threw>" : "<not buffered>";
+        if (thrown == null) {
+            try {
+                status = statusOf(ret);
+                Object entity = Reflect.invoke(ret, "getEntity");
+                if (entity != null) {
+                    Object len = Reflect.invoke(entity, "getContentLength");
+                    if (len instanceof Long) {
+                        respBytes = (Long) len;
+                    }
+                    Object rep = Reflect.invoke(entity, "isRepeatable");
+                    if (rep instanceof Boolean && (Boolean) rep) {
+                        Object in = Reflect.invoke(entity, "getContent");
+                        if (in instanceof InputStream) {
+                            byte[] rb = Reflect.readStream((InputStream) in, 4096);
+                            if (rb != null) {
+                                bodyIn = Reflect.preview(rb);
+                            }
                         }
+                    } else {
+                        bodyIn = "<not repeatable>";
                     }
                 }
+            } catch (Throwable ignore) {
+                // Leave the defaults; never let response inspection break the call.
             }
-        } catch (Throwable ignore) {
-            // Leave the defaults; never let response inspection break the call.
         }
 
-        safeLog(method, host, path, status, reqBytes, respBytes, bodyOut, bodyIn);
-        return response;
+        AgentLogger.logBlock(method, host, path, status, reqBytes, respBytes, bodyOut, bodyIn);
     }
 
-    // Read the request entity without consuming it for TLauncher: if it isn't
-    // repeatable, wrap it in a BufferedHttpEntity & set it back on the request, so
-    // the buffered copy feeds both our read & the real send.
-    private static byte[] readRequestBody(Object request) {
+    static void serviceCall(String method, Object[] args, Object ret, Throwable thrown) {
         try {
-            Object entity = invoke(request, "getEntity");
-            if (entity == null) {
-                return null;
+            String url = firstUrl(args);
+            if (url == null && thrown == null) {
+                url = urlOf(ret);
             }
-            Object repeatable = entity;
-            Object rep = invoke(entity, "isRepeatable");
-            if (rep instanceof Boolean && !((Boolean) rep)) {
-                ClassLoader cl = request.getClass().getClassLoader();
-                Class<?> httpEntity = Class.forName(
-                        "org.apache.hc.core5.http.HttpEntity", false, cl);
-                Class<?> buffered = Class.forName(
-                        "org.apache.hc.core5.http.io.entity.BufferedHttpEntity", false, cl);
-                Object wrapped = buffered.getConstructor(httpEntity).newInstance(entity);
-                request.getClass().getMethod("setEntity", httpEntity).invoke(request, wrapped);
-                repeatable = wrapped;
+            if (url == null) {
+                return; // no URL in this call; stay quiet rather than log noise
             }
-            Object in = invoke(repeatable, "getContent");
-            if (in instanceof InputStream) {
-                return readStream((InputStream) in, 4096);
+            String host = "?";
+            String path = "?";
+            try {
+                URI u = URI.create(url);
+                if (u.getHost() != null) {
+                    host = u.getHost();
+                }
+                path = u.getRawPath() != null ? u.getRawPath() : "/";
+            } catch (Throwable ignore) {
+                // leave placeholders
             }
-            return null;
-        } catch (Throwable t) {
-            return new byte[0];
+            String bodyIn = thrown != null ? "<call-threw>" : respPreview(ret);
+            AgentLogger.diag("HttpServiceImpl." + method + " -> " + url);
+            // Label as GET so the report table (which greps HTTP verbs) picks it up;
+            // a download service's requests are GETs.
+            AgentLogger.logBlock("GET", host, path, -1, 0, -1, "empty", bodyIn);
+        } catch (Throwable ignore) {
+            // logging never breaks the call
         }
     }
 
+    // --- request extraction, family-agnostic ---
+
+    // The request is the argument that carries a request line or a method; HttpHost &
+    // HttpContext (the other doExecute args) carry neither.
     private static Object findRequest(Object[] args) {
         if (args == null) {
             return null;
@@ -281,68 +351,103 @@ class HttpInterceptor {
             if (a == null) {
                 continue;
             }
-            String cn = a.getClass().getName().toLowerCase();
-            if (cn.contains("request") && hasMethod(a, "getMethod")) {
+            if (Reflect.hasMethod(a, "getRequestLine") || Reflect.hasMethod(a, "getMethod")) {
                 return a;
             }
         }
         return null;
     }
 
-    private static void safeLog(String m, String h, String p, int status,
-                                long req, long resp, String bodyOut, String bodyIn) {
-        try {
-            AgentLogger.logRequest(m, h, p);
-            AgentLogger.logStatus(status, req, resp);
-            AgentLogger.logBody("BODY_OUT", bodyOut);
-            AgentLogger.logBody("BODY_IN", bodyIn);
-        } catch (Throwable ignore) {
-            // Logging must never break the call.
+    private static String methodOf(Object request) {
+        // 5.x: request.getMethod(). 4.x: request.getRequestLine().getMethod().
+        Object m = Reflect.invoke(request, "getMethod");
+        if (m != null) {
+            return Reflect.str(m);
         }
+        Object line = Reflect.invoke(request, "getRequestLine");
+        return Reflect.str(Reflect.invoke(line, "getMethod"));
     }
 
-    // --- reflection helpers, shared with HttpServiceInterceptor via Reflect ---
-
-    private static Object invoke(Object t, String n) { return Reflect.invoke(t, n); }
-    private static boolean hasMethod(Object t, String n) { return Reflect.hasMethod(t, n); }
-    private static byte[] readStream(InputStream in, int max) { return Reflect.readStream(in, max); }
-    private static String str(Object o) { return Reflect.str(o); }
-    private static String preview(byte[] b) { return Reflect.preview(b); }
-}
-
-/*
- * Delegation target for HttpServiceImpl's methods. HttpServiceImpl is TLauncher's own
- * download class & its methods don't share HttpClient5's execute() signature, so this
- * has its own extraction: it scans the arguments (and the return value) for a URL,
- * & logs it as a GET, since a download service's requests are GETs. It never reads a
- * streaming return value (that would consume it) & never modifies anything.
- */
-class HttpServiceInterceptor {
-
-    @RuntimeType
-    public static Object intercept(@Origin Method method,
-                                   @SuperCall Callable<?> superCall,
-                                   @AllArguments Object[] args) throws Exception {
-        String url = firstUrl(args);
-
-        Object response;
-        try {
-            response = superCall.call();
-        } catch (Exception e) {
-            if (url != null) {
-                logUrl(method.getName(), url, "<call-threw>");
+    // Returns {host, path}. 5.x exposes a full URI on the request; 4.x carries only the
+    // path on the request line, with the host on the HttpHost argument.
+    private static String[] hostPath(Object request, Object[] args) {
+        String host = "?";
+        String path = "?";
+        Object uri = Reflect.invoke(request, "getUri");
+        if (uri == null) {
+            uri = Reflect.invoke(request, "getURI");
+        }
+        if (uri != null) {
+            host = Reflect.str(Reflect.invoke(uri, "getHost"));
+            path = Reflect.str(Reflect.invoke(uri, "getPath"));
+        }
+        if (isUnknown(path)) {
+            Object line = Reflect.invoke(request, "getRequestLine");
+            if (line != null) {
+                path = Reflect.str(Reflect.invoke(line, "getUri"));
             }
-            throw e;
         }
-
-        if (url == null) {
-            url = urlOf(response);
+        if (isUnknown(host)) {
+            host = hostFromArgs(args);
         }
-        if (url != null) {
-            logUrl(method.getName(), url, respPreview(response));
-        }
-        return response;
+        return new String[]{host, path};
     }
+
+    // The HttpHost argument, if present, answers getHostName().
+    private static String hostFromArgs(Object[] args) {
+        if (args == null) {
+            return "?";
+        }
+        for (Object a : args) {
+            if (a == null) {
+                continue;
+            }
+            Object h = Reflect.invoke(a, "getHostName");
+            if (h != null) {
+                return Reflect.str(h);
+            }
+        }
+        return "?";
+    }
+
+    private static int statusOf(Object response) {
+        // 5.x: getCode(). 4.x: getStatusLine().getStatusCode().
+        Object code = Reflect.invoke(response, "getCode");
+        if (code instanceof Integer) {
+            return (Integer) code;
+        }
+        Object line = Reflect.invoke(response, "getStatusLine");
+        Object sc = Reflect.invoke(line, "getStatusCode");
+        if (sc instanceof Integer) {
+            return (Integer) sc;
+        }
+        return -1;
+    }
+
+    // Read the request body only if the entity is already repeatable. A non-repeatable
+    // entity would be consumed by reading it, and the constraint is: never read a body
+    // that isn't repeatable, and never modify the request to make it so.
+    private static byte[] repeatableRequestBody(Object request) {
+        try {
+            Object entity = Reflect.invoke(request, "getEntity");
+            if (entity == null) {
+                return null;
+            }
+            Object rep = Reflect.invoke(entity, "isRepeatable");
+            if (!(rep instanceof Boolean) || !((Boolean) rep)) {
+                return null;
+            }
+            Object in = Reflect.invoke(entity, "getContent");
+            if (in instanceof InputStream) {
+                return Reflect.readStream((InputStream) in, 4096);
+            }
+            return null;
+        } catch (Throwable t) {
+            return null;
+        }
+    }
+
+    // --- URL extraction for HttpServiceImpl ---
 
     private static String firstUrl(Object[] args) {
         if (args == null) {
@@ -357,8 +462,7 @@ class HttpServiceInterceptor {
         return null;
     }
 
-    // A URL is either the value itself, or reachable via a getUrl()/getUri() on a
-    // small request/dto object.
+    // A URL is the value itself, or reachable via getUrl()/getUri() on a small dto.
     private static String urlOf(Object o) {
         if (o == null) {
             return null;
@@ -385,31 +489,6 @@ class HttpServiceInterceptor {
         return null;
     }
 
-    private static void logUrl(String javaMethod, String url, String bodyIn) {
-        String host = "?";
-        String path = "?";
-        try {
-            URI u = URI.create(url);
-            if (u.getHost() != null) {
-                host = u.getHost();
-            }
-            path = u.getRawPath() != null ? u.getRawPath() : "/";
-        } catch (Throwable ignore) {
-            // leave placeholders
-        }
-        try {
-            AgentLogger.diag("HttpServiceImpl." + javaMethod + " -> " + url);
-            // Label as GET so the report table (which greps HTTP verbs) picks it up;
-            // a download service's requests are GETs.
-            AgentLogger.logRequest("GET", host, path);
-            AgentLogger.logStatus(-1, 0, -1);
-            AgentLogger.logBody("BODY_OUT", "empty");
-            AgentLogger.logBody("BODY_IN", bodyIn == null ? "<via HttpServiceImpl>" : bodyIn);
-        } catch (Throwable ignore) {
-            // logging never breaks the call
-        }
-    }
-
     // Preview a return value only if it is already in memory (String or byte[]).
     // Never read an InputStream return: that would consume the download.
     private static String respPreview(Object resp) {
@@ -421,11 +500,15 @@ class HttpServiceInterceptor {
         }
         return "<via HttpServiceImpl>";
     }
+
+    private static boolean isUnknown(String s) {
+        return s == null || s.isEmpty() || "?".equals(s) || "null".equals(s);
+    }
 }
 
 /*
- * Shared reflection helpers. Kept in one place so both interceptors read objects the
- * same way & neither imports an HttpClient5 type.
+ * Shared reflection helpers. Kept in one place so both call paths read objects the same
+ * way & neither imports an HttpClient type.
  */
 class Reflect {
 
@@ -443,6 +526,9 @@ class Reflect {
     }
 
     static boolean hasMethod(Object target, String name) {
+        if (target == null) {
+            return false;
+        }
         try {
             target.getClass().getMethod(name);
             return true;
@@ -485,8 +571,10 @@ class Reflect {
 /*
  * Thread-safe append-only writer, one intercept log & one diag log per process (the
  * PID is in the file name). AgentLogger is thread-safe within a JVM, not across
- * processes, so each JVM writes its own files & run.sh concatenates them; that keeps
- * a four-line request block whole instead of interleaving three JVMs into one file.
+ * processes, so each JVM writes its own files & run.sh concatenates them in start order;
+ * that keeps a four-line request block whole instead of interleaving three JVMs into one
+ * file. logBlock writes all four lines under one lock so a block is never split even by
+ * two concurrent requests inside the same JVM.
  */
 class AgentLogger {
 
@@ -503,28 +591,31 @@ class AgentLogger {
                 new FileWriter(dir + "/agent-diag-" + pid + ".log", true)));
     }
 
-    static void logRequest(String method, String host, String path) {
-        line(out, method + " " + host + " " + path);
-    }
-
-    static void logStatus(int status, long reqBytes, long respBytes) {
-        line(out, "STATUS: " + status + " REQ: " + reqBytes + " RESP: " + respBytes);
-    }
-
-    static void logBody(String tag, String body) {
-        line(out, tag + ": " + body);
+    // The four-line request block the report parser reads: method line, status line,
+    // then the two body lines, in that exact order & format. Written under one lock.
+    static void logBlock(String method, String host, String path, int status,
+                         long reqBytes, long respBytes, String bodyOut, String bodyIn) {
+        LOCK.lock();
+        try {
+            if (out != null) {
+                String ts = "[" + LocalTime.now().format(TS) + "] ";
+                out.println(ts + method + " " + host + " " + path);
+                out.println(ts + "STATUS: " + status + " REQ: " + reqBytes + " RESP: " + respBytes);
+                out.println(ts + "BODY_OUT: " + bodyOut);
+                out.println(ts + "BODY_IN: " + bodyIn);
+                out.flush();
+            }
+        } finally {
+            LOCK.unlock();
+        }
     }
 
     static void diag(String s) {
-        line(diagOut, s);
-    }
-
-    private static void line(PrintWriter w, String s) {
         LOCK.lock();
         try {
-            if (w != null) {
-                w.println("[" + LocalTime.now().format(TS) + "] " + s);
-                w.flush();
+            if (diagOut != null) {
+                diagOut.println("[" + LocalTime.now().format(TS) + "] " + s);
+                diagOut.flush();
             }
         } finally {
             LOCK.unlock();
