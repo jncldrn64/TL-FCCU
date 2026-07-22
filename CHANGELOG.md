@@ -4,6 +4,40 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.13 — 2026-07-22
+
+ROADMAP Phase 1, second half: make the hook bind. The first real session (v2.12) loaded
+the agent into every JVM & saw both target classes, but the interception never fired.
+Phase 1 stays `in progress`; the capture is the author's real-session call.
+
+### Fixed
+- The interceptors moved from `MethodDelegation` to `Advice`. In the v2.12 session the
+  diagnostic log carried an `IllegalArgumentException` for both targets: none of the
+  interceptor signatures could bind, because `@SuperCall` has no super method to hand
+  back once the target is rewritten in place under `RETRANSFORMATION`, and its failure
+  drags the whole delegation signature down with it. `Advice` injects its body inline
+  instead of resolving a delegation by signature, so it binds on inherited & overloaded
+  methods too. This is the case Byte Buddy's own docs point at `Advice` for. It is not
+  shading: the diagnostic named both classes exactly.
+
+### Changed
+- The agent now covers both HttpClient name families, not just 5.x. The diagnostic
+  showed the JVMs don't share a stack: the starter (JVMs 1 & 2) loads
+  `org.apache.http.impl.client.InternalHttpClient` (HttpClient 4.x) while the launcher
+  (JVM 3) loads `org.apache.hc.client5.http.impl.classic.InternalHttpClient` (5.x). The
+  earlier analysis read one classpath (JVM 3's) & assumed one library. The hook now
+  matches `doExecute`/`execute` on both names & reads the request reflectively across
+  the two APIs (`getMethod` or the request line; `getUri`/`getURI`; `getCode` or the
+  status line). It also hooks `HttpServiceImpl.getRequestByUrlAndSave(String, Path)`,
+  whose URL is argument 0, which is the shortest path to a real capture.
+- `run.sh` aggregates the per-PID logs in JVM start order with a `# ---- JVM pid=N ----`
+  banner before each block, instead of `cat *.log`. The glob sorted lexically by PID, so
+  JVM 1 (a low PID) landed after the game JVMs; now whole files are ordered by their
+  first line's timestamp, so a four-line block is never split & the starter reads before
+  the launcher. Empty per-PID files (a skipped or silent JVM) are dropped, so an
+  all-empty capture still aggregates to an empty file & the report keeps telling
+  "active, no requests" from "active, has data". `VERSION` bumped 2.12 to 2.13.
+
 ## v2.12 — 2026-07-22
 
 ROADMAP Phase 1, first half: make the agent see. The code path is built & checkable

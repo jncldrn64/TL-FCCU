@@ -162,6 +162,51 @@ before that run. The four traps this phase had to resolve, & the call made on ea
   its presence is a cheap confirmation that the env var reached the JVM. It stays in
   the session logs as-is.
 
+2026-07-22: Phase 1 second half (v2.13). The first real session (v2.12) proved the
+injection worked & the hook did not: the agent loaded into all three JVMs & the
+diagnostic logged `SAW` for both target classes, then an `IllegalArgumentException`
+binding failure for each, eight milliseconds before the GET to `starterUpdateV1.json`
+went out unlogged. Two findings changed the work:
+
+- `MethodDelegation` can't bind under `RedefinitionStrategy.RETRANSFORMATION`, because
+  `@SuperCall` has no super method to call once the target is rewritten in place, and
+  its failure invalidates the whole delegation signature. Fixed by moving both hooks to
+  `Advice` (inline bytecode, no signature delegation). Not shading: both classes showed
+  their exact names.
+- The JVMs run two different HttpClient libraries. The starter (JVMs 1 & 2) loads
+  `org.apache.http.impl.client.InternalHttpClient` (HttpClient 4.x); the launcher (JVM 3)
+  loads `org.apache.hc.client5.http.impl.classic.InternalHttpClient` (5.x). The v2.12
+  agent knew only the 5.x name, so JVMs 1 & 2 were never even attempted. Both name
+  families are matched now, & the request is read reflectively across both APIs.
+
+The two `Advice` traps from the spec (section 5) & the calls made:
+
+- 5.1 Class visibility from inlined `Advice`. An `Advice` body is copied into the target
+  class, so any class it names must be visible to that class's loader; TLauncher loads
+  the targets from its own jars, through loaders that need not be children of the
+  agent's, so a naive reference to `AgentLogger` would throw `NoClassDefFoundError` at
+  runtime inside TLauncher. Decision: `appendToBootstrapClassLoaderSearch(own jar)` in
+  `premain`, before the first reference to any helper, so parent-first delegation defines
+  the helpers once in the bootstrap loader (the ancestor of every loader) & `premain` &
+  the inlined bodies see the same class. NOT verified against real TLauncher: this fault
+  only appears at runtime, & no launcher ran here. The reasoning is sound (bootstrap is
+  every loader's ancestor; ordering the append before the first helper use keeps a single
+  class identity), but the proof is the author's session. If a `NoClassDefFoundError`
+  appears in the launch output, the append is the first suspect.
+- 5.2 `Advice` exceptions propagate into the target. Unlike the `try/catch (Throwable)`
+  that wrapped `MethodDelegation`, a throw inside an `Advice` body rises into TLauncher's
+  own code. Decision, non-negotiable: every `Advice` method carries
+  `suppress = Throwable.class`, so an interception fault is swallowed & TLauncher runs
+  unchanged. The read-only guarantees also hold: only repeatable bodies are read (no
+  streams, no buffering wrap that would modify the request), and the return value is
+  read but never altered.
+
+The agent-log aggregation format changed: `run.sh` now orders per-PID files by start
+time with a `# ---- JVM pid=N ----` banner per block, & drops empty per-PID files so an
+all-empty capture stays empty. The report parser ignores any line that isn't a request or
+`STATUS`/`BODY` line, so banners pass through; the `agent-data` fixture carries banners to
+keep the regression net honest to the real shape.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.
