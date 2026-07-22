@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.9"
+VERSION="2.11"
 
 # Directory holding this script, used to find helpers like scripts/mitm_report.py.
 # Resolved once & survives being called through a symlink.
@@ -752,6 +752,22 @@ run_sandboxed() {
     fi
     local java_cmd="java ${java_opts} -jar bin/TLauncher.jar"
 
+    # Record the capture mode as a DATUM the report reads, instead of the report
+    # guessing it from a file's absence (which made it claim "-P not used" during an
+    # active agent session). One word: agent, mitmproxy, or off. Pure report
+    # metadata; it changes nothing about what runs inside the sandbox. The fallback
+    # branch only runs when the preflight already confirmed mitmdump, so "mitmproxy"
+    # here is accurate.
+    if session_logging_active; then
+        if [ "$agent_active" = true ]; then
+            printf 'agent\n' > "${SESSION_DIR}/capture-mode"
+        elif [ "$PROXY_ENABLED" = true ]; then
+            printf 'mitmproxy\n' > "${SESSION_DIR}/capture-mode"
+        else
+            printf 'off\n' > "${SESSION_DIR}/capture-mode"
+        fi
+    fi
+
     # Log firejail command
     if session_logging_active; then
         {
@@ -940,18 +956,15 @@ save_baseline() {
     fi
 }
 
-# Markdown section: the network payload summary from a -P proxy capture (Task 2).
-# The flow parsing goes to scripts/mitm_report.py, kept in its own file so the
-# mitmproxy logic stays out of run.sh. Every step degrades to a distinct line: no
-# capture, no python3, no helper, & parse failure each say something different.
-report_payload_summary() {
+# Helper: summarize a mitmproxy flow via scripts/mitm_report.py, or a distinct note
+# at each degrade step. Only report_network_capture's mitmproxy branch calls this,
+# where -P WAS used, so there is no "run without -P" guess here anymore. The flow
+# parsing lives in its own file so the mitmproxy logic stays out of run.sh.
+_report_mitm_flow() {
     local session="$1"
     local flow="${session}/mitm.flow"
-    printf "## Network payload summary (proxy capture)\n\n"
     if [ ! -f "$flow" ]; then
-        # "Nothing suspicious" & "nothing captured" are different; say which.
-        printf "_Payload capture was **disabled** for this session (run without \`-P/--proxy\`)._\n\n"
-        printf "_To actually inspect what TLauncher sends on the wire, re-run with_ \`%s -P\` _(requires mitmdump)._\n\n" "$(basename "$0")"
+        printf "_No \`mitm.flow\` was written; mitmproxy started but recorded nothing._\n\n"
         return 0
     fi
     if ! command -v python3 >/dev/null 2>&1; then
@@ -1072,41 +1085,67 @@ generate_summary() {
     log_verbose "Summary generated"
 }
 
-# Markdown section: the Java-agent HTTP capture (Round 5). This is the payload
-# source that actually sees HttpClient5 traffic. The log is written by
-# scripts/TLHttpAgent.java in blocks of four lines per request (request, STATUS,
-# BODY_OUT, BODY_IN). Three states: caught traffic, active-but-empty, not used.
-report_agent_capture() {
+# Markdown section: the network payload capture (Phase 0). The capture MODE is read
+# from a recorded datum (SESSION_DIR/capture-mode, written by run_sandboxed), not
+# guessed from a file's absence. The guess was the bug: with the agent active &
+# mitmproxy skipped, no mitm.flow existed, so the old report claimed "run without
+# -P" one line after saying the agent was active. Four states, each with a phrase
+# the other three don't share, so tests/ can assert exclusivity. Rule: no section
+# claims anything about an option the user did use; missing data says so, plainly.
+report_network_capture() {
     local session="$1"
     local ilog="${session}/http-intercept.log"
-    printf "## Network payload (Java agent capture)\n\n"
-    if [ -f "$ilog" ] && [ -s "$ilog" ]; then
-        printf "_Intercepted in-process at the application layer, after TLS decrypt. Starter JVM only._\n\n"
-        # Request lines look like: [HH:MM:SS.mmm] METHOD HOST PATH
-        printf "| Method | Host | Path |\n|--------|------|------|\n"
-        grep -E '^\[[0-9:.]+\] (GET|POST|PUT|HEAD|DELETE|PATCH|OPTIONS) ' "$ilog" \
-            | sed -E 's/^\[[0-9:.]+\] //' \
-            | awk '{m=$1; h=$2; $1=""; $2=""; sub(/^ +/,""); print "| "m" | "h" | "$0" |"}' \
-            | sort -u | head -60
-        printf "\n### Flagged: POST/PUT with body\n\n"
-        if grep -qE '^\[[0-9:.]+\] (POST|PUT) ' "$ilog"; then
-            # Print each POST/PUT block: the request line, its BODY_OUT, its STATUS.
-            awk '
-                /^\[[0-9:.]+\] (POST|PUT) / { blk=1; printf "```\n%s\n", $0; next }
-                blk && /BODY_OUT:/ { print; next }
-                blk && /STATUS:/   { print; printf "```\n\n"; blk=0; next }
-            ' "$ilog"
-        else
-            printf "_No POST/PUT with a body observed._\n"
-        fi
-        printf "\n"
-    elif [ -f "$ilog" ]; then
-        printf "_Agent was active but intercepted no HTTP requests._\n"
-        printf "_TLauncher may wrap InternalHttpClient in a subclass the type filter misses, or made no outbound requests. See_ \`AGENTS.md\` _Known gaps._\n\n"
-    else
-        printf "_Java agent not active (JAR missing, or -P not used)._\n"
-        printf "_Build it once:_ \`bash scripts/build-agent.sh\`\n\n"
-    fi
+    local flow="${session}/mitm.flow"
+    local mode; mode="$(head -n1 "${session}/capture-mode" 2>/dev/null || true)"
+    printf "## Network payload capture\n\n"
+
+    case "$mode" in
+        agent)
+            if [ -s "$ilog" ]; then
+                # State 1: agent active, log has entries.
+                printf "_Mode: Java agent, in-process after TLS decrypt. Starter JVM only._\n\n"
+                printf "| Method | Host | Path |\n|--------|------|------|\n"
+                grep -E '^\[[0-9:.]+\] (GET|POST|PUT|HEAD|DELETE|PATCH|OPTIONS) ' "$ilog" \
+                    | sed -E 's/^\[[0-9:.]+\] //' \
+                    | awk '{m=$1; h=$2; $1=""; $2=""; sub(/^ +/,""); print "| "m" | "h" | "$0" |"}' \
+                    | sort -u | head -60
+                printf "\n### Flagged: POST/PUT with body\n\n"
+                if grep -qE '^\[[0-9:.]+\] (POST|PUT) ' "$ilog"; then
+                    awk '
+                        /^\[[0-9:.]+\] (POST|PUT) / { blk=1; printf "```\n%s\n", $0; next }
+                        blk && /BODY_OUT:/ { print; next }
+                        blk && /STATUS:/   { print; printf "```\n\n"; blk=0; next }
+                    ' "$ilog"
+                else
+                    printf "_No POST/PUT with a body observed._\n"
+                fi
+                printf "\n"
+            else
+                # State 2: agent active, log empty.
+                printf "_Mode: Java agent active, but it logged no HTTP requests._\n"
+                printf "_TLauncher may route through a HttpClient5 class the type filter misses (shaded or relocated), or made no outbound HTTP. See_ \`AGENTS.md\` _Known gaps._\n\n"
+            fi
+            ;;
+        mitmproxy)
+            # State 4: fallback used, with its limit declared before the data.
+            printf "_Mode: mitmproxy fallback (agent JAR not built). It captures env-proxy-aware traffic only & misses HttpClient5, so it can show nothing even when TLauncher sent data._\n\n"
+            _report_mitm_flow "$session"
+            ;;
+        *)
+            if [ -n "$mode" ]; then
+                # State 3: mode recorded as off; no -P backend ran this session.
+                printf "_Mode: no HTTP capture ran this session._\n"
+                printf "_To capture, build the agent (\`bash scripts/build-agent.sh\`) then run with \`-P\`._\n\n"
+            else
+                # No recorded mode (session predates v2.10). State on-disk facts, invent no cause.
+                local il="absent" fl="absent"
+                [ -f "$ilog" ] && { [ -s "$ilog" ] && il="present, non-empty" || il="present, empty"; }
+                [ -f "$flow" ] && fl="present"
+                printf "_Capture mode not recorded (session predates v2.10); no cause claimed._\n"
+                printf "_On disk: \`http-intercept.log\` %s, \`mitm.flow\` %s._\n\n" "$il" "$fl"
+            fi
+            ;;
+    esac
 }
 
 # ==========================================
@@ -1204,8 +1243,7 @@ generate_incident_report() {
         printf "\n"
 
         # --- Network payload summary (Task 2) + domain regression (Task 3) ---
-        report_agent_capture "$session"
-        report_payload_summary "$session"
+        report_network_capture "$session"
         report_regression_check "$session"
 
         # --- Sizes (growth sanity check) ---
@@ -1634,11 +1672,12 @@ usage() {
     printf "  ${BLUE}-P, --proxy [PORT]${NC}     Activate HTTP interception. Implies a session dir.\n"
     printf "                           With ${CYAN}scripts/tl-http-agent.jar${NC} present: injects a Java\n"
     printf "                           agent into the starter JVM & captures HTTP/HTTPS at the\n"
-    printf "                           application layer, where the payload is plain text, no\n"
-    printf "                           matter which HTTP library TLauncher uses. No CA trust\n"
-    printf "                           needed. Writes http-intercept.log to the session dir & a\n"
-    printf "                           'Network payload (Java agent capture)' section to the\n"
-    printf "                           report. Build the agent once: ${CYAN}bash scripts/build-agent.sh${NC}\n"
+    printf "                           application layer, where the payload is plain text. It hooks\n"
+    printf "                           HttpClient5 by its standard class name; a shaded copy (seen\n"
+    printf "                           in the starter jar) is missed today, see ROADMAP Phase 1.\n"
+    printf "                           No CA trust needed. Writes http-intercept.log & a\n"
+    printf "                           'Network payload capture' section to the report. Build the\n"
+    printf "                           agent once: ${CYAN}bash scripts/build-agent.sh${NC}\n"
     printf "                           Without the agent JAR: falls back to mitmproxy on\n"
     printf "                           127.0.0.1:PORT (default %d), which captures env-proxy-aware\n" "$PROXY_PORT"
     printf "                           traffic only & is confirmed to miss HttpClient5. The\n"
@@ -1680,12 +1719,9 @@ usage() {
     printf "    %s -A\n" "$0"
     printf "    ${CYAN}→ Analyze logs without running TLauncher${NC}\n\n"
 
-    printf "${YELLOW}WHAT'S NEW IN v2.5${NC}\n"
-    printf "  ${GREEN}✓${NC} Explicit sandbox-only mode with start/end feedback (no-arg run)\n"
-    printf "  ${GREEN}✓${NC} usage() audited line-by-line against the real parser\n"
-    printf "  ${GREEN}✓${NC} Deeper -P payload summary (per-request + flagged bodies)\n"
-    printf "  ${GREEN}✓${NC} Domain regression check vs a curated baseline (-B to populate)\n"
-    printf "  ${GREEN}✓${NC} DESIGN.md documenting the project's conventions\n\n"
+    printf "${YELLOW}WHAT'S NEW${NC}\n"
+    printf "  See ${BLUE}CHANGELOG.md${NC} for what changed and when. The CHANGELOG is the single\n"
+    printf "  source, so this heading no longer pins a version that goes stale on each bump.\n\n"
 
     printf "${YELLOW}OUTPUT LOCATION${NC}\n"
     printf "  %s/session_YYYYMMDD_HHMMSS/\n\n" "$(disp_path "$LOG_ROOT")"
