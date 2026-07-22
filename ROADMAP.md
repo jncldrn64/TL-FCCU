@@ -44,7 +44,7 @@ own verification.
 
 ## Phase 1: the agent sees
 
-Status: `pending`
+Status: `in progress`
 
 Objective: capture the HTTP traffic that is lost today.
 
@@ -62,6 +62,13 @@ Scope:
 
 Acceptance: one real session captures the GET to `starterUpdateV1.json`. If it
 doesn't, diagnostic mode states why.
+
+Built in v2.12 & verifiable without TLauncher: `JAVA_TOOL_OPTIONS` with absolute
+in-sandbox paths, the second hook on `HttpServiceImpl`, the game-JVM self-disable,
+& the diagnostic listener. Still open, & the reason this stays `in progress`: the
+real session hasn't run. The author runs `-v -M -a -P` against real TLauncher &
+closes this when the GET shows up in the report, or reads `agent-diag.log` when it
+doesn't. Nothing here is marked captured until then.
 
 Blocks: Phase 2.
 
