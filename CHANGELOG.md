@@ -4,6 +4,17 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.10 — 2026-07-22
+
+Documentation only. No `run.sh` or `scripts/` change.
+
+### Added
+- `ROADMAP.md`, a fourth canonical doc: a phased plan (Phase 0 through 4 plus a
+  backlog) with a one-line objective, scope, verifiable acceptance criterion,
+  blockers, & status per phase. The ordering principle is that a tool that lies
+  about its own state corrupts everything built on top, so the report stops lying
+  (Phase 0) before the agent is made to see (Phase 1) before binaries get archived.
+
 ## v2.9 — 2026-07-05
 
 Java agent for HTTP interception.
