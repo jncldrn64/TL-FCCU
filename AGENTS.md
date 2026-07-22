@@ -231,6 +231,23 @@ carrying only the logger (and whatever the `Advice` bodies call), appended in pl
 fat JAR, leaving Byte Buddy on the agent's own loader. Not done in v2.14 to keep the change
 to the access fix; noted here so the next agent-side pass can pick it up.
 
+2026-07-22: Phase 1 fourth pass (v2.15) closes the deferred bootstrap-JAR item above. The
+v2.14 access fix bound, then a `LinkageError: loader constraint violation ...
+AgentBuilder$Listener ... 'app' vs 'bootstrap'` fired: appending the whole fat JAR to the
+bootstrap search duplicated Byte Buddy on both loaders, so `.with(new DiagListener())`
+matched two different `AgentBuilder$Listener` classes. Now split into two jars, as the
+v2.14 note said would be the clean fix: `tl-http-bootstrap.jar` (only `AgentLogger`,
+`HttpTap`, `Reflect`; no Byte Buddy) is the only one appended to the bootstrap loader, &
+`tl-http-agent.jar` (`TLHttpAgent`, `DiagListener`, `HttpAdvice`, `ServiceAdvice` + Byte
+Buddy) stays on the app loader. Byte Buddy exists once, so the listener binds; the inlined
+`Advice` bodies still reach the logger because bootstrap is every loader's ancestor.
+`build-agent.sh` builds both from one compile; `run.sh` copies both into the sandbox; and
+this supersedes the "only `TLHttpAgent.java` & `build-agent.sh` live in the repo" line
+above, since the agent is now several `.java` files (one public top-level class each) plus
+`build-agent.sh`. CDS is no longer knocked out by a fat bootstrap classpath, since only the
+small logger jar lands there. Still NOT verified against real TLauncher: whether the split
+agent logs a request. The author's `-v -M -a -P` session is the proof.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.

@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.14"
+VERSION="2.15"
 
 # Directory holding this script, used to find helpers like scripts/mitm_report.py.
 # Resolved once & survives being called through a symlink.
@@ -766,10 +766,15 @@ run_sandboxed() {
     local java_opts=""
     local agent_active=false
     local agent_env=()
+    # Two jars: the -javaagent jar (Byte Buddy, app loader) & the bootstrap jar (logger
+    # only, appended to the bootstrap loader by premain). Both must sit in the same dir
+    # inside the sandbox, since premain finds the bootstrap jar next to its own.
     local agent_jar="${SCRIPT_DIR}/scripts/tl-http-agent.jar"
+    local boot_jar="${SCRIPT_DIR}/scripts/tl-http-bootstrap.jar"
     if [ "$PROXY_ENABLED" = true ]; then
-        if [ -f "$agent_jar" ]; then
+        if [ -f "$agent_jar" ] && [ -f "$boot_jar" ]; then
             cp "$agent_jar" "${SANDBOX_DIR}/bin/tl-http-agent.jar"
+            cp "$boot_jar" "${SANDBOX_DIR}/bin/tl-http-bootstrap.jar"
             local in_jar="${REAL_HOME}/bin/tl-http-agent.jar"
             local in_dir="${REAL_HOME}/tmp"
             agent_env=(--env="JAVA_TOOL_OPTIONS=-javaagent:${in_jar} -Dtl.intercept.dir=${in_dir}")
@@ -777,7 +782,7 @@ run_sandboxed() {
             log_verbose "  → Java agent active (all JVMs); logs → $(disp_path "${SESSION_DIR}/http-intercept.log")"
         else
             java_opts="-Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=${PROXY_PORT} -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=${PROXY_PORT}"
-            log_warn "Java agent JAR not found. Build it once (works from any cwd):"
+            log_warn "Java agent JARs not found. Build them once (works from any cwd):"
             log_warn "  bash $(disp_path "$SCRIPT_DIR")/scripts/build-agent.sh"
             log_warn "Falling back to mitmproxy (env-proxy-aware traffic only; misses HttpClient5)."
         fi

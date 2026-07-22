@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
-# Build scripts/tl-http-agent.jar: a fat JAR with Byte Buddy bundled in. No sudo,
-# no Maven, no Gradle. Just javac + jar + a pinned download.
+# Build the agent's two JARs. No sudo, no Maven, no Gradle. Just javac + jar + a pinned
+# download.
 #
-# The output JAR is a build artifact, gitignored, never committed. Only this script
-# & TLHttpAgent.java live in the repo. Nothing is written outside this tree.
+#   tl-http-bootstrap.jar  AgentLogger, HttpTap, Reflect only. No Byte Buddy. premain
+#                          appends THIS one to the bootstrap classpath, so the inlined
+#                          Advice bodies reach the logger from any classloader.
+#   tl-http-agent.jar      TLHttpAgent, DiagListener, HttpAdvice, ServiceAdvice + Byte
+#                          Buddy. Stays on the app loader (the -javaagent jar). Byte Buddy
+#                          lives here & only here, so it is never duplicated across two
+#                          loaders (that duplication was the AgentBuilder$Listener
+#                          LinkageError).
 #
-# Third-party: the fat JAR bundles Byte Buddy 1.14.18 (Apache-2.0). Step 6 adds a
-# NOTICE into the JAR so the attribution rides along if the artifact is ever shared.
+# Both JARs are build artifacts, gitignored, never committed. Only the .java sources & this
+# script live in the repo. Nothing is written outside this tree.
+#
+# Third-party: tl-http-agent.jar bundles Byte Buddy 1.14.18 (Apache-2.0); step 6 adds a
+# NOTICE so the attribution rides along if the artifact is ever shared.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -15,7 +24,9 @@ BB_JAR="${SCRIPT_DIR}/.deps/byte-buddy-${BB_VER}.jar"
 BB_URL="https://search.maven.org/remotecontent?filepath=net/bytebuddy/byte-buddy/${BB_VER}/byte-buddy-${BB_VER}.jar"
 # SHA256 verified against Maven Central's published SHA1 (0081e9b9...20944626e6757b5950676af901c2485).
 BB_SHA256="52117af1696a53aa77c131353074ada25ccbdf2df511f2af33fad6704fa95104"
-OUT_JAR="${SCRIPT_DIR}/tl-http-agent.jar"
+OUT_AGENT="${SCRIPT_DIR}/tl-http-agent.jar"
+OUT_BOOT="${SCRIPT_DIR}/tl-http-bootstrap.jar"
+PKG="com/github/tlsandbox/agent"
 # The agent is several public top-level classes (one per file): TLHttpAgent plus its
 # helpers. They compile together; javac resolves the cross-references within scripts/.
 SRC_GLOB="${SCRIPT_DIR}/*.java"
@@ -39,11 +50,11 @@ if [ ! -f "$BB_JAR" ]; then
     echo "Byte Buddy ${BB_VER} downloaded and verified."
 fi
 
-# 3. Skip the build if the JAR is newer than every agent source.
-if [ -f "$OUT_JAR" ]; then
-    newer="$(find "$SCRIPT_DIR" -maxdepth 1 -name '*.java' -newer "$OUT_JAR")"
+# 3. Skip the build if both JARs are newer than every agent source.
+if [ -f "$OUT_AGENT" ] && [ -f "$OUT_BOOT" ]; then
+    newer="$(find "$SCRIPT_DIR" -maxdepth 1 -name '*.java' \( -newer "$OUT_AGENT" -o -newer "$OUT_BOOT" \))"
     if [ -z "$newer" ]; then
-        echo "tl-http-agent.jar is up to date."
+        echo "tl-http-agent.jar & tl-http-bootstrap.jar are up to date."
         exit 0
     fi
 fi
@@ -52,15 +63,29 @@ fi
 rm -rf "$BUILD" && mkdir -p "$BUILD/classes"
 javac -cp "$BB_JAR" -source 11 -target 11 -d "$BUILD/classes" $SRC_GLOB
 
-# 5. Explode Byte Buddy into the classes dir (this is what makes it a fat JAR).
-#    Drop the source manifest & any signatures; ours replaces them below.
-cd "$BUILD/classes"
+# 5. The bootstrap JAR: only the classes the inlined Advice bodies touch. No Byte Buddy,
+#    no manifest needed. This is the one appended to the bootstrap classloader.
+mkdir -p "$BUILD/boot/${PKG}"
+cp "$BUILD/classes/${PKG}/AgentLogger.class" \
+   "$BUILD/classes/${PKG}/HttpTap.class" \
+   "$BUILD/classes/${PKG}/Reflect.class" \
+   "$BUILD/boot/${PKG}/"
+jar cf "$OUT_BOOT" -C "$BUILD/boot" .
+
+# 6. The agent JAR: TLHttpAgent, DiagListener, HttpAdvice, ServiceAdvice + Byte Buddy.
+mkdir -p "$BUILD/agent/${PKG}"
+cp "$BUILD/classes/${PKG}/TLHttpAgent.class" \
+   "$BUILD/classes/${PKG}/DiagListener.class" \
+   "$BUILD/classes/${PKG}/HttpAdvice.class" \
+   "$BUILD/classes/${PKG}/ServiceAdvice.class" \
+   "$BUILD/agent/${PKG}/"
+# Explode Byte Buddy in (this is what makes it a fat JAR). Drop its manifest & signatures.
+cd "$BUILD/agent"
 jar xf "$BB_JAR"
 rm -f META-INF/MANIFEST.MF META-INF/*.SF META-INF/*.RSA META-INF/*.DSA
-
-# 6. Third-party attribution. Byte Buddy ships its own license inside its JAR, which
-#    the jar xf above already carried over; this NOTICE makes the Apache-2.0 credit
-#    explicit & survives even if upstream ever drops its copy.
+# Third-party attribution. Byte Buddy ships its own license inside its JAR, which the jar
+# xf above already carried over; this NOTICE makes the Apache-2.0 credit explicit &
+# survives even if upstream ever drops its copy.
 mkdir -p META-INF
 cat > META-INF/NOTICE-bytebuddy.txt <<'EOF'
 This artifact bundles Byte Buddy 1.14.18 (net.bytebuddy:byte-buddy),
@@ -69,7 +94,7 @@ licensed under the Apache License, Version 2.0.
   https://www.apache.org/licenses/LICENSE-2.0
 EOF
 
-# 7. Our manifest.
+# 7. Our manifest for the agent JAR.
 cd "$SCRIPT_DIR"
 cat > "$BUILD/MANIFEST.MF" <<'EOF'
 Premain-Class: com.github.tlsandbox.agent.TLHttpAgent
@@ -78,9 +103,8 @@ Can-Retransform-Classes: true
 X-Bundled-Dependency: Byte Buddy 1.14.18 (Apache-2.0)
 
 EOF
+jar cfm "$OUT_AGENT" "$BUILD/MANIFEST.MF" -C "$BUILD/agent" .
 
-# 8. Package the fat JAR.
-jar cfm "$OUT_JAR" "$BUILD/MANIFEST.MF" -C "$BUILD/classes" .
 rm -rf "$BUILD"
 
-echo "Built: $(basename "$OUT_JAR") ($(du -sh "$OUT_JAR" | cut -f1))"
+echo "Built: $(basename "$OUT_AGENT") ($(du -sh "$OUT_AGENT" | cut -f1)) + $(basename "$OUT_BOOT") ($(du -sh "$OUT_BOOT" | cut -f1))"

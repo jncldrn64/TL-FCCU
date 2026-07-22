@@ -4,6 +4,33 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.15 — 2026-07-22
+
+ROADMAP Phase 1, fourth pass: one Byte Buddy, not two. The v2.14 access fix bound, then
+a `LinkageError` fired before instrumentation. Phase 1 stays `in progress`; the capture is
+still the author's real session.
+
+### Fixed
+- `LinkageError: loader constraint violation ... AgentBuilder$Listener ... 'app' vs
+  'bootstrap'`. v2.14 appended the whole fat JAR to the bootstrap search, which put a
+  second copy of Byte Buddy on the bootstrap loader. `TLHttpAgent` (app loader) then called
+  `.with(new DiagListener())`, but `DiagListener` resolved from bootstrap & implemented the
+  bootstrap copy of `AgentBuilder$Listener`, a different `Class` from the app one the call
+  expected. The agent is now two jars: `tl-http-bootstrap.jar` holds only the classes the
+  inlined `Advice` bodies touch (`AgentLogger`, `HttpTap`, `Reflect`), no Byte Buddy, & is
+  the only one appended to the bootstrap loader; `tl-http-agent.jar` keeps `TLHttpAgent`,
+  `DiagListener`, `HttpAdvice`, `ServiceAdvice` & Byte Buddy on the app loader. Byte Buddy
+  exists once, so the listener binds; the inlined bodies still reach the logger because the
+  bootstrap loader is every loader's ancestor. `HttpAdvice`/`ServiceAdvice` don't need to be
+  on the bootstrap: Byte Buddy only reads their bytecode at instrumentation time, it never
+  loads them into the target. This closes the deferral noted in v2.14.
+
+### Changed
+- `scripts/build-agent.sh` produces both jars from one compile. `premain` locates the
+  bootstrap jar next to its own & appends that (not itself); `run.sh` copies both into the
+  sandbox `bin/`, so they share a directory there. The game-JVM skip still runs before the
+  append, and every safety guarantee is unchanged. `VERSION` bumped 2.14 to 2.15.
+
 ## v2.14 — 2026-07-22
 
 ROADMAP Phase 1, third pass: make the loaders agree. The v2.13 hook bound, then threw
