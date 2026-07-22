@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.11"
+VERSION="2.12"
 
 # Directory holding this script, used to find helpers like scripts/mitm_report.py.
 # Resolved once & survives being called through a symlink.
@@ -723,34 +723,50 @@ run_sandboxed() {
     local firejail_params
     mapfile -t firejail_params < <(build_firejail_params)
 
-    # Build the in-sandbox java command. With -P we intercept the starter JVM's HTTP.
+    # Build the in-sandbox java command & pick the -P backend.
     #
-    # WHY a Java agent instead of proxy props: TLauncher's requests go through Apache
-    # HttpClient5, which ignores -Dhttp.proxyHost & the HTTP_PROXY env vars, so
-    # mitmproxy captured zero. The agent (scripts/TLHttpAgent.java, built into the
-    # gitignored fat JAR by scripts/build-agent.sh) instruments
-    # InternalHttpClient.execute() in-process, after TLS decrypt. It never modifies
-    # traffic. Without the JAR we fall back to the old mitmproxy path.
+    # WHY a Java agent: TLauncher's requests go through Apache HttpClient5, which
+    # ignores -Dhttp.proxyHost & the HTTP_PROXY env vars, so mitmproxy captured zero.
+    # The agent (scripts/TLHttpAgent.java, built into the gitignored fat JAR) hooks
+    # the request classes in-process, after TLS decrypt. It never modifies traffic.
+    # Without the JAR we fall back to the old mitmproxy path.
+    #
+    # WHY JAVA_TOOL_OPTIONS with ABSOLUTE paths (Phase 1): the starter forks two more
+    # JVMs (the re-exec & the embedded JRE) from a different cwd, & a -javaagent on the
+    # starter command alone misses them. JAVA_TOOL_OPTIONS is inherited by all three.
+    # But an inherited RELATIVE path resolves against each JVM's own cwd & silently
+    # fails to load, so the paths are absolute inside the sandbox. firejail --private
+    # mounts SANDBOX_DIR at the real HOME, so bin/ & tmp/ live at ${REAL_HOME}/bin &
+    # ${REAL_HOME}/tmp there. The agent self-disables on the Minecraft JVM & writes one
+    # log per PID; run.sh aggregates them after the run.
     local java_opts=""
     local agent_active=false
+    local agent_env=()
     local agent_jar="${SCRIPT_DIR}/scripts/tl-http-agent.jar"
     if [ "$PROXY_ENABLED" = true ]; then
         if [ -f "$agent_jar" ]; then
-            # Copy the agent into the sandbox: firejail --private walls the FS off, so
-            # the JVM can only load it from inside SANDBOX_DIR/bin. For the same reason
-            # the agent CAN'T write to SESSION_DIR; it writes to the whitelisted tmp/
-            # (relative to the JVM cwd = the sandbox home) & run.sh copies it out below.
             cp "$agent_jar" "${SANDBOX_DIR}/bin/tl-http-agent.jar"
-            java_opts="-javaagent:bin/tl-http-agent.jar -Dtl.intercept.log=tmp/http-intercept.log"
+            local in_jar="${REAL_HOME}/bin/tl-http-agent.jar"
+            local in_dir="${REAL_HOME}/tmp"
+            agent_env=(--env="JAVA_TOOL_OPTIONS=-javaagent:${in_jar} -Dtl.intercept.dir=${in_dir}")
             agent_active=true
-            log_verbose "  → Java agent active; log → $(disp_path "${SESSION_DIR}/http-intercept.log")"
+            log_verbose "  → Java agent active (all JVMs); logs → $(disp_path "${SESSION_DIR}/http-intercept.log")"
         else
             java_opts="-Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=${PROXY_PORT} -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=${PROXY_PORT}"
-            log_warn "Java agent JAR not found; run: bash scripts/build-agent.sh"
-            log_warn "Falling back to mitmproxy (captures env-proxy-aware traffic only; misses HttpClient5)."
+            log_warn "Java agent JAR not found. Build it once (works from any cwd):"
+            log_warn "  bash $(disp_path "$SCRIPT_DIR")/scripts/build-agent.sh"
+            log_warn "Falling back to mitmproxy (env-proxy-aware traffic only; misses HttpClient5)."
         fi
     fi
     local java_cmd="java ${java_opts} -jar bin/TLauncher.jar"
+
+    # The agent env rides on every JVM the sandbox starts (2.1). Each JVM prints
+    # "Picked up JAVA_TOOL_OPTIONS: ..." to stderr; we accept that (a few lines that
+    # confirm the agent env is set) rather than pipe the launch through a filter that
+    # could swallow its exit code (2.4).
+    if [ "${#agent_env[@]}" -gt 0 ]; then
+        firejail_params+=("${agent_env[@]}")
+    fi
 
     # Record the capture mode as a DATUM the report reads, instead of the report
     # guessing it from a file's absence (which made it claim "-P not used" during an
@@ -867,16 +883,17 @@ run_sandboxed() {
 
         log_verbose "All monitors stopped"
 
-        # The Java agent writes inside the sandbox (firejail --private walls it off
-        # from SESSION_DIR); copy its log out so the report can read it. Keep it
-        # existing-but-empty when the agent was active but caught nothing, so the
-        # report can tell "agent active, no requests" from "agent not used".
+        # The agent writes one log per JVM inside the sandbox (firejail --private
+        # walls it off from SESSION_DIR). Concatenate the per-PID logs out to the
+        # session dir; each file is internally consistent, so cat keeps whole
+        # four-line request blocks instead of interleaving JVMs (2.2). The aggregate
+        # stays existing-but-empty when the agent caught nothing, so the report can
+        # tell "agent active, no requests" from "agent not used". agent-diag.log says
+        # which HttpClient/HttpService classes each JVM saw.
         if [ "$agent_active" = true ]; then
-            if [ -f "${SANDBOX_DIR}/tmp/http-intercept.log" ]; then
-                cp "${SANDBOX_DIR}/tmp/http-intercept.log" "${SESSION_DIR}/http-intercept.log"
-            else
-                : > "${SESSION_DIR}/http-intercept.log"
-            fi
+            cat "${SANDBOX_DIR}/tmp/"http-intercept-*.log > "${SESSION_DIR}/http-intercept.log" 2>/dev/null \
+                || : > "${SESSION_DIR}/http-intercept.log"
+            cat "${SANDBOX_DIR}/tmp/"agent-diag-*.log > "${SESSION_DIR}/agent-diag.log" 2>/dev/null || true
         fi
 
         # Take post-execution snapshot
@@ -1123,7 +1140,7 @@ report_network_capture() {
             else
                 # State 2: agent active, log empty.
                 printf "_Mode: Java agent active, but it logged no HTTP requests._\n"
-                printf "_TLauncher may route through a HttpClient5 class the type filter misses (shaded or relocated), or made no outbound HTTP. See_ \`AGENTS.md\` _Known gaps._\n\n"
+                printf "_TLauncher may route through a HttpClient5 class the matcher misses (shaded or relocated), or made no outbound HTTP. Check_ \`agent-diag.log\` _for the classes each JVM saw; see_ \`AGENTS.md\` _Known gaps._\n\n"
             fi
             ;;
         mitmproxy)
@@ -1670,14 +1687,20 @@ usage() {
 
     printf "${YELLOW}NETWORK CAPTURE (opt-in, no sudo)${NC}\n"
     printf "  ${BLUE}-P, --proxy [PORT]${NC}     Activate HTTP interception. Implies a session dir.\n"
-    printf "                           With ${CYAN}scripts/tl-http-agent.jar${NC} present: injects a Java\n"
-    printf "                           agent into the starter JVM & captures HTTP/HTTPS at the\n"
-    printf "                           application layer, where the payload is plain text. It hooks\n"
-    printf "                           HttpClient5 by its standard class name; a shaded copy (seen\n"
-    printf "                           in the starter jar) is missed today, see ROADMAP Phase 1.\n"
-    printf "                           No CA trust needed. Writes http-intercept.log & a\n"
-    printf "                           'Network payload capture' section to the report. Build the\n"
-    printf "                           agent once: ${CYAN}bash scripts/build-agent.sh${NC}\n"
+    printf "                           With ${CYAN}scripts/tl-http-agent.jar${NC} present: loads a Java\n"
+    printf "                           agent via JAVA_TOOL_OPTIONS into every JVM the sandbox\n"
+    printf "                           starts (starter, re-exec, embedded JRE), & captures\n"
+    printf "                           HTTP/HTTPS at the application layer where the payload is\n"
+    printf "                           plain text. No CA trust needed. It self-disables on the\n"
+    printf "                           Minecraft JVM (not the audit target) & hooks HttpClient5's\n"
+    printf "                           InternalHttpClient plus TLauncher's own HttpServiceImpl;\n"
+    printf "                           a shaded HttpClient5 copy still slips the name matcher, so\n"
+    printf "                           check ${CYAN}agent-diag.log${NC} if the capture is empty. Writes one\n"
+    printf "                           log per JVM (aggregated to http-intercept.log) & a\n"
+    printf "                           'Network payload capture' report section. Each JVM prints a\n"
+    printf "                           'Picked up JAVA_TOOL_OPTIONS' line to stderr; that is kept.\n"
+    printf "                           Build the agent once, from the repo root (the dir\n"
+    printf "                           holding run.sh): ${CYAN}bash scripts/build-agent.sh${NC}\n"
     printf "                           Without the agent JAR: falls back to mitmproxy on\n"
     printf "                           127.0.0.1:PORT (default %d), which captures env-proxy-aware\n" "$PROXY_PORT"
     printf "                           traffic only & is confirmed to miss HttpClient5. The\n"
