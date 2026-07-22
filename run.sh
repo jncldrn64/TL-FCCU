@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.12"
+VERSION="2.13"
 
 # Directory holding this script, used to find helpers like scripts/mitm_report.py.
 # Resolved once & survives being called through a symlink.
@@ -203,6 +203,30 @@ log_verbose() {
 # /home/<user> out of screenshots, pastes, and CI logs.
 disp_path() {
     printf '%s' "${1/#$REAL_HOME/$DISPLAY_HOME}"
+}
+
+# Aggregate the agent's per-PID logs into one file, in JVM start order, with a banner
+# naming the PID before each block.
+#
+# WHY not a plain `cat *.log`: the glob sorts lexically by PID, so JVM 1 (a low PID like
+# 4) lands after the game JVMs (PID 120+), and the file reads out of order. This orders
+# whole files by their first line's timestamp, so a four-line request block is never
+# split (2.2) & the reader sees the starter before the launcher. Empty per-PID files
+# (a JVM the agent skipped, or one that made no HTTP) are dropped, so an all-empty
+# capture aggregates to an empty file & the report can still tell "active, no requests"
+# from "active, has data". $1 is the glob of per-PID files; the result goes to stdout.
+aggregate_agent_logs() {
+    local f ts pid
+    for f in $1; do
+        [ -e "$f" ] || continue
+        [ -s "$f" ] || continue
+        ts="$(head -n1 "$f" 2>/dev/null | sed -E 's/^\[([0-9:.]+)\].*/\1/')"
+        printf '%s\t%s\n' "${ts:-99}" "$f"
+    done | sort | while IFS="$(printf '\t')" read -r ts f; do
+        pid="$(basename "$f" | sed -E 's/.*-([0-9]+)\.log$/\1/')"
+        printf '# ---- JVM pid=%s ----\n' "$pid"
+        cat "$f"
+    done
 }
 
 log_error() {
@@ -725,11 +749,11 @@ run_sandboxed() {
 
     # Build the in-sandbox java command & pick the -P backend.
     #
-    # WHY a Java agent: TLauncher's requests go through Apache HttpClient5, which
-    # ignores -Dhttp.proxyHost & the HTTP_PROXY env vars, so mitmproxy captured zero.
-    # The agent (scripts/TLHttpAgent.java, built into the gitignored fat JAR) hooks
-    # the request classes in-process, after TLS decrypt. It never modifies traffic.
-    # Without the JAR we fall back to the old mitmproxy path.
+    # WHY a Java agent: TLauncher's requests go through Apache HttpClient (4.x in the
+    # starter JVMs, 5.x in the launcher JVM), which ignores -Dhttp.proxyHost & the
+    # HTTP_PROXY env vars, so mitmproxy captured zero. The agent (scripts/TLHttpAgent.java,
+    # built into the gitignored fat JAR) hooks the request methods in-process, after TLS
+    # decrypt. It never modifies traffic. Without the JAR we fall back to mitmproxy.
     #
     # WHY JAVA_TOOL_OPTIONS with ABSOLUTE paths (Phase 1): the starter forks two more
     # JVMs (the re-exec & the embedded JRE) from a different cwd, & a -javaagent on the
@@ -884,16 +908,19 @@ run_sandboxed() {
         log_verbose "All monitors stopped"
 
         # The agent writes one log per JVM inside the sandbox (firejail --private
-        # walls it off from SESSION_DIR). Concatenate the per-PID logs out to the
-        # session dir; each file is internally consistent, so cat keeps whole
-        # four-line request blocks instead of interleaving JVMs (2.2). The aggregate
-        # stays existing-but-empty when the agent caught nothing, so the report can
-        # tell "agent active, no requests" from "agent not used". agent-diag.log says
-        # which HttpClient/HttpService classes each JVM saw.
+        # walls it off from SESSION_DIR). aggregate_agent_logs copies the per-PID logs
+        # out in JVM start order with a per-PID banner; each file is internally
+        # consistent, so a four-line request block is never split (2.2), & the starter
+        # reads before the launcher instead of after the game JVMs. The aggregate stays
+        # empty when the agent caught nothing, so the report can tell "agent active, no
+        # requests" from "agent not used". agent-diag.log says which HttpClient/
+        # HttpService classes each JVM saw.
         if [ "$agent_active" = true ]; then
-            cat "${SANDBOX_DIR}/tmp/"http-intercept-*.log > "${SESSION_DIR}/http-intercept.log" 2>/dev/null \
+            aggregate_agent_logs "${SANDBOX_DIR}/tmp/http-intercept-*.log" \
+                > "${SESSION_DIR}/http-intercept.log" 2>/dev/null \
                 || : > "${SESSION_DIR}/http-intercept.log"
-            cat "${SANDBOX_DIR}/tmp/"agent-diag-*.log > "${SESSION_DIR}/agent-diag.log" 2>/dev/null || true
+            aggregate_agent_logs "${SANDBOX_DIR}/tmp/agent-diag-*.log" \
+                > "${SESSION_DIR}/agent-diag.log" 2>/dev/null || true
         fi
 
         # Take post-execution snapshot
@@ -1120,7 +1147,7 @@ report_network_capture() {
         agent)
             if [ -s "$ilog" ]; then
                 # State 1: agent active, log has entries.
-                printf "_Mode: Java agent, in-process after TLS decrypt. Starter JVM only._\n\n"
+                printf "_Mode: Java agent, in-process after TLS decrypt. Every JVM except the game._\n\n"
                 printf "| Method | Host | Path |\n|--------|------|------|\n"
                 grep -E '^\[[0-9:.]+\] (GET|POST|PUT|HEAD|DELETE|PATCH|OPTIONS) ' "$ilog" \
                     | sed -E 's/^\[[0-9:.]+\] //' \
@@ -1140,7 +1167,7 @@ report_network_capture() {
             else
                 # State 2: agent active, log empty.
                 printf "_Mode: Java agent active, but it logged no HTTP requests._\n"
-                printf "_TLauncher may route through a HttpClient5 class the matcher misses (shaded or relocated), or made no outbound HTTP. Check_ \`agent-diag.log\` _for the classes each JVM saw; see_ \`AGENTS.md\` _Known gaps._\n\n"
+                printf "_TLauncher may route through an HTTP class the matcher misses, or a hook may have failed to bind, or it made no outbound HTTP. Check_ \`agent-diag.log\` _for each JVM: a_ \`SAW\` _line names a class the agent found, a missing_ \`HOOKED\` _or an_ \`ERROR\` _line says the hook did not take. See_ \`AGENTS.md\` _Known gaps._\n\n"
             fi
             ;;
         mitmproxy)
@@ -1692,10 +1719,11 @@ usage() {
     printf "                           starts (starter, re-exec, embedded JRE), & captures\n"
     printf "                           HTTP/HTTPS at the application layer where the payload is\n"
     printf "                           plain text. No CA trust needed. It self-disables on the\n"
-    printf "                           Minecraft JVM (not the audit target) & hooks HttpClient5's\n"
-    printf "                           InternalHttpClient plus TLauncher's own HttpServiceImpl;\n"
-    printf "                           a shaded HttpClient5 copy still slips the name matcher, so\n"
-    printf "                           check ${CYAN}agent-diag.log${NC} if the capture is empty. Writes one\n"
+    printf "                           Minecraft JVM (not the audit target) & hooks the\n"
+    printf "                           InternalHttpClient of both HttpClient families (4.x in the\n"
+    printf "                           starter, 5.x in the launcher) plus TLauncher's own\n"
+    printf "                           HttpServiceImpl; a class the name matcher misses still\n"
+    printf "                           slips, so check ${CYAN}agent-diag.log${NC} if empty. Writes one\n"
     printf "                           log per JVM (aggregated to http-intercept.log) & a\n"
     printf "                           'Network payload capture' report section. Each JVM prints a\n"
     printf "                           'Picked up JAVA_TOOL_OPTIONS' line to stderr; that is kept.\n"
