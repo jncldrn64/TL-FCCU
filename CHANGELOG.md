@@ -4,6 +4,33 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.14 — 2026-07-22
+
+ROADMAP Phase 1, third pass: make the loaders agree. The v2.13 hook bound, then threw
+before it logged. Phase 1 stays `in progress`; the capture is still the author's real
+session.
+
+### Fixed
+- `IllegalAccessError` across the classloader boundary. v2.13 appended the agent jar to
+  the bootstrap search so the inlined `Advice` bodies could reach the helpers, but
+  `premain` runs in the app loader, and a class in one loader cannot touch a
+  package-private member of the same-named class in another loader (they are different
+  runtime packages). The real session threw `AgentLogger is in unnamed module of loader
+  'bootstrap'; TLHttpAgent is in unnamed module of loader 'app'` & logged nothing. The
+  helpers, & the members crossed at that boundary (`AgentLogger.init`/`diag`/`close`/
+  `logBlock`, `HttpTap.clientCall`/`serviceCall`), are now public. Each helper is its own
+  top-level class in its own file, so there is no nest host to resolve twice across the
+  two loaders; `scripts/build-agent.sh` compiles the directory instead of one file.
+- The game-JVM self-disable now runs BEFORE the bootstrap append, not after. On the Forge
+  JVM the old order put Byte Buddy & its ASM on the bootstrap classpath, ahead of Forge's
+  own ASM, before the agent bowed out. `premain` now reads `sun.java.command` first &, on
+  a game JVM, returns without appending or loading any helper. The "skipped" diag line is
+  written with a direct file append instead of `AgentLogger`, since the helper is
+  deliberately not bootstrap-visible on that path.
+
+### Changed
+- `VERSION` bumped 2.13 to 2.14 to match this section.
+
 ## v2.13 — 2026-07-22
 
 ROADMAP Phase 1, second half: make the hook bind. The first real session (v2.12) loaded
