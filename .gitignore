@@ -3,3 +3,4 @@ __pycache__/
 scripts/.deps/
 scripts/.build/
 scripts/tl-http-agent.jar
+scripts/tl-http-bootstrap.jar

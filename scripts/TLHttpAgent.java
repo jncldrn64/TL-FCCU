@@ -13,23 +13,29 @@
  * back), and its failure drags the whole delegation signature down. Advice injects its
  * body inline instead, and works on inherited & overloaded methods.
  *
- * WHY the helpers are public & on the bootstrap classpath: an Advice body is copied INTO
- * the target class, so every class it names has to be visible to the target's own
- * classloader. TLauncher loads the targets from its own jars, through classloaders that
- * need not be children of the agent's. Appending the agent jar to the bootstrap search
- * (the ancestor of every loader) before the first reference to a helper makes parent-
- * first delegation define AgentLogger, HttpTap & the rest once, in the bootstrap loader.
- * But premain itself runs in the app loader, and a class in one loader can't reach a
- * package-private member of the same-named class in another loader (they are different
- * runtime packages): that is the IllegalAccessError the second real session hit. So the
- * helpers, & the members crossed at that boundary, are public. Each helper is its own
- * top-level class, not a nested one, so there is no nest host to resolve twice across the
- * two loaders.
+ * WHY two jars: an Advice body is copied INTO the target class, so every class it names
+ * has to be visible to the target's own classloader. TLauncher loads the targets from its
+ * own jars, through classloaders that need not be children of the agent's. So the classes
+ * the inlined bodies touch (AgentLogger, HttpTap, Reflect) ship in a SEPARATE jar,
+ * tl-http-bootstrap.jar, appended to the bootstrap search (the ancestor of every loader).
+ * Byte Buddy is NOT in it: appending the whole fat jar duplicated Byte Buddy on both the
+ * app & the bootstrap loader, and .with(new DiagListener()) then bound two different
+ * AgentBuilder$Listener classes, a LinkageError the third real session hit. This jar,
+ * tl-http-agent.jar, keeps TLHttpAgent, DiagListener, HttpAdvice, ServiceAdvice & Byte
+ * Buddy, all in the app loader, so Byte Buddy exists once & the Listener binds. HttpAdvice
+ * & ServiceAdvice need not be on the bootstrap: Byte Buddy only reads their bytecode at
+ * instrumentation time, it never loads them into the target.
+ *
+ * WHY the helpers are public: premain runs in the app loader while AgentLogger & HttpTap
+ * load from bootstrap, and a class in one loader can't reach a package-private member of
+ * the same-named class in another loader (different runtime packages): that was an earlier
+ * IllegalAccessError. So the helpers, & the members crossed at that boundary, are public.
+ * Each helper is its own top-level class, not a nested one, so there is no nest host to
+ * resolve twice across the two loaders.
  *
  * JAVA_TOOL_OPTIONS loads this into every JVM TLauncher starts, so it self-disables on
- * the Minecraft/mod JVM (not the audit target) BEFORE it touches the bootstrap classpath,
- * so it never forces Byte Buddy & its ASM ahead of Forge's own ASM there. It writes one
- * log per process (PID in the name); run.sh aggregates them in start order.
+ * the Minecraft/mod JVM (not the audit target) BEFORE it touches the bootstrap classpath.
+ * It writes one log per process (PID in the name); run.sh aggregates them in start order.
  *
  * Third-party: the fat JAR bundles Byte Buddy 1.14.18 (net.bytebuddy:byte-buddy),
  * Apache License 2.0. scripts/build-agent.sh adds a NOTICE for it to the JAR.
@@ -68,18 +74,17 @@ public class TLHttpAgent {
         }
         // Decide whether to instrument BEFORE touching the bootstrap classpath or loading
         // any helper. JAVA_TOOL_OPTIONS loads us into every JVM, Minecraft & Forge
-        // included. The game is not the audit target, and appending our fat JAR (Byte
-        // Buddy + ASM) to the bootstrap loader there would put our ASM ahead of Forge's
-        // own. So self-disable first, & record the skip with a plain file write, not the
-        // AgentLogger helper (which we have deliberately not made bootstrap-visible yet).
+        // included. The game is not the audit target, so self-disable first & record the
+        // skip with a plain file write, not the AgentLogger helper (which we have
+        // deliberately not made bootstrap-visible yet on this path).
         String cmd = System.getProperty("sun.java.command", "");
         if (isGameJvm(cmd)) {
             writeSkippedNote(dir, cmd);
             return;
         }
-        // Now, & only now, put the helpers on the bootstrap classpath, before the first
-        // reference to any of them.
-        appendSelfToBootstrap(inst);
+        // Now, & only now, put the bootstrap helpers on the bootstrap classpath, before
+        // the first reference to any of them.
+        appendBootstrapJar(inst);
         try {
             AgentLogger.init(dir);
         } catch (Throwable t) {
@@ -119,18 +124,25 @@ public class TLHttpAgent {
         }
     }
 
-    // Append our own jar to the bootstrap search. Best-effort: if it fails, the agent
-    // still runs, it just can't reach helpers from a foreign target loader, & those
-    // Advice bodies suppress their own throwables, so TLauncher is never broken.
-    private static void appendSelfToBootstrap(Instrumentation inst) {
+    // Append the SEPARATE tl-http-bootstrap.jar (AgentLogger/HttpTap/Reflect only, no Byte
+    // Buddy) to the bootstrap search, so the inlined Advice bodies reach those helpers from
+    // any loader. We do NOT append our own jar: it carries Byte Buddy, & duplicating that
+    // on the bootstrap loader triggered the AgentBuilder$Listener LinkageError. The
+    // bootstrap jar sits next to ours; run.sh copies both into the sandbox. Best-effort:
+    // if it's missing, the Advice bodies suppress their own throwables, so TLauncher is
+    // never broken; premain's own AgentLogger use would then fail & disable capture.
+    private static void appendBootstrapJar(Instrumentation inst) {
         try {
             CodeSource cs = TLHttpAgent.class.getProtectionDomain().getCodeSource();
             if (cs == null || cs.getLocation() == null) {
                 return;
             }
-            File jar = new File(cs.getLocation().toURI());
-            if (jar.isFile()) {
-                inst.appendToBootstrapClassLoaderSearch(new JarFile(jar));
+            File self = new File(cs.getLocation().toURI());
+            File boot = new File(self.getParentFile(), "tl-http-bootstrap.jar");
+            if (boot.isFile()) {
+                inst.appendToBootstrapClassLoaderSearch(new JarFile(boot));
+            } else {
+                System.err.println("[tl-http-agent] bootstrap jar not found next to agent jar: " + boot);
             }
         } catch (Throwable t) {
             System.err.println("[tl-http-agent] bootstrap append failed: " + t);
