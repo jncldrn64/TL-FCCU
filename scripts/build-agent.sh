@@ -16,7 +16,9 @@ BB_URL="https://search.maven.org/remotecontent?filepath=net/bytebuddy/byte-buddy
 # SHA256 verified against Maven Central's published SHA1 (0081e9b9...20944626e6757b5950676af901c2485).
 BB_SHA256="52117af1696a53aa77c131353074ada25ccbdf2df511f2af33fad6704fa95104"
 OUT_JAR="${SCRIPT_DIR}/tl-http-agent.jar"
-SRC="${SCRIPT_DIR}/TLHttpAgent.java"
+# The agent is several public top-level classes (one per file): TLHttpAgent plus its
+# helpers. They compile together; javac resolves the cross-references within scripts/.
+SRC_GLOB="${SCRIPT_DIR}/*.java"
 BUILD="${SCRIPT_DIR}/.build"
 
 # 1. javac is required (default-jdk). The runtime JRE alone can't compile.
@@ -37,15 +39,18 @@ if [ ! -f "$BB_JAR" ]; then
     echo "Byte Buddy ${BB_VER} downloaded and verified."
 fi
 
-# 3. Skip the build if the JAR is already newer than the source.
-if [ -f "$OUT_JAR" ] && [ "$OUT_JAR" -nt "$SRC" ]; then
-    echo "tl-http-agent.jar is up to date."
-    exit 0
+# 3. Skip the build if the JAR is newer than every agent source.
+if [ -f "$OUT_JAR" ]; then
+    newer="$(find "$SCRIPT_DIR" -maxdepth 1 -name '*.java' -newer "$OUT_JAR")"
+    if [ -z "$newer" ]; then
+        echo "tl-http-agent.jar is up to date."
+        exit 0
+    fi
 fi
 
-# 4. Compile against Byte Buddy only (the agent reads HttpClient5 via reflection).
+# 4. Compile against Byte Buddy only (the agent reads HttpClient via reflection).
 rm -rf "$BUILD" && mkdir -p "$BUILD/classes"
-javac -cp "$BB_JAR" -source 11 -target 11 -d "$BUILD/classes" "$SRC"
+javac -cp "$BB_JAR" -source 11 -target 11 -d "$BUILD/classes" $SRC_GLOB
 
 # 5. Explode Byte Buddy into the classes dir (this is what makes it a fat JAR).
 #    Drop the source manifest & any signatures; ours replaces them below.
