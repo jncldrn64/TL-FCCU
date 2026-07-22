@@ -17,7 +17,7 @@ Status values: `pending`, `in progress`, `closed (YYYY-MM-DD)`.
 
 ## Phase 0: the report stops lying
 
-Status: `pending`
+Status: `closed (2026-07-22)`
 
 Objective: the output describes its own state with no false claims, & a regression
 net proves it without launching TLauncher.

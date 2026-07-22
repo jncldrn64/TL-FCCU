@@ -123,9 +123,11 @@ regression check, which flagged `advancedrepository.net`, `securelogger.net`,
 `securelogger.top`, `ruzone.securelogger.top`, & `repo.tl.vg` as a new domain; that
 comes from parsing `tlauncher.log`, not from the agent.
 
-2026-07-22: this doc PR advances the CHANGELOG to v2.10 but leaves `VERSION="2.9"`,
-because the Displayed-version rule forbids bumping in a doc-only PR. The desfase is
-intentional & closes in ROADMAP Phase 0, which audits `usage()` & the version string.
+2026-07-22: closed. Phase 0 is a code PR, so it bumped `VERSION` to 2.11 to match the
+new CHANGELOG section; `-h` & the CHANGELOG are single-source again. The `usage()`
+audit found every documented flag present in the parser & no behavior mismatch; the
+stale "WHAT'S NEW IN v2.5" heading is gone, & the `-P` help no longer overpromises
+("no matter which HTTP library") now that the shaded-class miss is known.
 
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or

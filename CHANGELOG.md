@@ -4,6 +4,36 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.11 — 2026-07-22
+
+ROADMAP Phase 0: the report stops lying.
+
+### Fixed
+- The report no longer claims capture was off during an active `-P` session. It used
+  to infer the mode from the absence of `mitm.flow`; with the agent active mitmproxy
+  is skipped, so no flow exists, & the old code printed "Payload capture was
+  **disabled** ... run without `-P/--proxy`" one line after saying the agent was
+  active. The capture mode is now a recorded datum (`SESSION_DIR/capture-mode`,
+  written by `run_sandboxed`), & one `report_network_capture` section reads it &
+  prints exactly one of four states: agent with data, agent empty, mitmproxy
+  fallback, or no capture. No section claims anything about an option the user did
+  use; missing data says so.
+- `usage()` no longer heads its news block "WHAT'S NEW IN v2.5" while VERSION had
+  moved on. It points at the CHANGELOG instead, so it can't go stale on a bump. The
+  `-P` help stopped promising capture "no matter which HTTP library" now that the
+  shaded-class miss is documented.
+
+### Added
+- `tests/`: a regression net (`report-states.sh` plus four synthetic session
+  fixtures) that drives the real report through `run.sh -R` for each capture state &
+  checks the state's phrase is present while the other three are absent. That second
+  half is what would have caught the lying report. 4/4 states pass. No network, no
+  sudo, no TLauncher.
+
+### Changed
+- `VERSION` bumped 2.9 to 2.11 to match this section; the desfase noted 2026-07-22 in
+  AGENTS.md Known gaps is closed.
+
 ## v2.10 — 2026-07-22
 
 Documentation only. No `run.sh` or `scripts/` change.
