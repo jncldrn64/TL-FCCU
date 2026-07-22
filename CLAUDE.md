@@ -1,9 +1,10 @@
 # CLAUDE.md: project standard
 
 - Read AGENTS.md first (purpose, hard constraints, repo map, known gaps), then
-  DESIGN.md before writing code. This file just pins the doc/format standard.
-- Documentation lives at repo root: AGENTS.md, DESIGN.md, CHANGELOG.md. Do NOT
-  create a new doc file without asking me first (this already lives in AGENTS.md).
+  DESIGN.md before writing code, & ROADMAP.md when the work belongs to a phase.
+  This file just pins the doc/format standard.
+- Documentation lives at repo root: AGENTS.md, DESIGN.md, CHANGELOG.md, ROADMAP.md.
+  Do NOT create a new doc file without asking me first (this already lives in AGENTS.md).
 - Decisions and open items go in the "Known gaps" section of AGENTS.md, one place,
   append-only, dated. Never scatter them.
 - CHANGELOG.md: Keep a Changelog. ONE file that grows by section, never one per round.
