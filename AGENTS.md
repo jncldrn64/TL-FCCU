@@ -99,8 +99,9 @@ with `-v -M -a -P` against real TLauncher & read `http-intercept.log`.
 2026-07-22: the project moved from loose rounds to numbered phases. Until now each
 feature landed as its own round with no plan tying them together; from here the work
 runs by phases with a written acceptance criterion each, tracked in `ROADMAP.md`. The
-blueprint is the MIDI-Scale-Trainer repo, copied for its phase discipline, not its
-folder structure.
+blueprint is the MIDI-Scale-Trainer repo, the author's other project & a separate
+repository whose documentation standard this one shares, copied for its phase
+discipline, not its folder structure.
 
 2026-07-22: the agent ran against real TLauncher (session_20260721_234406, `-v -M -a
 -m -P`, agent compiled) & captured zero. This supersedes the earlier "no real run"
