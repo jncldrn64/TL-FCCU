@@ -4,6 +4,34 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.21 — 2026-07-23
+
+ROADMAP Phase 2 closed: cut what can't work. The mitmproxy fallback is gone.
+
+### Removed
+- The mitmproxy fallback for `-P`. It set the JVM proxy props & ran an on-host
+  `mitmdump`, but TLauncher's traffic goes through Apache HttpClient (4.x & 5.x), which
+  ignores those props, so it captured nothing of the audit target & never ran end to end.
+  Removed: `monitor_mitmproxy`, the `HTTP(S)_PROXY` env injection, the `-Dhttp.proxyHost`
+  fallback java opts, `MITM_ALLOWLIST`, the report's mitmproxy branch, `_report_mitm_flow`,
+  the `mitmdump` dependency entry, & `scripts/mitm_report.py`. `-P` is agent-only; the
+  preflight disables it when the agent isn't built. The decision (remove vs degrade to a
+  label) went to removal & is dated in AGENTS.md Known gaps.
+- The `[PORT]` argument on `-P/--proxy`. It only ever set the mitmproxy listen port; the
+  agent uses no port, so a documented argument that did nothing is gone. `-P/--proxy` is
+  now a plain flag.
+
+### Changed
+- `capture-mode` records only `agent` or `off`. The report's network-capture section
+  drops to three live states (agent with data, agent empty, off) plus a legacy branch: a
+  session that recorded the removed `mitmproxy` mode renders as on-disk facts, promising
+  nothing. `usage()`, the config summary (`Capture: Java agent` / `Off`), `--check-deps`,
+  & the header comments no longer mention mitmproxy. `DESIGN.md` & the AGENTS.md repo map
+  drop their `mitm_report.py` references. `VERSION` jumped 2.16 to 2.21 to match this
+  section, closing the doc-only desfase carried since v2.17.
+- `tests/report-states.sh`: the `proxy-fallback` fixture became `legacy-mitm`, asserting a
+  removed-mode session promises no capture. Still green, now 5/5.
+
 ## v2.20 — 2026-07-23
 
 Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.

@@ -30,10 +30,10 @@ any new file the script reads or writes.
 
 The script never calls `sudo`, never asks for a password, & never needs a
 capability beyond what `firejail` drops on its own. An optional dependency like
-`mitmdump` gets probed with `command -v` & degraded with a one-line manual install
-hint. A printed line that reads `pip install mitmproxy --break-system-packages` is
-an instruction for the user to run by hand; that's allowed. The script running it
-is not.
+`javac` (for the one-time agent build) gets probed with `command -v` & degraded
+with a one-line manual install hint. A printed line that reads `apt install
+default-jdk` is an instruction for the user to run by hand; that's allowed. The
+script running it is not.
 
 ## 3. Race conditions get designed out, not patched later
 
@@ -119,6 +119,7 @@ Every resource the script creates has a written teardown or regeneration path, &
 5.7 KB; a `files.log` from the same family of sessions reached 51 MB & 178,756
 MODIFY events in about 30 minutes. The report never carries that weight. It
 summarizes: one line per item, bodies truncated at 2048 bytes, lists capped by
-`head`. A heavy helper like `scripts/mitm_report.py` lives in its own file so it
-doesn't bloat `run.sh`, & it degrades to a one-line Markdown note instead of
-crashing the report when `mitmproxy` or `python3` is missing.
+`head`. A report section degrades to a one-line Markdown note instead of crashing
+when its input is missing: the network-capture section states on-disk facts &
+claims no cause rather than guessing when a session's log is empty or its mode is
+one no longer supported.
