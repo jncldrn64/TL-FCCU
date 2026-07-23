@@ -4,6 +4,23 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.22 — 2026-07-23
+
+Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
+
+### Added
+- `DESIGN.md` principle 9, "One program, one file". `run.sh` is one file on purpose &
+  none of the eight existing principles said why, so a "should this be `lib/*.sh`?"
+  question had nothing written to answer with. The reasons, each checked against the
+  repo: an audit tool is read end to end, so chasing `source` across files costs the
+  reader more than it saves; bash has no namespaces, so the per-area prefixes (`log_`,
+  `deps_`, `kill_`) already do the isolation splitting would claim to; a `lib/` layout
+  adds a missing-library-at-launch failure mode the single file doesn't have; & the
+  tool is copy-and-run, not installed. Stated as a property, not a line count: the
+  condition that would move a piece out is that it becomes its own separately-audited
+  program, the way `scripts/` (the Java agent, `build-agent.sh`) already is. Nothing in
+  the launcher's own logic currently is.
+
 ## v2.21 — 2026-07-23
 
 ROADMAP Phase 2 closed: cut what can't work. The mitmproxy fallback is gone.

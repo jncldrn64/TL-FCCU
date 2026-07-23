@@ -123,3 +123,30 @@ summarizes: one line per item, bodies truncated at 2048 bytes, lists capped by
 when its input is missing: the network-capture section states on-disk facts &
 claims no cause rather than guessing when a session's log is empty or its mode is
 one no longer supported.
+
+## 9. One program, one file
+
+`run.sh` is one file (near 2,000 lines, 47 prefixed functions today) & it stays that
+way on purpose. The reasons, not a line count:
+
+- A security audit tool gets read end to end by whoever audits it. That is the point
+  of it. Chasing a `source` across `lib/*.sh` costs the reader more than the
+  navigation saves; the whole thing has to be held in one head, so it lives in one
+  file.
+- Bash has no namespaces. Splitting buys navigation, not isolation. The per-area
+  function prefixes (`log_`, `deps_`, `kill_`, `monitor_`, `report_`) already do the
+  isolation a reader needs, in one file, found with `grep`.
+- Splitting adds a failure mode that does not exist today. The script resolves its own
+  `SCRIPT_DIR` only to find the `scripts/` helpers; a `lib/` layout would make it load
+  libraries that can be missing, moved, or stale, & fail at launch on a machine where
+  the copy came over incomplete.
+- Distribution is copy-and-run, not install. `run.sh` lands on a machine & runs; no
+  package manager places its parts.
+
+This is a property, not a tolerance: end-to-end auditability does not degrade at N
+lines, so a threshold would be decoration. What the boundary tracks is whether a piece
+is its own program. The Java agent & `build-agent.sh` live in `scripts/` because each
+is a separate program, built & audited on its own terms, not a slice of the launcher
+carved out for navigation. So the condition that would move something out of `run.sh`
+is that: it becomes a program in its own right, audited separately, the way `scripts/`
+already is. Nothing in the launcher's own logic currently is.
