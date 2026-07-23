@@ -4,6 +4,20 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.19 — 2026-07-23
+
+Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
+
+### Changed
+- `CLAUDE.md` writes down the sibling-repository anchoring policy the repo already
+  follows. A reference to a sibling is anchored, not deleted: identified inline on first
+  mention in each file (which is why `ROADMAP.md` & `AGENTS.md` name MIDI-Scale-Trainer
+  where they first cite it, PR #18), left bare on later mentions in the same file, & left
+  as-is in CHANGELOG history. The bullet names the siblings so a reader who cloned only
+  this repo can place them: MIDI-Scale-Trainer, TdeA-Mimos-Website, TdeA-Mimos-API-REST.
+  The two TdeA-Mimos repos already carried the written rule; this closes the split across
+  the four projects that all follow it.
+
 ## v2.18 — 2026-07-23
 
 Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
