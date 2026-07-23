@@ -10,8 +10,9 @@ runs, then the binaries get archived. Phases don't get reordered for convenience
 
 Work now moves by numbered phases, not loose rounds. Each phase carries a one-line
 objective, the scope it touches, a verifiable acceptance criterion, its blockers,
-& a status. The blueprint for this discipline is the MIDI-Scale-Trainer repo; this
-copies its phase habit, not its folder layout.
+& a status. The blueprint for this discipline is the MIDI-Scale-Trainer repo, the
+author's other project & a separate repository whose documentation standard this one
+shares; this copies its phase habit, not its folder layout.
 
 Status values: `pending`, `in progress`, `closed (YYYY-MM-DD)`.
 

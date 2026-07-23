@@ -4,6 +4,19 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.17 — 2026-07-23
+
+Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
+
+### Changed
+- `ROADMAP.md` & `AGENTS.md` now identify the MIDI-Scale-Trainer repo on its first
+  mention in each file: the author's other project, a separate repository whose
+  documentation standard this one shares. Both cited it as the blueprint for the phase
+  discipline without saying what it was, so a reader who cloned only this repo had no way
+  to place it. Later mentions in the same file (ROADMAP's fixtures line, the
+  reconciliation note in v2.8 below) stay as they are, & the qualifier that this repo
+  copies the phase habit, not the folder layout, is unchanged.
+
 ## v2.16 — 2026-07-22
 
 ROADMAP Phase 1 closed. The agent sees.
