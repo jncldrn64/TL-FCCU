@@ -4,6 +4,24 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.20 — 2026-07-23
+
+Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
+
+### Removed
+- The sibling-repository list & the "anchored, not deleted" policy from `CLAUDE.md`
+  (added in `v2.19`). Naming other repos there implied a dependency this repo does not
+  have, & the same pattern in a sibling repo produced a stale claim that had to be fixed.
+
+### Changed
+- `CLAUDE.md` now says the opposite in one bullet: this repo does not describe other
+  repos. Another repo's name may appear as historical provenance, where a convention came
+  from, never as operational information; no document here depends on another repo to be
+  understood or worked on. `ROADMAP.md` & `AGENTS.md` are left alone: their one-clause
+  mentions of MIDI-Scale-Trainer are provenance & an analogy inside a task that is
+  entirely this repo's own, they say nothing about that repo's structure, & they don't go
+  stale. CHANGELOG history is left alone.
+
 ## v2.19 — 2026-07-23
 
 Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
