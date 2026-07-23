@@ -9,13 +9,13 @@
 #     monitor filters noise & the process monitors log first-seen lines only.
 #   - INCIDENT_REPORT.md aggregates the signal into about 5.7 KB per session.
 #   - Retention keeps the log directory off the 2 GB it once reached on its own.
-#   - Opt-in HTTP(S) capture through mitmproxy, off by default.
+#   - Opt-in HTTP(S) capture through an in-process Java agent, off by default.
 #   - A domain regression check against a baseline the user curates.
 #
 # HARD CONSTRAINT: this script never calls sudo, never asks for a password, &
-# never needs a capability beyond what firejail drops on its own. Installing
-# mitmproxy or sqlite3 by hand, outside this script, is the user's job; the
-# script itself stays unprivileged.
+# never needs a capability beyond what firejail drops on its own. Installing a
+# dependency by hand, outside this script, is the user's job; the script itself
+# stays unprivileged.
 #
 # CONVENTIONS: DESIGN.md sits next to this script & holds the style guide. XDG
 # paths everywhere, zero sudo, flock in the same scope, background jobs tracked
@@ -23,9 +23,9 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.16"
+VERSION="2.21"
 
-# Directory holding this script, used to find helpers like scripts/mitm_report.py.
+# Directory holding this script, used to find helpers like scripts/build-agent.sh.
 # Resolved once & survives being called through a symlink.
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 
@@ -80,8 +80,7 @@ REPORT_SESSION=""        # -R DIR: (re)generate INCIDENT_REPORT.md for a session
 CLEANUP_LOGS_FLAG=false   # -c: run log retention, don't launch
 CLEANUP_DAYS=7           # default retention window (days)
 LOG_SIZE_CAP_MB=500      # delete old compressed sessions once dir exceeds this
-PROXY_ENABLED=false      # -P: opt-in mitmproxy HTTP(S) capture
-PROXY_PORT=8080          # default mitmproxy listen port
+PROXY_ENABLED=false      # -P: opt-in in-process Java agent HTTP(S) capture
 SAVE_BASELINE_SESSION="" # -B DIR: derive baseline files from a clean session, then exit
 CHECK_DEPS=false         # --check-deps: report dependency state, then exit
 
@@ -105,7 +104,6 @@ DEPS_CATALOG=(
     "inotifywait|inotify-tools|system|no|apt|filesystem monitor (-M)"
     "ss|iproute2|system|no|apt|network monitor (-M)"
     "pgrep|procps|system|no|apt|orphan-proof cleanup (-M)"
-    "mitmdump|mitmproxy|python|no|pip|HTTP(S) capture (-P) fallback"
     "javac|default-jdk|system|no|apt|build the Java HTTP agent (one-time)"
     "wget|wget|system|no|apt|download Byte Buddy for agent build"
 )
@@ -140,13 +138,6 @@ NOISE_PATTERNS=(
 )
 # Pre-joined into a single ERE; exported so the (separate-process) monitors see it.
 NOISE_REGEX="$(IFS='|'; printf '%s' "${NOISE_PATTERNS[*]}")"
-
-# Hosts considered benign for the mitmproxy summary (full request bodies are only
-# surfaced for hosts NOT in this list, or for non-empty POST/PUT bodies).
-MITM_ALLOWLIST=(
-    "tlauncher.org" "fastrepo.org" "tl.vg" "mojang.com" "forgecdn.net"
-    "curseforge.com" "minecraft.net" "microsoft.com" "live.com" "xboxlive.com"
-)
 
 # Known-risky domain substrings for the regression check (Task 3). A domain that
 # matches any of these gets flagged hard in INCIDENT_REPORT.md even when it's
@@ -264,7 +255,7 @@ die() {
 # Recursively kill a process & all of its descendants.
 #
 # WHY: each background monitor is a bash shell that spawns a long-running leaf
-# tool (inotifywait -m, ss, ps, mitmdump). Kill only the shell & the leaf gets
+# tool (inotifywait -m, ss, ps). Kill only the shell & the leaf gets
 # reparented to init, where it keeps writing to the inherited log fd. That's how
 # one orphaned inotifywait grew a session's files.log to 51 MB. Killing children
 # first, depth-first, closes the reparent race.
@@ -294,7 +285,6 @@ find_orphan_pids() {
     {
         pgrep -f "tlauncher-mon-"                          2>/dev/null || true
         pgrep -f "inotifywait -m -r.*tlauncher-sandbox"    2>/dev/null || true
-        pgrep -f "mitmdump .*tlauncher-logs"               2>/dev/null || true
     } | sort -un | grep -vE "^(${excl})\$" || true
 }
 
@@ -510,18 +500,6 @@ build_firejail_params() {
         params+=(--net=none)
     fi
 
-    # Proxy capture (-P): expose HTTP(S)_PROXY to the non-JVM helpers inside the
-    # sandbox. The JVM ignores these env vars by default, so the JVM side is
-    # handled with -Dhttp.proxyHost/-Dhttps.proxyHost on the java command (see
-    # run_sandboxed). Without --net the sandbox shares the host network namespace,
-    # so 127.0.0.1:PORT reaches the mitmdump running on the host.
-    if [ "$PROXY_ENABLED" = true ]; then
-        params+=(--env=HTTP_PROXY=http://127.0.0.1:${PROXY_PORT})
-        params+=(--env=HTTPS_PROXY=http://127.0.0.1:${PROXY_PORT})
-        params+=(--env=http_proxy=http://127.0.0.1:${PROXY_PORT})
-        params+=(--env=https_proxy=http://127.0.0.1:${PROXY_PORT})
-    fi
-
     # Blacklist protected directories
     for dir in "${PROTECTED_DIRS[@]}"; do
         [ -d "${REAL_HOME}/${dir}" ] && params+=(--blacklist="${REAL_HOME}/${dir}")
@@ -731,28 +709,6 @@ monitor_suspicious_dirs() {
     '
 }
 
-monitor_mitmproxy() {
-    # -P/--proxy: opt-in HTTP(S) capture, optional. No mitmdump means the flag
-    # turns off for this run & the launch continues. A missing optional dependency
-    # never aborts the whole thing.
-    if ! command -v mitmdump >/dev/null 2>&1; then
-        log_warn "mitmdump not found; -P/--proxy disabled for this run."
-        log_warn "Install manually (no sudo for the script itself): pip install mitmproxy --break-system-packages"
-        PROXY_ENABLED=false
-        return 1
-    fi
-    if [ "$OFFLINE_MODE" = true ]; then
-        log_warn "-P/--proxy with -n/--offline: sandbox has no network, nothing will be captured."
-    fi
-    log_msg "Starting mitmproxy capture on 127.0.0.1:${PROXY_PORT} (flow → mitm.flow)"
-    # exec replaces the tag-bash with mitmdump; $! stays valid for kill_tree, &
-    # -K still matches it through the "mitmdump .*tlauncher-logs" pattern.
-    spawn_monitor "mitm" '
-        exec mitmdump -p "$PROXY_PORT" -w "$SESSION_DIR/mitm.flow" --flow-detail 1 \
-            > "$SESSION_DIR/mitm.log" 2>&1
-    '
-}
-
 # ==========================================
 # EXECUTION
 # ==========================================
@@ -765,9 +721,11 @@ run_sandboxed() {
     #
     # WHY a Java agent: TLauncher's requests go through Apache HttpClient (4.x in the
     # starter JVMs, 5.x in the launcher JVM), which ignores -Dhttp.proxyHost & the
-    # HTTP_PROXY env vars, so mitmproxy captured zero. The agent (scripts/TLHttpAgent.java,
-    # built into the gitignored fat JAR) hooks the request methods in-process, after TLS
-    # decrypt. It never modifies traffic. Without the JAR we fall back to mitmproxy.
+    # HTTP_PROXY env vars, so an on-host proxy captured zero. The agent
+    # (scripts/TLHttpAgent.java, built into the gitignored fat JAR) hooks the request
+    # methods in-process, after TLS decrypt. It never modifies traffic. It is the only
+    # -P backend now; the mitmproxy fallback that could not see HttpClient was removed
+    # (ROADMAP Phase 2). The preflight disables -P when the agent isn't built.
     #
     # WHY JAVA_TOOL_OPTIONS with ABSOLUTE paths (Phase 1): the starter forks two more
     # JVMs (the re-exec & the embedded JRE) from a different cwd, & a -javaagent on the
@@ -777,7 +735,6 @@ run_sandboxed() {
     # mounts SANDBOX_DIR at the real HOME, so bin/ & tmp/ live at ${REAL_HOME}/bin &
     # ${REAL_HOME}/tmp there. The agent self-disables on the Minecraft JVM & writes one
     # log per PID; run.sh aggregates them after the run.
-    local java_opts=""
     local agent_active=false
     local agent_env=()
     # Two jars: the -javaagent jar (Byte Buddy, app loader) & the bootstrap jar (logger
@@ -798,13 +755,14 @@ run_sandboxed() {
             agent_active=true
             log_verbose "  → Java agent active (all JVMs); logs → $(disp_path "${SESSION_DIR}/http-intercept.log")"
         else
-            java_opts="-Dhttp.proxyHost=127.0.0.1 -Dhttp.proxyPort=${PROXY_PORT} -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=${PROXY_PORT}"
-            log_warn "Java agent JARs not found. Build them once (works from any cwd):"
+            # The preflight already disables -P when the agent isn't built; this is a
+            # guard, not a fallback. There is no capture without the agent.
+            log_warn "Java agent JARs not found; -P produced no capture. Build them once:"
             log_warn "  bash $(disp_path "$SCRIPT_DIR")/scripts/build-agent.sh"
-            log_warn "Falling back to mitmproxy (env-proxy-aware traffic only; misses HttpClient5)."
+            PROXY_ENABLED=false
         fi
     fi
-    local java_cmd="java ${java_opts} -jar bin/TLauncher.jar"
+    local java_cmd="java -jar bin/TLauncher.jar"
 
     # The agent env rides on every JVM the sandbox starts (2.1). Each JVM prints
     # "Picked up JAVA_TOOL_OPTIONS: ..." to stderr; we accept that (a few lines that
@@ -816,15 +774,11 @@ run_sandboxed() {
 
     # Record the capture mode as a DATUM the report reads, instead of the report
     # guessing it from a file's absence (which made it claim "-P not used" during an
-    # active agent session). One word: agent, mitmproxy, or off. Pure report
-    # metadata; it changes nothing about what runs inside the sandbox. The fallback
-    # branch only runs when the preflight already confirmed mitmdump, so "mitmproxy"
-    # here is accurate.
+    # active agent session). One word: agent or off. Pure report metadata; it changes
+    # nothing about what runs inside the sandbox.
     if session_logging_active; then
         if [ "$agent_active" = true ]; then
             printf 'agent\n' > "${SESSION_DIR}/capture-mode"
-        elif [ "$PROXY_ENABLED" = true ]; then
-            printf 'mitmproxy\n' > "${SESSION_DIR}/capture-mode"
         else
             printf 'off\n' > "${SESSION_DIR}/capture-mode"
         fi
@@ -857,7 +811,7 @@ run_sandboxed() {
     flock -n 200 || die "TLauncher already running (lockfile exists)"
 
     # Export the handful of vars the (separate-process) monitors reference.
-    export SANDBOX_DIR SESSION_DIR SESSION_ID NOISE_REGEX PROXY_PORT SANDBOX_HOSTNAME
+    export SANDBOX_DIR SESSION_DIR SESSION_ID NOISE_REGEX SANDBOX_HOSTNAME
 
     if [ "$MONITOR_ENABLED" = true ]; then
         log_msg "Starting all monitors..."
@@ -871,12 +825,6 @@ run_sandboxed() {
 
         sleep 1
         log_msg "All monitors active (PIDs: ${MONITOR_PIDS[*]})"
-    fi
-
-    # mitmproxy only runs as the fallback: when the agent is handling -P there's
-    # nothing for it to do (HttpClient5 ignores the proxy anyway).
-    if [ "$PROXY_ENABLED" = true ] && [ "$agent_active" != true ]; then
-        monitor_mitmproxy || true
     fi
 
     # Start line, always printed: log_msg writes to stderr no matter the -v state.
@@ -1022,33 +970,6 @@ save_baseline() {
     fi
 }
 
-# Helper: summarize a mitmproxy flow via scripts/mitm_report.py, or a distinct note
-# at each degrade step. Only report_network_capture's mitmproxy branch calls this,
-# where -P WAS used, so there is no "run without -P" guess here anymore. The flow
-# parsing lives in its own file so the mitmproxy logic stays out of run.sh.
-_report_mitm_flow() {
-    local session="$1"
-    local flow="${session}/mitm.flow"
-    if [ ! -f "$flow" ]; then
-        printf "_No \`mitm.flow\` was written; mitmproxy started but recorded nothing._\n\n"
-        return 0
-    fi
-    if ! command -v python3 >/dev/null 2>&1; then
-        printf "_python3 not available to summarize; raw flow saved at \`mitm.flow\`._\n\n"
-        return 0
-    fi
-    local helper="${SCRIPT_DIR}/scripts/mitm_report.py"
-    if [ ! -f "$helper" ]; then
-        printf "_Helper \`scripts/mitm_report.py\` not found next to run.sh; raw flow at \`mitm.flow\`._\n\n"
-        return 0
-    fi
-    MITM_ALLOW="$(IFS=,; printf '%s' "${MITM_ALLOWLIST[*]}")" \
-    MITM_TRUNCATE="2048" \
-    python3 "$helper" "$flow" 2>/dev/null \
-        || printf "_Could not parse mitm.flow (is the mitmproxy python module installed?). Raw flow at \`mitm.flow\`._\n"
-    printf "\n"
-}
-
 # Markdown section: domain regression against the curated baseline (Task 3). Text
 # comparison only, no extra network & no outbound telemetry. It flags a first-seen
 # domain, & harder, any domain matching a known risk pattern even when baselined.
@@ -1153,11 +1074,13 @@ generate_summary() {
 
 # Markdown section: the network payload capture (Phase 0). The capture MODE is read
 # from a recorded datum (SESSION_DIR/capture-mode, written by run_sandboxed), not
-# guessed from a file's absence. The guess was the bug: with the agent active &
-# mitmproxy skipped, no mitm.flow existed, so the old report claimed "run without
-# -P" one line after saying the agent was active. Four states, each with a phrase
-# the other three don't share, so tests/ can assert exclusivity. Rule: no section
-# claims anything about an option the user did use; missing data says so, plainly.
+# guessed from a file's absence. The guess was the bug: with the agent active, no
+# proxy flow existed, so the old report claimed "run without -P" one line after
+# saying the agent was active. Three live states (agent with data, agent empty, off)
+# plus a legacy branch, each with a phrase the others don't share, so tests/ can
+# assert exclusivity. Rule: no section claims anything about an option the user did
+# use; missing data says so, plainly. The mitmproxy fallback was removed in Phase 2,
+# so a session that recorded `mitmproxy` is legacy & gets on-disk facts, no promise.
 report_network_capture() {
     local session="$1"
     local ilog="${session}/http-intercept.log"
@@ -1192,24 +1115,19 @@ report_network_capture() {
                 printf "_TLauncher may route through an HTTP class the matcher misses, or a hook may have failed to bind, or it made no outbound HTTP. Check_ \`agent-diag.log\` _for each JVM: a_ \`SAW\` _line names a class the agent found, a missing_ \`HOOKED\` _or an_ \`ERROR\` _line says the hook did not take. See_ \`AGENTS.md\` _Known gaps._\n\n"
             fi
             ;;
-        mitmproxy)
-            # State 4: fallback used, with its limit declared before the data.
-            printf "_Mode: mitmproxy fallback (agent JAR not built). It captures env-proxy-aware traffic only & misses HttpClient5, so it can show nothing even when TLauncher sent data._\n\n"
-            _report_mitm_flow "$session"
+        off)
+            # State 3: mode recorded as off; no capture backend ran this session.
+            printf "_Mode: no HTTP capture ran this session._\n"
+            printf "_To capture, build the agent (\`bash scripts/build-agent.sh\`) then run with \`-P\`._\n\n"
             ;;
         *)
-            if [ -n "$mode" ]; then
-                # State 3: mode recorded as off; no -P backend ran this session.
-                printf "_Mode: no HTTP capture ran this session._\n"
-                printf "_To capture, build the agent (\`bash scripts/build-agent.sh\`) then run with \`-P\`._\n\n"
-            else
-                # No recorded mode (session predates v2.10). State on-disk facts, invent no cause.
-                local il="absent" fl="absent"
-                [ -f "$ilog" ] && { [ -s "$ilog" ] && il="present, non-empty" || il="present, empty"; }
-                [ -f "$flow" ] && fl="present"
-                printf "_Capture mode not recorded (session predates v2.10); no cause claimed._\n"
-                printf "_On disk: \`http-intercept.log\` %s, \`mitm.flow\` %s._\n\n" "$il" "$fl"
-            fi
+            # Empty (session predates v2.10) or a mode no longer supported (the removed
+            # `mitmproxy` fallback). State on-disk facts, claim no cause & promise nothing.
+            local il="absent" fl="absent"
+            [ -f "$ilog" ] && { [ -s "$ilog" ] && il="present, non-empty" || il="present, empty"; }
+            [ -f "$flow" ] && fl="present"
+            printf "_Capture mode not recorded or no longer supported; no cause claimed._\n"
+            printf "_On disk: \`http-intercept.log\` %s, \`mitm.flow\` %s._\n\n" "$il" "$fl"
             ;;
     esac
 }
@@ -1657,7 +1575,7 @@ check_mozilla_directory() {
 
 cleanup() {
     # Stop monitors started in this run, reaping their whole process trees so no
-    # inotifywait/ss/ps/mitmdump leaf survives to write into old logs. The
+    # inotifywait/ss/ps leaf survives to write into old logs. The
     # EXIT/INT/TERM trap calls this too, say when the user hits Ctrl+C mid-session,
     # so it escalates TERM then KILL like stop_monitors instead of a single TERM
     # pass. A lone TERM can lose a leaf to a reparent race & leave the exact orphan
@@ -1735,13 +1653,12 @@ usage() {
     printf "  ${CYAN}without launching TLauncher. If several are given, the first wins.${NC}\n\n"
 
     printf "${YELLOW}NETWORK CAPTURE (opt-in, no sudo)${NC}\n"
-    printf "  ${BLUE}-P, --proxy [PORT]${NC}     Activate HTTP interception. Implies a session dir.\n"
-    printf "                           With ${CYAN}scripts/tl-http-agent.jar${NC} present: loads a Java\n"
-    printf "                           agent via JAVA_TOOL_OPTIONS into every JVM the sandbox\n"
-    printf "                           starts (starter, re-exec, embedded JRE), & captures\n"
-    printf "                           HTTP/HTTPS at the application layer where the payload is\n"
-    printf "                           plain text. No CA trust needed. It self-disables on the\n"
-    printf "                           Minecraft JVM (not the audit target) & hooks the\n"
+    printf "  ${BLUE}-P, --proxy${NC}            Activate HTTP interception. Implies a session dir.\n"
+    printf "                           Loads the Java agent via JAVA_TOOL_OPTIONS into every JVM\n"
+    printf "                           the sandbox starts (starter, re-exec, embedded JRE), &\n"
+    printf "                           captures HTTP/HTTPS at the application layer where the\n"
+    printf "                           payload is plain text. No CA trust needed. It self-disables\n"
+    printf "                           on the Minecraft JVM (not the audit target) & hooks the\n"
     printf "                           InternalHttpClient of both HttpClient families (4.x in the\n"
     printf "                           starter, 5.x in the launcher) plus TLauncher's own\n"
     printf "                           HttpServiceImpl; a class the name matcher misses still\n"
@@ -1749,13 +1666,9 @@ usage() {
     printf "                           log per JVM (aggregated to http-intercept.log) & a\n"
     printf "                           'Network payload capture' report section. Each JVM prints a\n"
     printf "                           'Picked up JAVA_TOOL_OPTIONS' line to stderr; that is kept.\n"
-    printf "                           Build the agent once, from the repo root (the dir\n"
-    printf "                           holding run.sh): ${CYAN}bash scripts/build-agent.sh${NC}\n"
-    printf "                           Without the agent JAR: falls back to mitmproxy on\n"
-    printf "                           127.0.0.1:PORT (default %d), which captures env-proxy-aware\n" "$PROXY_PORT"
-    printf "                           traffic only & is confirmed to miss HttpClient5. The\n"
-    printf "                           fallback needs 'mitmdump' & the JVM to trust its CA\n"
-    printf "                           (keytool import into a truststore); see DESIGN/AGENTS.\n\n"
+    printf "                           The agent is the only backend; -P is skipped if it isn't\n"
+    printf "                           built. Build it once, from the repo root (the dir holding\n"
+    printf "                           run.sh): ${CYAN}bash scripts/build-agent.sh${NC}\n\n"
 
     printf "${YELLOW}SECURITY CHECKS${NC}\n"
     printf "  ${BLUE}-m, --mozilla${NC}          Add a .mozilla check to the analysis output\n"
@@ -1842,13 +1755,7 @@ main() {
                 ;;
             -P|--proxy)
                 PROXY_ENABLED=true
-                # Optional numeric [PORT] argument.
-                if [ -n "${2:-}" ] && [[ "${2:-}" =~ ^[0-9]+$ ]]; then
-                    PROXY_PORT="$2"
-                    shift 2
-                else
-                    shift
-                fi
+                shift
                 ;;
             -B|--save-baseline)
                 if [ -z "${2:-}" ]; then
@@ -1914,15 +1821,14 @@ main() {
         exit $?
     fi
 
-    # Proxy preflight: -P needs one of two backends. The Java agent (its built JAR)
-    # is the real one; mitmproxy is the fallback. Only disable -P when NEITHER is
-    # present, otherwise the fallback would inject proxy settings pointing at a dead
-    # port & break TLauncher's networking. With the agent JAR, mitmdump isn't needed.
+    # Proxy preflight: -P needs the Java agent, its only backend. Both jars must be
+    # built (the -javaagent jar & the bootstrap jar premain appends). Missing either,
+    # disable -P rather than launch a session that captures nothing.
     if [ "$PROXY_ENABLED" = true ] \
-       && [ ! -f "${SCRIPT_DIR}/scripts/tl-http-agent.jar" ] \
-       && ! command -v mitmdump >/dev/null 2>&1; then
-        log_warn "-P/--proxy needs the Java agent JAR or mitmdump; neither is present."
-        log_warn "Build the agent: bash scripts/build-agent.sh   (or: pip install mitmproxy --break-system-packages)"
+       && { [ ! -f "${SCRIPT_DIR}/scripts/tl-http-agent.jar" ] \
+            || [ ! -f "${SCRIPT_DIR}/scripts/tl-http-bootstrap.jar" ]; }; then
+        log_warn "-P/--proxy needs the Java agent; it isn't built."
+        log_warn "Build it: bash scripts/build-agent.sh"
         PROXY_ENABLED=false
     fi
 
@@ -1986,9 +1892,9 @@ main() {
         fi
         printf "\n"
 
-        printf "${BLUE}Proxy:${NC}           "
+        printf "${BLUE}Capture:${NC}         "
         if [ "$PROXY_ENABLED" = true ]; then
-            printf "${GREEN}mitmproxy 127.0.0.1:%s${NC}" "$PROXY_PORT"
+            printf "${GREEN}Java agent (in-process)${NC}"
         else
             printf "${YELLOW}Off${NC}"
         fi
@@ -2040,7 +1946,7 @@ main() {
             printf "  Verbose: %s\n" "$VERBOSE"
             printf "  Offline: %s\n" "$OFFLINE_MODE"
             printf "  Monitor: %s\n" "$MONITOR_ENABLED"
-            printf "  Proxy: %s (port %s)\n" "$PROXY_ENABLED" "$PROXY_PORT"
+            printf "  Capture (agent): %s\n" "$PROXY_ENABLED"
             printf "  Auto-Analyze: %s\n" "$AUTO_ANALYZE"
         } > "${SESSION_DIR}/system-info.txt"
     fi

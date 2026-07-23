@@ -19,7 +19,7 @@ REPO="$(cd "$TESTS_DIR/.." && pwd)"
 RUN="$REPO/run.sh"
 FIX="$TESTS_DIR/fixtures"
 
-STATES=(agent-data agent-empty off proxy-fallback)
+STATES=(agent-data agent-empty off legacy-mitm)
 
 # The phrase each state's report must contain, unique to that state.
 phrase_for() {
@@ -27,7 +27,9 @@ phrase_for() {
         agent-data)      printf 'Mode: Java agent, in-process after TLS decrypt' ;;
         agent-empty)     printf 'Java agent active, but it logged no HTTP requests' ;;
         off)             printf 'no HTTP capture ran this session' ;;
-        proxy-fallback)  printf 'mitmproxy fallback' ;;
+        # A session that recorded the removed `mitmproxy` mode: honest on-disk facts,
+        # no capture promise. This guards that the removed option can't reappear.
+        legacy-mitm)     printf 'no longer supported' ;;
     esac
 }
 
