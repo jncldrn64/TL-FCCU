@@ -4,6 +4,17 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.18 — 2026-07-23
+
+Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
+
+### Changed
+- `CLAUDE.md` writes down the doc-only CHANGELOG rule the repo already follows: a doc-only
+  PR opens its own dated section, never folded into an already-published version's section,
+  & may leave the latest CHANGELOG version ahead of the printed version until the next code
+  PR closes the desfase. The rule was practice (see `v2.10`, `v2.17`); now it's on paper.
+  History is not renormalized.
+
 ## v2.17 — 2026-07-23
 
 Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
