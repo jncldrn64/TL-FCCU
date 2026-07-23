@@ -5,12 +5,9 @@
   This file just pins the doc/format standard.
 - Documentation lives at repo root: AGENTS.md, DESIGN.md, CHANGELOG.md, ROADMAP.md.
   Do NOT create a new doc file without asking me first (this already lives in AGENTS.md).
-- A reference to a sibling repository is anchored, not deleted. This repo anchors inline on
-  first mention in each file, which is why `ROADMAP.md` & `AGENTS.md` identify the sibling
-  where they first name it; later mentions in the same file stay bare (`ROADMAP.md`'s "the
-  MIDI repo's fixtures"), & CHANGELOG mentions are history, not rewritten to add or remove an
-  anchor. The siblings, the author's other projects sharing this documentation standard:
-  MIDI-Scale-Trainer (the phase-discipline blueprint), TdeA-Mimos-Website, TdeA-Mimos-API-REST.
+- This repo does not describe other repos. Another repo's name may appear as historical
+  provenance, where a convention came from, never as operational information. No document
+  here depends on another repo to be understood or worked on.
 - Decisions and open items go in the "Known gaps" section of AGENTS.md, one place,
   append-only, dated. Never scatter them.
 - CHANGELOG.md: Keep a Changelog. ONE file that grows by section, never one per round.
