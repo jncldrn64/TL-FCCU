@@ -10,6 +10,11 @@
 - CHANGELOG.md: Keep a Changelog. ONE file that grows by section, never one per round.
   Newest section on TOP (descending). Every section header is
   `## vX.Y — YYYY-MM-DD`, then ### Added / ### Changed / ### Fixed / ### Removed.
+- A doc-only PR opens its OWN dated CHANGELOG section. Never fold it into the section of
+  an already-published version: that section is history & isn't rewritten. The new section
+  carries the change's real date in ISO 8601, not an earlier version's date. A doc-only PR
+  may leave the latest CHANGELOG version ahead of the version the program prints; that
+  desfase is intentional & closes in the next code PR (see "Displayed version").
 - Dates: ISO 8601 (YYYY-MM-DD) everywhere I author them by hand.
 - Commits: "<type>: <short imperative summary>", type in {add, chg, fix, rmv, doc}.
   add=new capability, chg=behavior change, fix=bugfix, rmv=feature removed, doc=docs only.
