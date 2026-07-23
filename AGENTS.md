@@ -21,7 +21,8 @@ using it. Visibility & isolation come first, usability second.
 ## Map of the repo
 
 - `run.sh`: the whole launcher, one bash script.
-- `scripts/mitm_report.py`: turns a `-P` mitmproxy capture into Markdown.
+- `scripts/TLHttpAgent.java` & its helpers, `scripts/build-agent.sh`: the `-P` Java
+  agent (built into two gitignored jars, never committed).
 - `DESIGN.md`: the conventions, read before coding.
 - `CHANGELOG.md`: what changed & when.
 - `ROADMAP.md`: the phased plan, read when the work belongs to a phase.
@@ -265,6 +266,22 @@ PID-globbing aggregate mixed old sessions into the report. `run.sh` now clears t
 logs at the start of every agent-active run (`reset_agent_tmp`). A fifth check in
 `tests/report-states.sh` guards it: it drives the real reset + aggregate on a tmp seeded
 with a stale file & a fresh one, & fails if the stale line survives. Runner is at 5/5.
+
+2026-07-23: ROADMAP Phase 2 removed the mitmproxy fallback. The decision, between removing
+it & degrading it to an unambiguous label, went to removal. The fallback set the JVM proxy
+props & ran an on-host `mitmdump`, but TLauncher's traffic goes through Apache HttpClient
+(4.x & 5.x), which ignores those props, so it captured nothing of the audit target; it
+never ran end to end for real either. Keeping even a labelled dead path invites a reader to
+run a capture that returns nothing, which is what "cut what can't work" is about. So `-P`
+is agent-only now: the preflight disables it when the agent isn't built, the `[PORT]`
+argument (which only fed mitmproxy) is gone, `capture-mode` records only `agent` or `off`,
+& `scripts/mitm_report.py`, `MITM_ALLOWLIST`, `monitor_mitmproxy`, the proxy env injection
+& the report's mitmproxy branch are removed. A session that recorded the old `mitmproxy`
+mode renders as legacy on-disk facts, promising nothing. This supersedes the "`-P/--proxy`
+has never run end to end" note above: that path is gone; the agent path is the one that
+ran & captured (Phase 1, session `20260722_113644`). The `usage()` sweep for other options
+that over-promise found only the `-P` fallback; the rest matched the parser (last full
+audit was Phase 0, re-checked here).
 
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
