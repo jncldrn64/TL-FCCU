@@ -153,6 +153,42 @@ binary.
 
 Blocked by: Phase 3.
 
+## Phase 5: cleanup survives every death it can see
+
+Status: `pending`
+
+Objective: cleanup runs on every death the kernel lets the script observe, not only
+on the ones it happens to trap today.
+
+Scope:
+- `run.sh:1596` reads `trap cleanup EXIT INT TERM`. Bash runs the EXIT trap on a
+  normal exit or a trapped signal only, so an untrapped fatal signal (HUP, QUIT)
+  kills the shell without running `cleanup()` & orphans every monitor, including the
+  `inotifywait -m -r` that then writes `files.log` forever: the 51 MB case this
+  repo's own CHANGELOG records. Fix: `trap cleanup EXIT INT TERM HUP QUIT`. SIGKILL
+  & the OOM killer can never be trapped; for those, `warn_orphans` & `-K` stay the
+  answer, & that is the boundary of what this phase can promise.
+- `run.sh:810` does `exec 200>"$LOCKFILE"` before the monitors & firejail start, &
+  nothing closes fd 200 in the children. A `flock(2)` lock lives on the open file
+  description & is inherited across fork/exec, so any surviving child co-holds it &
+  the next run dies at `flock -n` with a false "TLauncher already running". Fix: add
+  `200>&-` to the `spawn_monitor` invocation & to the firejail command lines.
+- `first_seen_loop` (`run.sh:547`) creates a `mktemp` file each cycle & removes it at
+  cycle end, so a TERM or KILL landing mid-cycle leaks one small file in `/tmp` per
+  monitor per session. Cosmetic, cleared on reboot. Fix: a per-loop temp path reaped
+  by the cleanup path instead of a fresh `mktemp` per cycle.
+
+Acceptance: stub-driven & checkable without launching TLauncher, the way the rest of
+the repo tests. A monitored stub session killed with SIGHUP leaves
+`pgrep -f 'tlauncher-mon-'` empty; with a stub monitor deliberately held alive,
+`flock -n` on the lockfile succeeds from a second shell, proving no child still
+holds fd 200; & `bash -n run.sh` clean.
+
+Blocked by: nothing. This phase is independent of Phases 3 & 4 & touches no code
+they touch, so it can land before or after them. The number records when the work
+arrived, not a dependency; the Ordering principle above constrains 0 through 2,
+which had to run in sequence, & says nothing that forces 5 behind 3.
+
 ## Backlog
 
 Archive rotation, hash comparison against public sources, & whatever else surfaces.

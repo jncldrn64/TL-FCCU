@@ -4,6 +4,35 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.23 — 2026-07-30
+
+Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
+
+### Added
+- ROADMAP Phase 5, "cleanup survives every death it can see": the phase that fixes the
+  three defects below. It is independent of Phases 3 & 4, stated there explicitly so the
+  Ordering principle isn't read as putting it behind them; the number records arrival
+  order, not a dependency. Its acceptance is stub-driven & needs no TLauncher: a stub
+  session killed with SIGHUP leaves no `tlauncher-mon-` process, `flock -n` succeeds
+  from a second shell while a stub monitor is held alive, & `bash -n run.sh` stays clean.
+- AGENTS.md Known gaps: the trap does not cover every fatal signal. `run.sh:1596` traps
+  EXIT, INT & TERM, so an untrapped HUP or QUIT kills the shell without running
+  `cleanup()` & orphans every monitor, `inotifywait` included, which is the 51 MB
+  `files.log` failure this changelog already records.
+- AGENTS.md Known gaps: the lockfile descriptor is inherited by children. `run.sh:810`
+  opens fd 200 before the monitors & firejail spawn & never closes it in them, & a
+  `flock(2)` lock lives on the open file description, so a surviving child co-holds it &
+  the next run reports a false "TLauncher already running".
+- AGENTS.md Known gaps: `first_seen_loop` (`run.sh:547`) leaks one `/tmp` file per
+  monitor per session when a signal lands between the `mktemp` & the `rm` that closes
+  the cycle. Cosmetic, clears on reboot.
+
+All three are latent, not active: every session so far has ended through a trapped exit,
+& the author's machine shows zero orphan monitors, zero retained inotify watches & a free
+lockfile. They are recorded here, not fixed; the fix is a code PR under Phase 5. Until it
+lands, the "orphan-proof cleanup" header comment in `run.sh` holds only for a death the
+script can trap.
+
 ## v2.22 — 2026-07-23
 
 Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
