@@ -283,6 +283,37 @@ ran & captured (Phase 1, session `20260722_113644`). The `usage()` sweep for oth
 that over-promise found only the `-P` fallback; the rest matched the parser (last full
 audit was Phase 0, re-checked here).
 
+2026-07-30: `trap cleanup EXIT INT TERM` (`run.sh:1596`) does not cover every fatal
+signal. Bash runs the EXIT trap on a normal exit or a trapped signal only, so an
+untrapped HUP or QUIT kills the shell without running `cleanup()`, & every monitor
+orphans, `inotifywait -m -r` included, which then writes `files.log` with nobody left
+to stop it. That is the 51 MB failure this repo already paid for once. The defect is
+latent: every session so far has ended through a trapped exit, so nothing has hit it,
+& the author's machine shows zero orphans & zero retained watches. Latent is not
+fixed. Until it lands, read the "orphan-proof cleanup" header comment in `run.sh` as
+conditional: cleanup is orphan-proof against a death it can trap. SIGKILL & the OOM
+killer are untrappable by anyone, so `warn_orphans` & `-K` remain the answer there
+no matter what the trap line says. Planned fix: ROADMAP Phase 5. Provenance: external
+code review, 2026-07-30.
+
+2026-07-30: the lockfile descriptor is inherited by every child. `run.sh:810` does
+`exec 200>"$LOCKFILE"` before the monitors & firejail are spawned, & nothing closes
+fd 200 in the children. A `flock(2)` lock lives on the open file description, not on
+the process, so it survives fork & exec: any child that outlives the parent still
+co-holds the lock. One orphaned monitor is enough to make the next run die at
+`flock -n` with a false "TLauncher already running", which reads as a bug in the lock
+& is not. Latent for the same reason as above, trapped exits only, so no session has
+produced the surviving child that would trigger it. Don't claim the lock is
+process-scoped; it isn't. Planned fix: ROADMAP Phase 5. Provenance: external code
+review, 2026-07-30.
+
+2026-07-30: `first_seen_loop` (`run.sh:547`) leaks a temp file when killed mid-cycle.
+It creates a `mktemp` file each cycle & removes it at the end of that cycle, so a TERM
+or KILL landing between the two leaves one small file in `/tmp`, per monitor per
+session. This one is cosmetic & clears on reboot; it is recorded because it is real,
+not because it is urgent. Latent in practice for the same trapped-exit reason. Planned
+fix: ROADMAP Phase 5. Provenance: external code review, 2026-07-30.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.
