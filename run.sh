@@ -137,17 +137,46 @@ NOISE_PATTERNS=(
     '\.lock$'
 )
 # Pre-joined into a single ERE; exported so the (separate-process) monitors see it.
+# NOT escaped, deliberately: unlike the domain lists, these entries ARE regexes &
+# are written as such on purpose (`\.sqlite-wal$` anchors an extension, `GPUCache/`
+# matches a path segment). Escaping them would break every anchor. Add new noise
+# patterns as regexes, & escape any literal dot yourself.
 NOISE_REGEX="$(IFS='|'; printf '%s' "${NOISE_PATTERNS[*]}")"
+
+# Escape ERE metacharacters so a LITERAL string matches only itself.
+#
+# WHY: the arrays below hold literal substrings, not expressions, but they are
+# joined with `|` & fed to `grep -E`. Today's entries carry no metacharacters, so
+# the raw join happens to work. The moment a literal domain goes in, its dots stop
+# meaning dots: `res.tlauncher.ru` would also match `resXtlauncherYru`. AGENTS.md
+# leaves adding the `tlauncher.ru` family open as the author's call, so that entry
+# is one edit away. A false positive in an audit tool costs trust in the whole
+# report, so the escape happens here rather than in the reader's head.
+ere_escape() {
+    printf '%s' "$1" | sed -E 's/[][(){}.*+?^$|\\]/\\&/g'
+}
+
+# Join an array of literal substrings into one alternation, each escaped.
+join_literals_ere() {
+    local out="" item
+    for item in "$@"; do
+        [ -z "$item" ] && continue
+        [ -n "$out" ] && out="${out}|"
+        out="${out}$(ere_escape "$item")"
+    done
+    printf '%s' "$out"
+}
 
 # Known-risky domain substrings for the regression check (Task 3). A domain that
 # matches any of these gets flagged hard in INCIDENT_REPORT.md even when it's
 # already in the baseline. These are the fallback & telemetry domains the author
-# distrusts; advancedrepository probes over plain HTTP. Add new ones by hand.
+# distrusts; advancedrepository probes over plain HTTP. Add new ones by hand, as
+# plain literals: the escaping above handles the rest, so do NOT pre-escape them.
 RISK_DOMAIN_PATTERNS=(
     'advancedrepository'
     'securelogger'
 )
-RISK_DOMAIN_REGEX="$(IFS='|'; printf '%s' "${RISK_DOMAIN_PATTERNS[*]}")"
+RISK_DOMAIN_REGEX="$(join_literals_ere "${RISK_DOMAIN_PATTERNS[@]}")"
 
 # Blocked domains (for reference in logs)
 BLOCKED_DOMAINS=(
