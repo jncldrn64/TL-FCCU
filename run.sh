@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.21"
+VERSION="2.24"
 
 # Directory holding this script, used to find helpers like scripts/build-agent.sh.
 # Resolved once & survives being called through a symlink.
@@ -137,20 +137,57 @@ NOISE_PATTERNS=(
     '\.lock$'
 )
 # Pre-joined into a single ERE; exported so the (separate-process) monitors see it.
+# NOT escaped, deliberately: unlike the domain lists, these entries ARE regexes &
+# are written as such on purpose (`\.sqlite-wal$` anchors an extension, `GPUCache/`
+# matches a path segment). Escaping them would break every anchor. Add new noise
+# patterns as regexes, & escape any literal dot yourself.
 NOISE_REGEX="$(IFS='|'; printf '%s' "${NOISE_PATTERNS[*]}")"
+
+# Escape ERE metacharacters so a LITERAL string matches only itself.
+#
+# WHY: the arrays below hold literal substrings, not expressions, but they are
+# joined with `|` & fed to `grep -E`. Today's entries carry no metacharacters, so
+# the raw join happens to work. The moment a literal domain goes in, its dots stop
+# meaning dots: `res.tlauncher.ru` would also match `resXtlauncherYru`. AGENTS.md
+# leaves adding the `tlauncher.ru` family open as the author's call, so that entry
+# is one edit away. A false positive in an audit tool costs trust in the whole
+# report, so the escape happens here rather than in the reader's head.
+ere_escape() {
+    printf '%s' "$1" | sed -E 's/[][(){}.*+?^$|\\]/\\&/g'
+}
+
+# Join an array of literal substrings into one alternation, each escaped.
+join_literals_ere() {
+    local out="" item
+    for item in "$@"; do
+        [ -z "$item" ] && continue
+        [ -n "$out" ] && out="${out}|"
+        out="${out}$(ere_escape "$item")"
+    done
+    printf '%s' "$out"
+}
 
 # Known-risky domain substrings for the regression check (Task 3). A domain that
 # matches any of these gets flagged hard in INCIDENT_REPORT.md even when it's
 # already in the baseline. These are the fallback & telemetry domains the author
-# distrusts; advancedrepository probes over plain HTTP. Add new ones by hand.
+# distrusts; advancedrepository probes over plain HTTP. Add new ones by hand, as
+# plain literals: the escaping above handles the rest, so do NOT pre-escape them.
 RISK_DOMAIN_PATTERNS=(
     'advancedrepository'
     'securelogger'
 )
-RISK_DOMAIN_REGEX="$(IFS='|'; printf '%s' "${RISK_DOMAIN_PATTERNS[*]}")"
+RISK_DOMAIN_REGEX="$(join_literals_ere "${RISK_DOMAIN_PATTERNS[@]}")"
 
-# Blocked domains (for reference in logs)
-BLOCKED_DOMAINS=(
+
+# Telemetry & ad hosts seen in TLauncher traffic, kept as a named reference list.
+#
+# NOT blocked. This array was called BLOCKED_DOMAINS & nothing in the script ever
+# read it: no --dns, no netfilter, no filter of any kind, so the name promised a
+# capability the sandbox does not have. Renamed to say what it is, & now actually
+# read by report_regression_check, which marks any of these contacted during a
+# session. Blocking would need firejail netfilter rules & is not in scope here;
+# this tool watches, it does not intervene.
+KNOWN_TELEMETRY_DOMAINS=(
     "telemetry.tlauncher.org" "stats.tlauncher.org" "analytics.tlauncher.org"
     "tracking.tlauncher.org" "metrics.tlauncher.org" "events.tlauncher.org"
     "ads.tlauncher.org" "promo.tlauncher.org" "offers.tlauncher.org"
@@ -159,6 +196,9 @@ BLOCKED_DOMAINS=(
     "mps.tlauncher.org" "page.tlauncher.org" "stat.fastrepo.org"
     "stat.tlauncher.ru" "img.fastrepo.org"
 )
+# Same treatment for the telemetry reference list: literals in, escaped alternation
+# out. These entries DO carry dots, so this one is not hypothetical.
+KNOWN_TELEMETRY_REGEX="$(join_literals_ere "${KNOWN_TELEMETRY_DOMAINS[@]}")"
 
 # Colors
 if [ -t 1 ]; then
@@ -301,7 +341,51 @@ warn_orphans() {
 }
 
 # -K/--kill-orphans implementation: find and kill stray monitors, loudly.
+# True when no live session holds the lock. Tries the lock on a scratch fd &
+# releases it immediately; taking it proves nobody else has it.
+#
+# WHY -K needs this: find_orphan_pids matches ANY process tagged `tlauncher-mon-`,
+# excluding only our own ancestor chain, & -K is a standalone mode that never looked
+# at the lock. Run from a second terminal during a live session it killed that live
+# session's monitors while announcing them as strays "from a previous session". For
+# an audit tool, losing the instrumentation while the target keeps running is the
+# worst failure available, so -K now refuses instead of guessing.
+session_lock_is_free() {
+    # No lockfile at all means no session has ever run here: nothing holds it.
+    [ -e "$LOCKFILE" ] || return 0
+    # Probe first, then redirect. `exec 201>"$F" 2>/dev/null` would apply BOTH
+    # redirections to this shell & silence every later diagnostic for the rest of
+    # the run, so the probe is a separate subshell & the exec stays bare.
+    ( : >>"$LOCKFILE" ) 2>/dev/null || return 1
+    exec 201>>"$LOCKFILE"
+    if flock -n 201; then
+        flock -u 201
+        exec 201>&-
+        return 0
+    fi
+    exec 201>&-
+    return 1
+}
+
+# PIDs holding the lockfile open, for the refusal message. Best effort: `fuser` is
+# not a hard dependency, so a miss degrades to no PID rather than to a failure.
+lock_holder_pids() {
+    fuser "$LOCKFILE" 2>/dev/null | tr -s ' ' '\n' | grep -E '^[0-9]+$' | tr '\n' ' ' | sed 's/ $//'
+}
+
 kill_orphans() {
+    if ! session_lock_is_free; then
+        local holders; holders="$(lock_holder_pids)"
+        log_error "Refusing to kill: a TLauncher session is live & holds the lock."
+        if [ -n "$holders" ]; then
+            log_error "  Lock held by PID(s): ${holders}"
+        else
+            log_error "  Lock file: $(disp_path "$LOCKFILE") (holder PID unavailable; install psmisc for fuser)"
+        fi
+        log_error "  Monitors tagged 'tlauncher-mon-' belong to that session, not to a previous one."
+        log_error "  Let the session finish, or stop it, then run -K again."
+        return 2
+    fi
     local pids; pids="$(find_orphan_pids)"
     if [ -z "$pids" ]; then
         log_msg "No orphaned monitor processes found."
@@ -500,7 +584,18 @@ build_firejail_params() {
         params+=(--net=none)
     fi
 
-    # Blacklist protected directories
+    # Blacklist protected directories.
+    #
+    # Probably redundant with --private="$SANDBOX_DIR" above, which already replaces
+    # the home directory, so ${REAL_HOME}/.ssh should not resolve to the real one
+    # inside the sandbox at all. Kept anyway, as deliberate belt-and-braces: the
+    # redundancy costs one firejail argument per existing directory & nothing at
+    # runtime, while the failure it guards against (a --private that does not take,
+    # or an ordering change in a future firejail) hands TLauncher the user's keys &
+    # browser profiles. NOT empirically confirmed either way: this dev environment
+    # has no firejail, so whether --blacklist is applied before or after the private
+    # mount was never observed here. Verified redundancy is the only thing that
+    # would justify deleting a control like this one, so it stays until then.
     for dir in "${PROTECTED_DIRS[@]}"; do
         [ -d "${REAL_HOME}/${dir}" ] && params+=(--blacklist="${REAL_HOME}/${dir}")
     done
@@ -610,8 +705,13 @@ PREAMBLE
 # so $! is the bash PID we can track exactly; kill_tree() reaps the descendants.
 spawn_monitor() {
     local name="$1" body="$2"
+    # 200>&- closes the lockfile descriptor in the child. flock(2) lives on the open
+    # file description, which fork/exec inherits, so a monitor that outlives the
+    # parent would go on co-holding the session lock. That matters twice over now
+    # that -K consults the lock before reaping: an orphan still holding fd 200 would
+    # make -K refuse to clean up the very orphan that is holding it.
     bash -c "${MONITOR_PREAMBLE}
-${body}" "tlauncher-mon-${SESSION_ID}-${name}" &
+${body}" "tlauncher-mon-${SESSION_ID}-${name}" 200>&- &
     local pid=$!
     MONITOR_PIDS+=("$pid")
     log_verbose "  → ${name} monitor PID: $pid"
@@ -807,8 +907,16 @@ run_sandboxed() {
     # The fix: hold the lock on an exec'd fd in the current shell. The monitors,
     # MONITOR_PIDS, & the code that kills them now share one scope.
     # ----------------------------------------------------------------------
+    # Probe writability FIRST, with the error captured, so the `exec` below stays a
+    # bare redirection. `exec 200>"$F" 2>/dev/null` would apply BOTH redirections to
+    # the shell itself & silence every later diagnostic for the rest of the run.
+    if ! : 2>/dev/null >>"$LOCKFILE"; then
+        die "Cannot write the lockfile: $(disp_path "$LOCKFILE")"
+    fi
     exec 200>"$LOCKFILE"
-    flock -n 200 || die "TLauncher already running (lockfile exists)"
+    # The lock is never released by deleting the file; see cleanup(). A rejected
+    # instance exits without touching the holder's lock.
+    flock -n 200 || die "TLauncher already running (lock held on $(disp_path "$LOCKFILE"))"
 
     # Export the handful of vars the (separate-process) monitors reference.
     export SANDBOX_DIR SESSION_DIR SESSION_ID NOISE_REGEX SANDBOX_HOSTNAME
@@ -843,23 +951,23 @@ run_sandboxed() {
     if [ "$VERBOSE" = true ]; then
         if session_logging_active; then
             firejail "${firejail_params[@]}" \
-                bash -c "$java_cmd" \
+                bash -c "$java_cmd" 200>&- \
                 2>&1 | tee "${SESSION_DIR}/tlauncher.log"
             exit_code=${PIPESTATUS[0]}
         else
             firejail "${firejail_params[@]}" \
-                bash -c "$java_cmd"
+                bash -c "$java_cmd" 200>&-
             exit_code=$?
         fi
     else
         if session_logging_active; then
             firejail "${firejail_params[@]}" \
-                bash -c "$java_cmd" \
+                bash -c "$java_cmd" 200>&- \
                 > "${SESSION_DIR}/tlauncher.log" 2>&1
             exit_code=$?
         else
             firejail "${firejail_params[@]}" \
-                bash -c "$java_cmd" \
+                bash -c "$java_cmd" 200>&- \
                 >/dev/null 2>&1
             exit_code=$?
         fi
@@ -993,6 +1101,17 @@ report_regression_check() {
         local risky; risky="$(printf '%s\n' "$domains" | grep -E "$RISK_DOMAIN_REGEX" || true)"
         if [ -n "$risky" ]; then
             printf "**🚨 Known risk-pattern domains contacted this session:**\n\n\`\`\`\n%s\n\`\`\`\n\n" "$risky"
+        fi
+    fi
+
+    # Known telemetry/ad hosts contacted this session. Listed, not blocked: the
+    # sandbox observes traffic, it never intercepts it. Separate from the risk
+    # patterns above, which are the narrower set the author treats as hard flags.
+    if [ -n "$KNOWN_TELEMETRY_REGEX" ]; then
+        local seen_telemetry
+        seen_telemetry="$(printf '%s\n' "$domains" | grep -E "$KNOWN_TELEMETRY_REGEX" || true)"
+        if [ -n "$seen_telemetry" ]; then
+            printf "**Known telemetry/ad hosts contacted (observed, NOT blocked):**\n\n\`\`\`\n%s\n\`\`\`\n\n" "$seen_telemetry"
         fi
     fi
 
@@ -1323,16 +1442,33 @@ cleanup_logs() {
         (
             cd "$d" || exit 0
             # Everything EXCEPT the quick-read reports and the archive itself.
+            #
+            # Globs, not `for f in $(ls -A)`: that split on IFS & re-expanded every
+            # name as a pattern. The names are script-generated so none carries a
+            # space today, but the agent's per-PID logs land here too, & a single
+            # space would have silently split one name into two nonexistent ones.
+            # `dotglob`+`nullglob` gets the dotfiles & yields nothing when empty.
             local files=()
             local f
-            for f in $(ls -A 2>/dev/null); do
+            shopt -s nullglob dotglob
+            for f in *; do
                 case "$f" in
                     SUMMARY.txt|INCIDENT_REPORT.md|logs.tar.gz) ;;
                     *) files+=("$f") ;;
                 esac
             done
+            shopt -u nullglob dotglob
             if [ "${#files[@]}" -gt 0 ]; then
-                tar -czf logs.tar.gz --remove-files "${files[@]}" 2>/dev/null || true
+                # No `|| true` here. `tar --remove-files` deletes what it archived,
+                # so swallowing its status is how a session's logs disappear without
+                # the archive that was supposed to replace them. Report & keep going:
+                # one unarchived session must not abort the rest of the sweep.
+                if ! tar -czf logs.tar.gz --remove-files "${files[@]}" 2>"${d}/.tar-error"; then
+                    log_warn "Could not compress $(basename "$d"); logs left in place."
+                    [ -s "${d}/.tar-error" ] && log_warn "  tar: $(head -c 200 "${d}/.tar-error")"
+                else
+                    rm -f "${d}/.tar-error"
+                fi
             fi
         ) || true
     done < <(find "$root" -maxdepth 1 -type d -name 'session_*' -mtime +"$days" 2>/dev/null)
@@ -1574,6 +1710,12 @@ check_mozilla_directory() {
 # ==========================================
 
 cleanup() {
+    # Idempotence guard. die() calls cleanup() & then exit 1, which fires the EXIT
+    # trap & calls cleanup() a second time. Every step below happens to be safe
+    # twice today, so this costs nothing now; it exists so the first step that
+    # isn't safe twice doesn't turn into a bug months from now.
+    [ -n "${CLEANUP_DONE:-}" ] && return 0
+    CLEANUP_DONE=1
     # Stop monitors started in this run, reaping their whole process trees so no
     # inotifywait/ss/ps leaf survives to write into old logs. The
     # EXIT/INT/TERM trap calls this too, say when the user hits Ctrl+C mid-session,
@@ -1589,11 +1731,23 @@ cleanup() {
     # Safety net: kill anything still tagged with THIS session id.
     [ -n "${SESSION_ID:-}" ] && pkill -f "tlauncher-mon-${SESSION_ID}" 2>/dev/null || true
 
-    # Remove lockfile
-    rm -f "$LOCKFILE"
+    # The lockfile is NOT removed here, on purpose. flock(2) lives on the open file
+    # description, not on the path, so unlinking it does not release anything: it
+    # only detaches the name. A second instance that lost the race & died through
+    # die() used to delete the holder's lockfile, after which a third instance
+    # created a fresh inode, locked that without contest, & ran in parallel with the
+    # first. The file is zero bytes & lives under XDG_RUNTIME_DIR, which the system
+    # clears at logout; leaving it is correct, not litter.
 }
 
-trap cleanup EXIT INT TERM
+# HUP & QUIT are named explicitly rather than left to the EXIT trap. Measured on
+# bash 5.2 here, the EXIT trap DID still run for an untrapped HUP or QUIT, so the
+# orphaning this was predicted to cause did not reproduce; that behaviour is bash's
+# own & is version dependent, so relying on it is a bet. Naming the two signals
+# costs nothing & states the intent. SIGKILL & the OOM killer stay untrappable by
+# anyone; for those, warn_orphans & -K remain the answer, which is the boundary of
+# what any trap line can promise.
+trap cleanup EXIT INT TERM HUP QUIT
 
 # ==========================================
 # USAGE
@@ -1796,7 +1950,9 @@ main() {
 
     # ---- Standalone modes that never launch TLauncher ----
     if [ "$KILL_ORPHANS" = true ]; then
-        kill_orphans
+        # `|| exit` keeps errexit out of it & preserves kill_orphans' own status:
+        # 2 when it refused because a session is live.
+        kill_orphans || exit $?
         exit 0
     fi
 

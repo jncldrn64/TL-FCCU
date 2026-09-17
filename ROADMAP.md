@@ -155,7 +155,7 @@ Blocked by: Phase 3.
 
 ## Phase 5: cleanup survives every death it can see
 
-Status: `pending`
+Status: `in progress`
 
 Objective: cleanup runs on every death the kernel lets the script observe, not only
 on the ones it happens to trap today.
@@ -183,6 +183,23 @@ the repo tests. A monitored stub session killed with SIGHUP leaves
 `pgrep -f 'tlauncher-mon-'` empty; with a stub monitor deliberately held alive,
 `flock -n` on the lockfile succeeds from a second shell, proving no child still
 holds fd 200; & `bash -n run.sh` clean.
+
+Progress, v2.24 (2026-09-17). Two of the three scope items are closed, both as a
+side effect of an external review landing on the same code:
+
+- The trap now names HUP & QUIT. The orphaning this item predicted did NOT reproduce:
+  measured on bash 5.2.21, the EXIT trap still ran for an untrapped HUP & QUIT. The
+  signals are named because that behaviour is bash's own & version dependent, not
+  because an orphan was observed. The acceptance check written below (a stub session
+  killed with SIGHUP leaves no `tlauncher-mon-` process) therefore passes today for a
+  reason this item did not anticipate, which is worth knowing before it is ticked off.
+- The fd-200 leak is closed with `200>&-` on the monitors & on firejail, & verified by
+  reproduction both ways. It stopped being latent when `-K` began consulting the lock in
+  the same release: an orphan holding fd 200 would have made `-K` refuse to reap the
+  orphan holding it.
+
+Still open: the `first_seen_loop` temp-file leak, the third bullet above. Cosmetic,
+cleared on reboot, & untouched.
 
 Blocked by: nothing. This phase is independent of Phases 3 & 4 & touches no code
 they touch, so it can land before or after them. The number records when the work

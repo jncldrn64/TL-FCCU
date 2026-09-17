@@ -314,6 +314,58 @@ session. This one is cosmetic & clears on reboot; it is recorded because it is r
 not because it is urgent. Latent in practice for the same trapped-exit reason. Planned
 fix: ROADMAP Phase 5. Provenance: external code review, 2026-07-30.
 
+2026-09-17: an external code review found six defects; all six are fixed in v2.24, &
+fixing the second of them forced a seventh. What the reader should & should not claim
+now:
+
+- The lock is exclusive again, & the fix is under test. `cleanup()` used to delete the
+  lockfile & `die()` calls `cleanup()`, so the instance that LOST the race deleted the
+  holder's file: the holder kept its lock on an unlinked inode while the path went free
+  & a third instance locked a brand-new inode beside it. This was never latent; it fired
+  on every accidental double launch. The lockfile is no longer deleted by anything.
+  `tests/lock-exclusion.sh` reproduces the three-instance case & goes red against the
+  old behaviour, so this one IS verified, not merely reasoned.
+- `-K` is no longer safe to run blind, & that is the point. It now takes the lock before
+  killing anything & exits 2 if a live session holds it. Do not describe `-K` as "reaps
+  strays" without the caveat: it refuses outright during a session rather than guessing
+  which monitors are strays, because it never could tell.
+- The fd-200 leak (recorded 2026-07-30 as latent) is closed, & it was not latent any
+  more. `flock` lives on the open file description, so a monitor that outlived the
+  parent co-held the lock; once `-K` started consulting that lock, an orphan holding
+  fd 200 would have blocked its own reaping. `200>&-` on the monitors & on firejail
+  closes it. Verified by reproduction both ways. This closes the second of the three
+  ROADMAP Phase 5 items.
+- The trap now names HUP & QUIT, but the gap it was filed against did NOT reproduce.
+  Measured on bash 5.2.21 in this environment, the EXIT trap still ran for an untrapped
+  HUP & for an untrapped QUIT, so the predicted orphaning did not happen. That is bash's
+  own behaviour & is version dependent, so the signals are named rather than relied on.
+  Do not claim this fixed an observed orphan; nothing observed one here. SIGKILL & the
+  OOM killer stay untrappable, & for those `warn_orphans` plus `-K` remain the only
+  answer.
+- `BLOCKED_DOMAINS` was renamed `KNOWN_TELEMETRY_DOMAINS` & is finally read. Nothing in
+  the script had ever used it: no `--dns`, no netfilter, no filter at all, so the name
+  claimed a capability the sandbox does not have. It now marks those hosts in the report
+  as contacted, labelled "observed, NOT blocked". The sandbox still blocks nothing at the
+  network layer, & nothing in this change moves it closer to doing so.
+- The risk-domain literals are escaped before being joined into an ERE. Adding the
+  `tlauncher.ru` family, still the author's call & still open, is now safe to do as plain
+  literals: do NOT pre-escape them by hand, the code does it. `NOISE_PATTERNS` are the
+  opposite & are deliberately regexes; that is now said in the code next to both.
+- Log compression no longer splits filenames on whitespace. The old `$(ls -A)` loop did
+  something worse than failing: `tar` archived the files it could resolve, `--remove-files`
+  deleted those, the spaced name was left behind unarchived, & `|| true` hid the error.
+
+Two of the three ROADMAP Phase 5 items are now closed (the trap line & the fd-200 leak);
+the `first_seen_loop` temp-file leak (`run.sh`, the `mktemp` per cycle) is untouched &
+stays open. It remains cosmetic & clears on reboot.
+
+Still not verified against real data, & unchanged by this work: no `firejail` exists in
+this environment, so whether the `PROTECTED_DIRS` blacklists are redundant under
+`--private` was never observed. The code now says so at the loop. They are kept as
+deliberate belt-and-braces: verified redundancy is the only thing that would justify
+deleting a control that guards SSH keys & browser profiles, & this environment cannot
+supply it.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.
