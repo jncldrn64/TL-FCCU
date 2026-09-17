@@ -4,6 +4,73 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.24 — 2026-09-17
+
+Six findings from an external code review, fixed, plus one ROADMAP Phase 5 item that
+the second of them turned from latent into load-bearing. Plus the first CLI surface
+inventory, as input for the man page standard.
+
+### Fixed
+- The instance that LOST the lock race deleted the lockfile of the instance that held
+  it. `cleanup()` ended with `rm -f "$LOCKFILE"` & `die()` calls `cleanup()`, so a
+  second launch freed the path while the holder kept its lock on the now-unlinked
+  inode; a third launch then created a fresh inode, locked it without contest & ran in
+  parallel. Mutual exclusion was gone in exactly the case it exists for, & it fired
+  every time someone launched twice by accident. The lockfile is no longer deleted:
+  `flock(2)` lives on the open file description, not on the path, so unlinking never
+  released anything anyway. It is zero bytes & sits under `XDG_RUNTIME_DIR`, which the
+  system clears at logout. `tests/lock-exclusion.sh` is the regression net, 5/5,
+  & it goes red against the old behaviour.
+- `-K/--kill-orphans` killed the monitors of a LIVE session. `find_orphan_pids` matches
+  any process tagged `tlauncher-mon-`, excluding only our own ancestor chain, & `-K` is
+  a standalone mode that never consulted the lock. Run from a second terminal during a
+  session it reaped that session's monitors while announcing them as strays "from a
+  previous session", leaving the audit target running with no instrumentation & no
+  warning. `-K` now takes the lock first: if a live session holds it, it refuses, names
+  the holding PID & exits 2.
+- `cleanup()` ran twice on the `die()` path, which calls it & then exits into the EXIT
+  trap. Every step happened to be idempotent, so nothing broke; a `CLEANUP_DONE` guard
+  makes it once so the first non-idempotent step added later doesn't become a bug.
+- `$(ls -A)` split session filenames on whitespace during log compression. A name with
+  a space became several nonexistent entries: `tar` archived the rest, `--remove-files`
+  deleted those, the odd file was left unarchived, & `|| true` swallowed the error. Now
+  a `nullglob`/`dotglob` glob, & a failed `tar` is reported instead of silently
+  discarding the logs it was meant to preserve.
+- The lockfile descriptor leaked into every child. `exec 200>"$LOCKFILE"` runs before
+  the monitors & firejail are spawned, & nothing closed fd 200 in them; `flock(2)` lives
+  on the open file description, which fork/exec inherits, so any monitor that outlived
+  the parent went on co-holding the session lock. Recorded as a latent gap in v2.23, it
+  stopped being latent the moment `-K` began consulting that lock: an orphan holding
+  fd 200 would have made `-K` refuse to reap the very orphan holding it. Verified here:
+  without `200>&-` the lock stays held after the parent exits; with it, the lock frees.
+  Closes the second of the three ROADMAP Phase 5 items.
+- The risk-domain literals are escaped before being joined into an ERE. The array holds
+  substrings but is fed to `grep -E`; today's two entries carry no metacharacters, so it
+  worked by luck. Adding the `tlauncher.ru` family, which AGENTS.md leaves open as the
+  author's call, would have made `res.tlauncher.ru` match `resXtlauncherYru`. A false
+  positive costs trust in the whole report, so the escaping happens in the code.
+
+### Changed
+- `BLOCKED_DOMAINS` is now `KNOWN_TELEMETRY_DOMAINS`, & is actually read. Twenty domains
+  sat in an array called "blocked" that nothing in the script ever used: no `--dns`, no
+  netfilter, no filter of any kind. The name promised a capability the sandbox does not
+  have, which is the state-honesty rule's own failure mode. The list now drives a report
+  line marking those hosts as contacted, labelled "observed, NOT blocked".
+- `trap cleanup EXIT INT TERM` names HUP & QUIT too. Measured on bash 5.2.21 here, the
+  EXIT trap still ran for an untrapped HUP or QUIT, so the orphaning this was predicted
+  to cause did not reproduce; that behaviour is bash's own & version dependent, so the
+  two signals are named rather than left to luck.
+- `VERSION` jumped 2.21 to 2.24 to match this section, closing the desfase the two
+  doc-only sections (v2.22, v2.23) opened by design.
+
+### Added
+- `docs/cli-surface.md`: an inventory of what the command line actually exposes, each
+  claim carrying `file:line`. Flags & the globals they set, environment variables read,
+  exit codes & where they are emitted, the logging & colour rules, the `--help` section
+  order, its five examples & the real cases with none, & the report states the test
+  suite covers against those it does not. It records the surface as it is, as input for
+  the man page standard; it proposes no standard.
+
 ## v2.23 — 2026-07-30
 
 Documentation only. No `run.sh`, `scripts/`, or `VERSION` change.
