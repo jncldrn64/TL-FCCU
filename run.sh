@@ -178,8 +178,16 @@ RISK_DOMAIN_PATTERNS=(
 )
 RISK_DOMAIN_REGEX="$(join_literals_ere "${RISK_DOMAIN_PATTERNS[@]}")"
 
-# Blocked domains (for reference in logs)
-BLOCKED_DOMAINS=(
+
+# Telemetry & ad hosts seen in TLauncher traffic, kept as a named reference list.
+#
+# NOT blocked. This array was called BLOCKED_DOMAINS & nothing in the script ever
+# read it: no --dns, no netfilter, no filter of any kind, so the name promised a
+# capability the sandbox does not have. Renamed to say what it is, & now actually
+# read by report_regression_check, which marks any of these contacted during a
+# session. Blocking would need firejail netfilter rules & is not in scope here;
+# this tool watches, it does not intervene.
+KNOWN_TELEMETRY_DOMAINS=(
     "telemetry.tlauncher.org" "stats.tlauncher.org" "analytics.tlauncher.org"
     "tracking.tlauncher.org" "metrics.tlauncher.org" "events.tlauncher.org"
     "ads.tlauncher.org" "promo.tlauncher.org" "offers.tlauncher.org"
@@ -188,6 +196,9 @@ BLOCKED_DOMAINS=(
     "mps.tlauncher.org" "page.tlauncher.org" "stat.fastrepo.org"
     "stat.tlauncher.ru" "img.fastrepo.org"
 )
+# Same treatment for the telemetry reference list: literals in, escaped alternation
+# out. These entries DO carry dots, so this one is not hypothetical.
+KNOWN_TELEMETRY_REGEX="$(join_literals_ere "${KNOWN_TELEMETRY_DOMAINS[@]}")"
 
 # Colors
 if [ -t 1 ]; then
@@ -573,7 +584,18 @@ build_firejail_params() {
         params+=(--net=none)
     fi
 
-    # Blacklist protected directories
+    # Blacklist protected directories.
+    #
+    # Probably redundant with --private="$SANDBOX_DIR" above, which already replaces
+    # the home directory, so ${REAL_HOME}/.ssh should not resolve to the real one
+    # inside the sandbox at all. Kept anyway, as deliberate belt-and-braces: the
+    # redundancy costs one firejail argument per existing directory & nothing at
+    # runtime, while the failure it guards against (a --private that does not take,
+    # or an ordering change in a future firejail) hands TLauncher the user's keys &
+    # browser profiles. NOT empirically confirmed either way: this dev environment
+    # has no firejail, so whether --blacklist is applied before or after the private
+    # mount was never observed here. Verified redundancy is the only thing that
+    # would justify deleting a control like this one, so it stays until then.
     for dir in "${PROTECTED_DIRS[@]}"; do
         [ -d "${REAL_HOME}/${dir}" ] && params+=(--blacklist="${REAL_HOME}/${dir}")
     done
@@ -1074,6 +1096,17 @@ report_regression_check() {
         local risky; risky="$(printf '%s\n' "$domains" | grep -E "$RISK_DOMAIN_REGEX" || true)"
         if [ -n "$risky" ]; then
             printf "**🚨 Known risk-pattern domains contacted this session:**\n\n\`\`\`\n%s\n\`\`\`\n\n" "$risky"
+        fi
+    fi
+
+    # Known telemetry/ad hosts contacted this session. Listed, not blocked: the
+    # sandbox observes traffic, it never intercepts it. Separate from the risk
+    # patterns above, which are the narrower set the author treats as hard flags.
+    if [ -n "$KNOWN_TELEMETRY_REGEX" ]; then
+        local seen_telemetry
+        seen_telemetry="$(printf '%s\n' "$domains" | grep -E "$KNOWN_TELEMETRY_REGEX" || true)"
+        if [ -n "$seen_telemetry" ]; then
+            printf "**Known telemetry/ad hosts contacted (observed, NOT blocked):**\n\n\`\`\`\n%s\n\`\`\`\n\n" "$seen_telemetry"
         fi
     fi
 
