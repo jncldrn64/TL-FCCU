@@ -157,6 +157,8 @@ NOISE_PATTERNS=(
     '\.lock$'
 )
 # Pre-joined into a single ERE; exported so the (separate-process) monitors see it.
+# _PATTERNS, per docs/cli-standard.md rule 6: regular expressions, joined RAW.
+#
 # NOT escaped, deliberately: unlike the domain lists, these entries ARE regexes &
 # are written as such on purpose (`\.sqlite-wal$` anchors an extension, `GPUCache/`
 # matches a path segment). Escaping them would break every anchor. Add new noise
@@ -187,18 +189,25 @@ join_literals_ere() {
     printf '%s' "$out"
 }
 
+# _LITERALS, per docs/cli-standard.md rule 6: this array holds LITERAL substrings &
+# is joined with escaping. A *_PATTERNS array holds regular expressions & is joined
+# raw. The two used to be told apart only by a comment, which is how a literal ends
+# up silently treated as a regex.
+#
 # Known-risky domain substrings for the regression check (Task 3). A domain that
 # matches any of these gets flagged hard in INCIDENT_REPORT.md even when it's
 # already in the baseline. These are the fallback & telemetry domains the author
 # distrusts; advancedrepository probes over plain HTTP. Add new ones by hand, as
 # plain literals: the escaping above handles the rest, so do NOT pre-escape them.
-RISK_DOMAIN_PATTERNS=(
+RISK_DOMAIN_LITERALS=(
     'advancedrepository'
     'securelogger'
 )
-RISK_DOMAIN_REGEX="$(join_literals_ere "${RISK_DOMAIN_PATTERNS[@]}")"
+RISK_DOMAIN_REGEX="$(join_literals_ere "${RISK_DOMAIN_LITERALS[@]}")"
 
 
+# _LITERALS: literal hostnames, joined with escaping. See docs/cli-standard.md rule 6.
+#
 # Telemetry & ad hosts seen in TLauncher traffic, kept as a named reference list.
 #
 # NOT blocked. This array was called BLOCKED_DOMAINS & nothing in the script ever
@@ -207,7 +216,7 @@ RISK_DOMAIN_REGEX="$(join_literals_ere "${RISK_DOMAIN_PATTERNS[@]}")"
 # read by report_regression_check, which marks any of these contacted during a
 # session. Blocking would need firejail netfilter rules & is not in scope here;
 # this tool watches, it does not intervene.
-KNOWN_TELEMETRY_DOMAINS=(
+KNOWN_TELEMETRY_LITERALS=(
     "telemetry.tlauncher.org" "stats.tlauncher.org" "analytics.tlauncher.org"
     "tracking.tlauncher.org" "metrics.tlauncher.org" "events.tlauncher.org"
     "ads.tlauncher.org" "promo.tlauncher.org" "offers.tlauncher.org"
@@ -218,7 +227,7 @@ KNOWN_TELEMETRY_DOMAINS=(
 )
 # Same treatment for the telemetry reference list: literals in, escaped alternation
 # out. These entries DO carry dots, so this one is not hypothetical.
-KNOWN_TELEMETRY_REGEX="$(join_literals_ere "${KNOWN_TELEMETRY_DOMAINS[@]}")"
+KNOWN_TELEMETRY_REGEX="$(join_literals_ere "${KNOWN_TELEMETRY_LITERALS[@]}")"
 
 # Colors
 if [ -t 1 ]; then
