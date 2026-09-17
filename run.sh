@@ -807,8 +807,16 @@ run_sandboxed() {
     # The fix: hold the lock on an exec'd fd in the current shell. The monitors,
     # MONITOR_PIDS, & the code that kills them now share one scope.
     # ----------------------------------------------------------------------
+    # Probe writability FIRST, with the error captured, so the `exec` below stays a
+    # bare redirection. `exec 200>"$F" 2>/dev/null` would apply BOTH redirections to
+    # the shell itself & silence every later diagnostic for the rest of the run.
+    if ! : 2>/dev/null >>"$LOCKFILE"; then
+        die "Cannot write the lockfile: $(disp_path "$LOCKFILE")"
+    fi
     exec 200>"$LOCKFILE"
-    flock -n 200 || die "TLauncher already running (lockfile exists)"
+    # The lock is never released by deleting the file; see cleanup(). A rejected
+    # instance exits without touching the holder's lock.
+    flock -n 200 || die "TLauncher already running (lock held on $(disp_path "$LOCKFILE"))"
 
     # Export the handful of vars the (separate-process) monitors reference.
     export SANDBOX_DIR SESSION_DIR SESSION_ID NOISE_REGEX SANDBOX_HOSTNAME
@@ -1589,8 +1597,13 @@ cleanup() {
     # Safety net: kill anything still tagged with THIS session id.
     [ -n "${SESSION_ID:-}" ] && pkill -f "tlauncher-mon-${SESSION_ID}" 2>/dev/null || true
 
-    # Remove lockfile
-    rm -f "$LOCKFILE"
+    # The lockfile is NOT removed here, on purpose. flock(2) lives on the open file
+    # description, not on the path, so unlinking it does not release anything: it
+    # only detaches the name. A second instance that lost the race & died through
+    # die() used to delete the holder's lockfile, after which a third instance
+    # created a fresh inode, locked that without contest, & ran in parallel with the
+    # first. The file is zero bytes & lives under XDG_RUNTIME_DIR, which the system
+    # clears at logout; leaving it is correct, not litter.
 }
 
 trap cleanup EXIT INT TERM
