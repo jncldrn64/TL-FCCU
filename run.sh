@@ -1437,16 +1437,33 @@ cleanup_logs() {
         (
             cd "$d" || exit 0
             # Everything EXCEPT the quick-read reports and the archive itself.
+            #
+            # Globs, not `for f in $(ls -A)`: that split on IFS & re-expanded every
+            # name as a pattern. The names are script-generated so none carries a
+            # space today, but the agent's per-PID logs land here too, & a single
+            # space would have silently split one name into two nonexistent ones.
+            # `dotglob`+`nullglob` gets the dotfiles & yields nothing when empty.
             local files=()
             local f
-            for f in $(ls -A 2>/dev/null); do
+            shopt -s nullglob dotglob
+            for f in *; do
                 case "$f" in
                     SUMMARY.txt|INCIDENT_REPORT.md|logs.tar.gz) ;;
                     *) files+=("$f") ;;
                 esac
             done
+            shopt -u nullglob dotglob
             if [ "${#files[@]}" -gt 0 ]; then
-                tar -czf logs.tar.gz --remove-files "${files[@]}" 2>/dev/null || true
+                # No `|| true` here. `tar --remove-files` deletes what it archived,
+                # so swallowing its status is how a session's logs disappear without
+                # the archive that was supposed to replace them. Report & keep going:
+                # one unarchived session must not abort the rest of the sweep.
+                if ! tar -czf logs.tar.gz --remove-files "${files[@]}" 2>"${d}/.tar-error"; then
+                    log_warn "Could not compress $(basename "$d"); logs left in place."
+                    [ -s "${d}/.tar-error" ] && log_warn "  tar: $(head -c 200 "${d}/.tar-error")"
+                else
+                    rm -f "${d}/.tar-error"
+                fi
             fi
         ) || true
     done < <(find "$root" -maxdepth 1 -type d -name 'session_*' -mtime +"$days" 2>/dev/null)
