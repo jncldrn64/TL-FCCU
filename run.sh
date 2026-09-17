@@ -306,11 +306,30 @@ log_warn() {
     _log_emit "WARN" "$YELLOW" "$@"
 }
 
+# Exit codes, one per condition. Before this, `1` covered five distinct failures &
+# a caller could not tell a missing dependency from an unknown flag without reading
+# stderr. docs/cli-standard.md is normative for these & the man page's EXIT STATUS
+# section lists every one; tests/doc-sync.sh fails if a code here is undocumented.
+readonly EX_OK=0            # success, including --help, --print-man & standalone modes
+readonly EX_USAGE=1         # unknown option, missing or invalid argument
+readonly EX_LOCK_HELD=2     # refusal: a live session holds the lock
+readonly EX_MISSING_DEP=3   # a required dependency is absent
+readonly EX_ENV=4           # environment: lockfile unwritable, jar missing, sandbox unusable
+readonly EX_LOCK_UNKNOWN=5  # the lock state could not be determined
+
+# die [CODE] MESSAGE. CODE defaults to EX_USAGE; it is taken as a code only when it
+# is a bare integer AND a message follows, so a message that merely starts with a
+# digit is never swallowed.
 die() {
+    local code=$EX_USAGE
+    if [ "$#" -ge 2 ] && [[ "$1" =~ ^[0-9]+$ ]]; then
+        code="$1"; shift
+    fi
     log_error "$*"
     cleanup
-    exit 1
+    exit "$code"
 }
+
 
 # ==========================================
 # PROCESS HELPERS (orphan-proof cleanup)
@@ -510,7 +529,7 @@ check_requirements() {
         # itself never invokes sudo (hard constraint).
         printf "\nInstall manually with: sudo apt install %s\n" "${missing[*]}" >&2
         printf "Dependency state recorded in: %s\n" "$(disp_path "$DEPS_FILE")" >&2
-        exit 1
+        exit "$EX_MISSING_DEP"
     fi
 }
 
@@ -539,7 +558,7 @@ check_deps() {
     printf "\nState file: %s\n" "$(disp_path "$DEPS_FILE")"
     if [ "$missing_required" -gt 0 ]; then
         printf "${RED}%d required dependency missing.${NC}\n" "$missing_required" >&2
-        return 1
+        return "$EX_MISSING_DEP"
     fi
     printf "${GREEN}All required dependencies present.${NC}\n"
     return 0
@@ -552,7 +571,7 @@ check_deps() {
 find_tlauncher() {
     if [ -n "$TLAUNCHER_PATH" ]; then
         if [ ! -f "$TLAUNCHER_PATH" ]; then
-            die "Specified TLauncher not found: $TLAUNCHER_PATH"
+            die "$EX_ENV" "Specified TLauncher not found: $TLAUNCHER_PATH"
         fi
         printf "%s" "$TLAUNCHER_PATH"
         return 0
@@ -566,7 +585,7 @@ find_tlauncher() {
         fi
     done
 
-    die "TLauncher.jar not found. Use -f to specify path"
+    die "$EX_ENV" "TLauncher.jar not found. Use -f to specify path"
 }
 
 # ==========================================
@@ -935,12 +954,12 @@ run_sandboxed() {
     # bare redirection. `exec 200>"$F" 2>/dev/null` would apply BOTH redirections to
     # the shell itself & silence every later diagnostic for the rest of the run.
     if ! : 2>/dev/null >>"$LOCKFILE"; then
-        die "Cannot write the lockfile: $(disp_path "$LOCKFILE")"
+        die "$EX_ENV" "Cannot write the lockfile: $(disp_path "$LOCKFILE")"
     fi
     exec 200>"$LOCKFILE"
     # The lock is never released by deleting the file; see cleanup(). A rejected
     # instance exits without touching the holder's lock.
-    flock -n 200 || die "TLauncher already running (lock held on $(disp_path "$LOCKFILE"))"
+    flock -n 200 || die "$EX_LOCK_HELD" "TLauncher already running (lock held on $(disp_path "$LOCKFILE"))"
 
     # Export the handful of vars the (separate-process) monitors reference.
     export SANDBOX_DIR SESSION_DIR SESSION_ID NOISE_REGEX SANDBOX_HOSTNAME
@@ -1082,7 +1101,7 @@ extract_session_domains() {
 # hand, under XDG_DATA_HOME.
 save_baseline() {
     local session="$1"
-    [ -d "$session" ] || die "save-baseline: session directory not found: $session"
+    [ -d "$session" ] || die "$EX_USAGE" "save-baseline: session directory not found: $session"
     mkdir -p "$(dirname "$BASELINE_DOMAINS")"
 
     local domains; domains="$(extract_session_domains "${session}/tlauncher.log")"
@@ -1916,7 +1935,7 @@ main() {
             -K|--kill-orphans) KILL_ORPHANS=true; shift ;;
             -R|--report)
                 if [ -z "${2:-}" ]; then
-                    die "--report requires a session directory argument"
+                    die "$EX_USAGE" "--report requires a session directory argument"
                 fi
                 REPORT_SESSION="$2"
                 shift 2
@@ -1937,7 +1956,7 @@ main() {
                 ;;
             -B|--save-baseline)
                 if [ -z "${2:-}" ]; then
-                    die "--save-baseline requires a session directory argument"
+                    die "$EX_USAGE" "--save-baseline requires a session directory argument"
                 fi
                 SAVE_BASELINE_SESSION="$2"
                 shift 2
@@ -1945,14 +1964,14 @@ main() {
             --check-deps) CHECK_DEPS=true; shift ;;
             -ml|--mozilla-path)
                 if [ -z "${2:-}" ]; then
-                    die "--mozilla-path requires a path argument"
+                    die "$EX_USAGE" "--mozilla-path requires a path argument"
                 fi
                 MOZILLA_SEARCH_PATH="$2"
                 shift 2
                 ;;
             -f|--file)
                 if [ -z "${2:-}" ]; then
-                    die "--file requires a path argument"
+                    die "$EX_USAGE" "--file requires a path argument"
                 fi
                 TLAUNCHER_PATH="$2"
                 shift 2
@@ -1961,13 +1980,13 @@ main() {
             -*)
                 printf "${RED}Error: Unknown option '%s'${NC}\n\n" "$1" >&2
                 printf "Run '${BLUE}%s --help${NC}' for usage information\n" "$0" >&2
-                exit 1
+                exit "$EX_USAGE"
                 ;;
             *)
                 printf "${RED}Error: Unexpected argument '%s'${NC}\n\n" "$1" >&2
                 printf "If specifying TLauncher file, use: ${BLUE}-f %s${NC}\n" "$1" >&2
                 printf "Run '${BLUE}%s --help${NC}' for usage\n" "$1" >&2
-                exit 1
+                exit "$EX_USAGE"
                 ;;
         esac
     done
