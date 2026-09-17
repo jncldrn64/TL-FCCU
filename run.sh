@@ -393,14 +393,22 @@ warn_orphans() {
 # session's monitors while announcing them as strays "from a previous session". For
 # an audit tool, losing the instrumentation while the target keeps running is the
 # worst failure available, so -K now refuses instead of guessing.
-session_lock_is_free() {
-    # No lockfile at all means no session has ever run here: nothing holds it.
-    [ -e "$LOCKFILE" ] || return 0
-    # Probe first, then redirect. `exec 201>"$F" 2>/dev/null` would apply BOTH
-    # redirections to this shell & silence every later diagnostic for the rest of
-    # the run, so the probe is a separate subshell & the exec stays bare.
-    ( : >>"$LOCKFILE" ) 2>/dev/null || return 1
-    exec 201>>"$LOCKFILE"
+# Report the session lock's state. Three outcomes, not two:
+#   0  free
+#   1  held by a live session
+#   2  state indeterminable (the lockfile is not writable by us)
+#
+# WHY three: this returned "not free" both when a session held the lock & when the
+# file simply could not be opened, so a lockfile left owned by another user made -K
+# refuse forever while claiming a session was running. That is a lie of exactly the
+# kind this repo exists to avoid, & the caller could not tell the two apart.
+#
+# The writability probe is a separate subshell & the exec stays bare: `exec
+# 201>"$F" 2>/dev/null` would apply BOTH redirections to this shell & silence every
+# later diagnostic for the rest of the run.
+session_lock_state() {
+    ( : >>"$LOCKFILE" ) 2>/dev/null || return 2
+    exec 201>>"$LOCKFILE" || return 2
     if flock -n 201; then
         flock -u 201
         exec 201>&-
@@ -417,18 +425,33 @@ lock_holder_pids() {
 }
 
 kill_orphans() {
-    if ! session_lock_is_free; then
-        local holders; holders="$(lock_holder_pids)"
-        log_error "Refusing to kill: a TLauncher session is live & holds the lock."
-        if [ -n "$holders" ]; then
-            log_error "  Lock held by PID(s): ${holders}"
-        else
-            log_error "  Lock file: $(disp_path "$LOCKFILE") (holder PID unavailable; install psmisc for fuser)"
-        fi
-        log_error "  Monitors tagged 'tlauncher-mon-' belong to that session, not to a previous one."
-        log_error "  Let the session finish, or stop it, then run -K again."
-        return 2
-    fi
+    local lock_state=0
+    session_lock_state || lock_state=$?
+    case "$lock_state" in
+        1)
+            local holders; holders="$(lock_holder_pids)"
+            log_error "Refusing to kill: a TLauncher session is live & holds the lock."
+            if [ -n "$holders" ]; then
+                log_error "  Lock held by PID(s): ${holders}"
+            else
+                log_error "  Lock file: $(disp_path "$LOCKFILE") (holder PID unavailable; install psmisc for fuser)"
+            fi
+            log_error "  Monitors tagged 'tlauncher-mon-' belong to that session, not to a previous one."
+            log_error "  Let the session finish, or stop it, then run -K again."
+            return "$EX_LOCK_HELD"
+            ;;
+        2)
+            # NOT the same as "a session is running", & saying so would be a lie.
+            log_error "Cannot determine whether a session is live: the lockfile is not writable."
+            log_error "  Lock file: $(disp_path "$LOCKFILE")"
+            log_error "  Owner/permissions, as seen from here:"
+            log_error "    $(ls -ld "$LOCKFILE" 2>/dev/null || printf 'unreadable')"
+            log_error "  Refusing to kill anything while the lock state is unknown: a sweep here"
+            log_error "  could take down the monitors of a session that IS running."
+            log_error "  Fix the ownership or permissions, or remove the file if no session is live."
+            return "$EX_LOCK_UNKNOWN"
+            ;;
+    esac
     local pids; pids="$(find_orphan_pids)"
     if [ -z "$pids" ]; then
         log_msg "No orphaned monitor processes found."
