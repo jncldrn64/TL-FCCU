@@ -330,7 +330,6 @@ die() {
     exit "$code"
 }
 
-
 # ==========================================
 # PROCESS HELPERS (orphan-proof cleanup)
 # ==========================================
@@ -393,29 +392,39 @@ warn_orphans() {
 # session's monitors while announcing them as strays "from a previous session". For
 # an audit tool, losing the instrumentation while the target keeps running is the
 # worst failure available, so -K now refuses instead of guessing.
-# Report the session lock's state. Three outcomes, not two:
-#   0  free
+# Take the session lock on fd 201 & KEEP it. Three outcomes, not two:
+#   0  acquired, & still held on return: the caller must call session_lock_release
 #   1  held by a live session
 #   2  state indeterminable (the lockfile is not writable by us)
 #
-# WHY three: this returned "not free" both when a session held the lock & when the
-# file simply could not be opened, so a lockfile left owned by another user made -K
-# refuse forever while claiming a session was running. That is a lie of exactly the
-# kind this repo exists to avoid, & the caller could not tell the two apart.
+# WHY three: the previous version returned "not free" both when a session held the
+# lock & when the file simply could not be opened, so a lockfile left owned by
+# another user made -K refuse forever while claiming a session was running. That is
+# a lie of exactly the kind this repo exists to avoid, & the caller could not tell.
+#
+# WHY it keeps the lock instead of probing: the previous version took the lock,
+# released it, closed the fd, & only then swept for orphans. A legitimate session
+# starting inside that window got its monitors killed by the sweep, which is the
+# failure the interlock was added to prevent. Holding it across the whole sweep
+# closes the window.
 #
 # The writability probe is a separate subshell & the exec stays bare: `exec
 # 201>"$F" 2>/dev/null` would apply BOTH redirections to this shell & silence every
 # later diagnostic for the rest of the run.
-session_lock_state() {
+session_lock_acquire() {
     ( : >>"$LOCKFILE" ) 2>/dev/null || return 2
     exec 201>>"$LOCKFILE" || return 2
     if flock -n 201; then
-        flock -u 201
-        exec 201>&-
         return 0
     fi
     exec 201>&-
     return 1
+}
+
+# Release what session_lock_acquire took. Safe to call only after it returned 0.
+session_lock_release() {
+    flock -u 201 2>/dev/null || true
+    exec 201>&-
 }
 
 # PIDs holding the lockfile open, for the refusal message. Best effort: `fuser` is
@@ -426,7 +435,7 @@ lock_holder_pids() {
 
 kill_orphans() {
     local lock_state=0
-    session_lock_state || lock_state=$?
+    session_lock_acquire || lock_state=$?
     case "$lock_state" in
         1)
             local holders; holders="$(lock_holder_pids)"
@@ -452,10 +461,14 @@ kill_orphans() {
             return "$EX_LOCK_UNKNOWN"
             ;;
     esac
+    # The lock is HELD from here to the end of the sweep, so no session can start
+    # underneath it & lose its monitors to the kills below.
+    local rc=0
     local pids; pids="$(find_orphan_pids)"
     if [ -z "$pids" ]; then
         log_msg "No orphaned monitor processes found."
-        return 0
+        session_lock_release
+        return "$EX_OK"
     fi
     log_warn "Found orphaned monitor process(es); terminating:"
     local p
@@ -468,6 +481,8 @@ kill_orphans() {
     pids="$(find_orphan_pids)"
     for p in $pids; do kill_tree "$p" KILL; done
     log_msg "Orphaned monitors terminated."
+    session_lock_release
+    return "$rc"
 }
 
 # Stop the monitors started in THIS run (TERM, then KILL), then a tag-based

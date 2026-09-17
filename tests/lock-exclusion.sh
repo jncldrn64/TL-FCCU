@@ -124,6 +124,48 @@ else
 fi
 pkill -f 'tlauncher-mon-fdtest' 2>/dev/null || true
 
+# -K must tell three lock states apart, & must hold the lock across its whole
+# sweep. Both were single findings in review: the old probe conflated "unreadable"
+# with "a session is live" (a lie, & it never cleared), & it released the lock
+# before sweeping, so a session starting in that window lost its monitors.
+printf -- '--- -K lock states ---\n'
+KW="$(mktemp -d)"
+mkdir -p "${KW}/run" "${KW}/data" "${KW}/state"
+kdir="${KW}/run/tlauncher-$(id -un).lock"
+
+# (a) indeterminable: the lockfile path cannot be opened for append.
+mkdir -p "$kdir"
+kout="$(XDG_RUNTIME_DIR="${KW}/run" XDG_DATA_HOME="${KW}/data" XDG_STATE_HOME="${KW}/state" \
+        bash "$RUN" -K 2>&1)"
+krc=$?
+rmdir "$kdir"
+if [ "$krc" -eq 5 ] && printf '%s' "$kout" | grep -q 'Cannot determine'; then
+    check "-K exits 5 when the lock state is indeterminable" true ""
+else
+    check "-K exits 5 when the lock state is indeterminable" false "rc=$krc"
+fi
+if printf '%s' "$kout" | grep -q 'session is live & holds'; then
+    check "-K does not claim a live session when it cannot tell" false "it claimed a live session"
+else
+    check "-K does not claim a live session when it cannot tell" true ""
+fi
+
+# (b) the lock stays HELD for the duration of the sweep, not just probed.
+bash -c 'exec -a "tlauncher-mon-locktest" sleep 20' >/dev/null 2>&1 &
+sleep 0.3
+XDG_RUNTIME_DIR="${KW}/run" XDG_DATA_HOME="${KW}/data" XDG_STATE_HOME="${KW}/state" \
+    bash "$RUN" -K >/dev/null 2>&1 &
+ksweep=$!
+sleep 0.6   # -K is mid-sweep here: it waits 1s between its TERM and KILL passes
+if flock -n 8 8>"${KW}/run/tlauncher-$(id -un).lock" 2>/dev/null; then
+    check "-K holds the lock across the whole sweep" false "lock was free mid-sweep: a session could start into it"
+else
+    check "-K holds the lock across the whole sweep" true ""
+fi
+wait "$ksweep" 2>/dev/null || true
+pkill -f 'tlauncher-mon-locktest' 2>/dev/null || true
+rm -rf "$KW"
+
 printf -- '--- run.sh source guard ---\n'
 if grep -qE '^\s*rm -f "\$LOCKFILE"' "$RUN"; then
     check "run.sh cleanup() does not delete the lockfile" false "rm -f \$LOCKFILE is back in run.sh"
