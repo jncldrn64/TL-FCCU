@@ -103,11 +103,38 @@ kill "$A_PID" 2>/dev/null || true
 wait "$A_PID" 2>/dev/null || true
 
 # A live session must still be visible to a later attempt.
+# An orphaned child must NOT keep holding the session lock. flock lives on the open
+# file description & fork/exec inherits it, so a monitor that outlives the parent
+# co-holds the lock unless the fd is closed in the child. That matters doubly now
+# that -K consults the lock: an orphan holding fd 200 would make -K refuse to reap
+# the very orphan holding it.
+printf -- '--- inherited-fd guard ---\n'
+ORPHLOCK="${WORK}/orphan.lock"
+bash -c '
+    exec 200>"$1"
+    flock -n 200 || exit 1
+    bash -c "exec -a tlauncher-mon-fdtest sleep 20" 200>&- &
+    exit 0
+' _ "$ORPHLOCK"
+sleep 0.4
+if flock -n 9 9>"$ORPHLOCK" 2>/dev/null; then
+    check "orphaned child does not hold the session lock" true ""
+else
+    check "orphaned child does not hold the session lock" false "fd 200 leaked into the child; -K would deadlock"
+fi
+pkill -f 'tlauncher-mon-fdtest' 2>/dev/null || true
+
 printf -- '--- run.sh source guard ---\n'
 if grep -qE '^\s*rm -f "\$LOCKFILE"' "$RUN"; then
     check "run.sh cleanup() does not delete the lockfile" false "rm -f \$LOCKFILE is back in run.sh"
 else
     check "run.sh cleanup() does not delete the lockfile" true ""
+fi
+
+if grep -q '200>&-' "$RUN"; then
+    check "run.sh closes fd 200 in its children" true ""
+else
+    check "run.sh closes fd 200 in its children" false "no 200>&- in run.sh"
 fi
 
 printf -- '----\n%d/%d lock checks verified\n' "$pass" "$total"

@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.21"
+VERSION="2.24"
 
 # Directory holding this script, used to find helpers like scripts/build-agent.sh.
 # Resolved once & survives being called through a symlink.
@@ -705,8 +705,13 @@ PREAMBLE
 # so $! is the bash PID we can track exactly; kill_tree() reaps the descendants.
 spawn_monitor() {
     local name="$1" body="$2"
+    # 200>&- closes the lockfile descriptor in the child. flock(2) lives on the open
+    # file description, which fork/exec inherits, so a monitor that outlives the
+    # parent would go on co-holding the session lock. That matters twice over now
+    # that -K consults the lock before reaping: an orphan still holding fd 200 would
+    # make -K refuse to clean up the very orphan that is holding it.
     bash -c "${MONITOR_PREAMBLE}
-${body}" "tlauncher-mon-${SESSION_ID}-${name}" &
+${body}" "tlauncher-mon-${SESSION_ID}-${name}" 200>&- &
     local pid=$!
     MONITOR_PIDS+=("$pid")
     log_verbose "  → ${name} monitor PID: $pid"
@@ -946,23 +951,23 @@ run_sandboxed() {
     if [ "$VERBOSE" = true ]; then
         if session_logging_active; then
             firejail "${firejail_params[@]}" \
-                bash -c "$java_cmd" \
+                bash -c "$java_cmd" 200>&- \
                 2>&1 | tee "${SESSION_DIR}/tlauncher.log"
             exit_code=${PIPESTATUS[0]}
         else
             firejail "${firejail_params[@]}" \
-                bash -c "$java_cmd"
+                bash -c "$java_cmd" 200>&-
             exit_code=$?
         fi
     else
         if session_logging_active; then
             firejail "${firejail_params[@]}" \
-                bash -c "$java_cmd" \
+                bash -c "$java_cmd" 200>&- \
                 > "${SESSION_DIR}/tlauncher.log" 2>&1
             exit_code=$?
         else
             firejail "${firejail_params[@]}" \
-                bash -c "$java_cmd" \
+                bash -c "$java_cmd" 200>&- \
                 >/dev/null 2>&1
             exit_code=$?
         fi
