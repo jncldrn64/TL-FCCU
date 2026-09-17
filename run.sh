@@ -212,12 +212,36 @@ fi
 # LOGGING
 # ==========================================
 
-log_msg() {
-    local ts="$(date '+%Y-%m-%d %H:%M:%S.%3N')"
-    printf "[%s] %s\n" "$ts" "$*" >&2
-    if [ -n "$SESSION_DIR" ] && [ -d "$SESSION_DIR" ]; then
-        printf "[%s] %s\n" "$ts" "$*" >> "${SESSION_DIR}/master.log" 2>/dev/null || true
+# One write path for all four levels.
+#
+# WHY: log_error & log_warn used to printf straight to stderr, so they carried no
+# timestamp & never reached ${SESSION_DIR}/master.log. Reading a past session's
+# master.log showed the run but not the errors in it, which is the worst possible
+# hole in a tool whose whole claim (DESIGN.md principle 9) is that an auditor can
+# read it end to end. All four levels now share this function, so the timestamp
+# format & the file write cannot drift apart again.
+#
+# Colour is decided HERE, at print time, & only for the terminal stream. The file
+# gets the same text with no escape sequence: a log you cannot grep is a log you
+# do not have.
+_log_emit() {
+    local level="$1" colour="$2"
+    shift 2
+    local ts; ts="$(date '+%Y-%m-%d %H:%M:%S.%3N')"
+    local tag=""
+    [ -n "$level" ] && tag="[${level}] "
+    if [ -n "$colour" ]; then
+        printf "[%s] ${colour}%s${NC}%s\n" "$ts" "$tag" "$*" >&2
+    else
+        printf "[%s] %s%s\n" "$ts" "$tag" "$*" >&2
     fi
+    if [ -n "${SESSION_DIR:-}" ] && [ -d "${SESSION_DIR:-}" ]; then
+        printf "[%s] %s%s\n" "$ts" "$tag" "$*" >> "${SESSION_DIR}/master.log" 2>/dev/null || true
+    fi
+}
+
+log_msg() {
+    _log_emit "" "" "$@"
 }
 
 log_verbose() {
@@ -225,7 +249,7 @@ log_verbose() {
     # returns exit status 1, & under `set -e` a bare `log_verbose ...` call then
     # aborts the whole script. That bug killed every non-verbose run, including
     # the documented `-M -a` pattern, until this line was added.
-    [ "$VERBOSE" = true ] && log_msg "$@"
+    [ "$VERBOSE" = true ] && _log_emit "" "" "$@"
     return 0
 }
 
@@ -275,11 +299,11 @@ reset_agent_tmp() {
 }
 
 log_error() {
-    printf "${RED}[ERROR]${NC} %s\n" "$*" >&2
+    _log_emit "ERROR" "$RED" "$@"
 }
 
 log_warn() {
-    printf "${YELLOW}[WARN]${NC} %s\n" "$*" >&2
+    _log_emit "WARN" "$YELLOW" "$@"
 }
 
 die() {
