@@ -301,7 +301,51 @@ warn_orphans() {
 }
 
 # -K/--kill-orphans implementation: find and kill stray monitors, loudly.
+# True when no live session holds the lock. Tries the lock on a scratch fd &
+# releases it immediately; taking it proves nobody else has it.
+#
+# WHY -K needs this: find_orphan_pids matches ANY process tagged `tlauncher-mon-`,
+# excluding only our own ancestor chain, & -K is a standalone mode that never looked
+# at the lock. Run from a second terminal during a live session it killed that live
+# session's monitors while announcing them as strays "from a previous session". For
+# an audit tool, losing the instrumentation while the target keeps running is the
+# worst failure available, so -K now refuses instead of guessing.
+session_lock_is_free() {
+    # No lockfile at all means no session has ever run here: nothing holds it.
+    [ -e "$LOCKFILE" ] || return 0
+    # Probe first, then redirect. `exec 201>"$F" 2>/dev/null` would apply BOTH
+    # redirections to this shell & silence every later diagnostic for the rest of
+    # the run, so the probe is a separate subshell & the exec stays bare.
+    ( : >>"$LOCKFILE" ) 2>/dev/null || return 1
+    exec 201>>"$LOCKFILE"
+    if flock -n 201; then
+        flock -u 201
+        exec 201>&-
+        return 0
+    fi
+    exec 201>&-
+    return 1
+}
+
+# PIDs holding the lockfile open, for the refusal message. Best effort: `fuser` is
+# not a hard dependency, so a miss degrades to no PID rather than to a failure.
+lock_holder_pids() {
+    fuser "$LOCKFILE" 2>/dev/null | tr -s ' ' '\n' | grep -E '^[0-9]+$' | tr '\n' ' ' | sed 's/ $//'
+}
+
 kill_orphans() {
+    if ! session_lock_is_free; then
+        local holders; holders="$(lock_holder_pids)"
+        log_error "Refusing to kill: a TLauncher session is live & holds the lock."
+        if [ -n "$holders" ]; then
+            log_error "  Lock held by PID(s): ${holders}"
+        else
+            log_error "  Lock file: $(disp_path "$LOCKFILE") (holder PID unavailable; install psmisc for fuser)"
+        fi
+        log_error "  Monitors tagged 'tlauncher-mon-' belong to that session, not to a previous one."
+        log_error "  Let the session finish, or stop it, then run -K again."
+        return 2
+    fi
     local pids; pids="$(find_orphan_pids)"
     if [ -z "$pids" ]; then
         log_msg "No orphaned monitor processes found."
@@ -1809,7 +1853,9 @@ main() {
 
     # ---- Standalone modes that never launch TLauncher ----
     if [ "$KILL_ORPHANS" = true ]; then
-        kill_orphans
+        # `|| exit` keeps errexit out of it & preserves kill_orphans' own status:
+        # 2 when it refused because a session is live.
+        kill_orphans || exit $?
         exit 0
     fi
 
