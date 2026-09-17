@@ -4,6 +4,78 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.25 — 2026-09-17
+
+Three review findings from the previous PR, & the command-line documentation
+standard, applied: a manual page that ships inside the script, one exit code per
+condition, & a test that keeps the two documents from drifting.
+
+### Fixed
+- Errors & warnings never reached the session log. `log_error` & `log_warn` printed
+  straight to stderr with no timestamp & no file write, so reading a past session's
+  `master.log` showed the run but none of the errors in it. In a tool whose claim is
+  that an auditor can read it end to end (`DESIGN.md` principle 9), the hole was in
+  the worst possible place. All four levels now share one writer, `_log_emit`, which
+  fixes the timestamp format & the file write in one spot. Colour is decided at print
+  time & only for the terminal: `master.log` received no escape sequences before this
+  change & receives none after, verified with colour forced on.
+- `-K` could not tell an unreadable lockfile from a live session. The probe returned
+  "not free" for both, so a lockfile left owned by another user made `-K` refuse
+  forever while stating that a session was running, which was false. Three states
+  now: free, held, & indeterminable, the last with its own message & its own exit
+  code. Verified against the real case, a root-owned `0600` lockfile read as another
+  user.
+- `-K` released the lock before sweeping. It took the lock, released it, closed the
+  descriptor, & only then looked for orphans to kill, so a legitimate session
+  starting inside that window lost its monitors, which is the failure the interlock
+  exists to prevent. The lock is now held across the whole sweep. Verified: a
+  concurrent `flock -n` fails while the sweep is in progress.
+
+### Added
+- A manual page, in roff, embedded in `run.sh`. `--print-man` writes it to stdout &
+  exits 0; `--install-man` installs it under `${XDG_DATA_HOME}/man/man1` without
+  root, prints the `MANPATH` hint when it is needed, & links the canonical command
+  name into `~/.local/bin` when that directory exists & is on `PATH`. No `.1` file
+  lives in the tree: the script is the single copy, which is the same reason
+  `DESIGN.md` principle 9 keeps the program in one file. The page carries the four
+  sections no user could see before: `EXIT STATUS`, `ENVIRONMENT`, `FILES` &
+  `DIAGNOSTICS`.
+- `docs/cli-standard.md`, normative. The canonical command name (`tlauncher-fccu`),
+  where the manual lives, the split between it & the long `--help`, the presentation
+  rules, the exit-code table, & the array naming convention.
+- `tests/doc-sync.sh`. A long `--help` plus a full manual page duplicates content on
+  purpose; this is what stops it duplicating maintenance. It checks that every parsed
+  option appears in both documents & that neither documents an option the parser does
+  not accept, that every `EX_*` code appears in `EXIT STATUS`, that both documents
+  write to stdout & exit 0 with nothing on stderr, & that the manual's sections are
+  present & in the fixed order. Each rule was verified to go red by breaking it.
+  7/8 green with 1 honestly reported as skipped: neither `mandoc` nor `groff` is
+  installed here, so the roff is NOT machine-validated & the check says so rather
+  than passing by default.
+
+### Changed
+- One exit code per condition. `1` used to cover usage errors, unknown options, a
+  missing dependency, an unwritable lockfile & a lost lock race, so a caller could
+  not tell them apart without parsing stderr. Now `1` usage, `2` a live session holds
+  the lock, `3` a missing dependency, `4` an environment error, `5` the lock state is
+  indeterminable. `die()` takes an optional code. TLauncher's own status is still
+  propagated unchanged.
+- Regex arrays are named for their semantics: `*_PATTERNS` holds regular expressions
+  & is joined raw, `*_LITERALS` holds literals & is joined with escaping. A comment
+  was previously the only thing distinguishing `NOISE_PATTERNS` from the domain
+  lists, which is how a literal ends up silently treated as a regex.
+  `RISK_DOMAIN_PATTERNS` & `KNOWN_TELEMETRY_DOMAINS` became `RISK_DOMAIN_LITERALS` &
+  `KNOWN_TELEMETRY_LITERALS`.
+- `SCRIPT_DIR` resolves symlinks. A comment had claimed for months that it "survives
+  being called through a symlink" & it did not: it resolved the symlink's own
+  directory, so the tool invoked through `~/.local/bin` looked for the agent jars
+  beside the link, found none, & ran with no capture. That had to be true before the
+  `--install-man` symlink could be honest, so the code was fixed rather than the
+  feature dropped.
+- `docs/cli-surface.md` refreshed against this release: line references re-verified,
+  the exit-code table replaced, the logging table corrected, & the two new options
+  added. `VERSION` 2.24 to 2.25.
+
 ## v2.24 — 2026-09-17
 
 Six findings from an external code review, fixed, plus one ROADMAP Phase 5 item that

@@ -366,6 +366,49 @@ deliberate belt-and-braces: verified redundancy is the only thing that would jus
 deleting a control that guards SSH keys & browser profiles, & this environment cannot
 supply it.
 
+2026-09-17 (v2.25): three review findings closed, the command-line documentation
+standard fixed & applied. What to claim & what not to:
+
+- Errors reach `master.log` now. All four log levels go through one writer, are
+  timestamped the same way, & land in the session log. Before this, `log_error` &
+  `log_warn` wrote to stderr only, so a past session's log showed the run but none of
+  its errors. The file still receives no escape sequences; that was true before &
+  was re-checked after, with colour forced on rather than assumed off.
+- `-K` distinguishes three lock states, not two. Free, held by a live session, &
+  indeterminable. Do NOT describe the third as "a session is running": that is
+  exactly the false claim this fixed. It exits 5 & prints the lockfile's owner &
+  mode. Verified against a root-owned `0600` lockfile read as another user.
+- `-K` holds the lock for the whole sweep. It used to probe & release before
+  scanning, so a session starting in that window lost its monitors. Verified: a
+  concurrent `flock -n` fails mid-sweep.
+- Exit codes are one per condition (1 usage, 2 lock held, 3 missing dependency, 4
+  environment, 5 lock indeterminable). A caller can now branch on status instead of
+  parsing stderr. TLauncher's own exit status is still propagated unchanged, & that
+  distinction matters when reading a session's result.
+- `SCRIPT_DIR` really does resolve symlinks now. The comment above it had claimed so
+  for months while the code resolved the symlink's own directory: invoked through a
+  link in `~/.local/bin`, the tool looked for the agent jars beside the link, found
+  none, & ran with no capture. Nobody had hit it because nobody had installed a link;
+  `--install-man` now creates one, so it had to be true before that shipped.
+- The manual page is embedded in `run.sh` & has no `.1` file in the tree.
+  `--print-man` & `--install-man` are the only copies. `tests/doc-sync.sh` keeps it &
+  `--help` from drifting.
+
+Not verified, & not to be reported as verified: the roff is NOT machine-validated
+here. Neither `mandoc` nor `groff` is installed & this repo installs nothing, so
+`tests/doc-sync.sh` reports that check as SKIP rather than PASS. The page renders
+correctly only as far as review can tell. Anyone with a formatter should run
+`bash run.sh --print-man | mandoc -Tlint` & record the result here.
+
+2026-09-17: deferred on purpose, not overlooked. The colour gate tests stdout
+(`[ -t 1 ]`) while nearly all coloured output goes to stderr, so `run.sh -M > file`
+strips colour from a terminal that still has it & `run.sh -M 2> file` writes escape
+codes into that file. `NO_COLOR` is not read at all. Both are recorded in
+`docs/cli-surface.md` section 4 & are held for a later PR so this one stays about
+correctness & the documentation standard. The binding part is already enforced:
+whatever the gate decides, the log files stay clean, which `_log_emit` guarantees by
+writing the file from a separate branch that never carries colour.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.
