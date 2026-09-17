@@ -1626,6 +1626,12 @@ check_mozilla_directory() {
 # ==========================================
 
 cleanup() {
+    # Idempotence guard. die() calls cleanup() & then exit 1, which fires the EXIT
+    # trap & calls cleanup() a second time. Every step below happens to be safe
+    # twice today, so this costs nothing now; it exists so the first step that
+    # isn't safe twice doesn't turn into a bug months from now.
+    [ -n "${CLEANUP_DONE:-}" ] && return 0
+    CLEANUP_DONE=1
     # Stop monitors started in this run, reaping their whole process trees so no
     # inotifywait/ss/ps leaf survives to write into old logs. The
     # EXIT/INT/TERM trap calls this too, say when the user hits Ctrl+C mid-session,
@@ -1650,7 +1656,14 @@ cleanup() {
     # clears at logout; leaving it is correct, not litter.
 }
 
-trap cleanup EXIT INT TERM
+# HUP & QUIT are named explicitly rather than left to the EXIT trap. Measured on
+# bash 5.2 here, the EXIT trap DID still run for an untrapped HUP or QUIT, so the
+# orphaning this was predicted to cause did not reproduce; that behaviour is bash's
+# own & is version dependent, so relying on it is a bet. Naming the two signals
+# costs nothing & states the intent. SIGKILL & the OOM killer stay untrappable by
+# anyone; for those, warn_orphans & -K remain the answer, which is the boundary of
+# what any trap line can promise.
+trap cleanup EXIT INT TERM HUP QUIT
 
 # ==========================================
 # USAGE
