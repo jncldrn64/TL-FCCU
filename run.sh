@@ -26,8 +26,26 @@ set -euo pipefail
 VERSION="2.24"
 
 # Directory holding this script, used to find helpers like scripts/build-agent.sh.
-# Resolved once & survives being called through a symlink.
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+# Resolved once, & it really does survive being called through a symlink now.
+#
+# WHY the loop: the previous one-liner did `cd "$(dirname "$BASH_SOURCE")"`, which
+# lands in the SYMLINK's directory, not the target's. The comment above it claimed
+# the opposite for months. Invoked through ~/.local/bin/tlauncher-fccu, SCRIPT_DIR
+# became ~/.local/bin, so -P looked for the agent jars in ~/.local/bin/scripts/,
+# found none, & quietly ran with no capture. That is the failure mode this repo
+# exists to catch, coming from the repo itself. `readlink -f` would do it in one
+# call but is GNU-only; this walks the chain with shell builtins.
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+while [ -L "$SCRIPT_SOURCE" ]; do
+    SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" >/dev/null 2>&1 && pwd)"
+    SCRIPT_SOURCE="$(readlink "$SCRIPT_SOURCE")"
+    # A relative link resolves against the directory the link lives in.
+    case "$SCRIPT_SOURCE" in
+        /*) ;;
+        *) SCRIPT_SOURCE="${SCRIPT_DIR}/${SCRIPT_SOURCE}" ;;
+    esac
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" >/dev/null 2>&1 && pwd)"
 
 # ==========================================
 # CONFIGURATION
@@ -83,6 +101,8 @@ LOG_SIZE_CAP_MB=500      # delete old compressed sessions once dir exceeds this
 PROXY_ENABLED=false      # -P: opt-in in-process Java agent HTTP(S) capture
 SAVE_BASELINE_SESSION="" # -B DIR: derive baseline files from a clean session, then exit
 CHECK_DEPS=false         # --check-deps: report dependency state, then exit
+PRINT_MAN=false          # --print-man: write the roff manual to stdout, then exit
+INSTALL_MAN=false        # --install-man: install the manual under XDG_DATA_HOME, then exit
 
 # Baseline files (XDG_DATA_HOME, same pattern as everything else). The IP one is
 # pre-existing; the domains one drives the regression check (Round 2 / Task 3).
@@ -1834,6 +1854,394 @@ trap cleanup EXIT INT TERM HUP QUIT
 # USAGE
 # ==========================================
 
+# ==========================================
+# MANUAL PAGE (roff, embedded)
+# ==========================================
+
+# The manual page lives here & nowhere else. docs/cli-standard.md makes that
+# normative: a .1 file checked into the tree is a second copy that drifts from the
+# script, & DESIGN.md principle 9 already keeps the program in one file. The
+# manual is part of the program's contract, so it ships in the same file.
+#
+# Kept in sync with usage() by tests/doc-sync.sh, which fails if an option or an
+# exit code exists in one & not the other.
+MAN_NAME="tlauncher-fccu"
+
+print_man() {
+    # The heredoc is quoted so roff keeps its own backslashes; the one value that
+    # must interpolate is substituted after.
+    local roff
+    roff="$(cat <<'ROFF'
+.TH TLAUNCHER-FCCU 1 "2026-09-17" "tlauncher-fccu VERSION_PLACEHOLDER" "User Commands"
+.SH NAME
+tlauncher\-fccu \- run TLauncher under firejail and record what it touches
+.SH SYNOPSIS
+.B tlauncher\-fccu
+.RI [ options ]
+.br
+.B tlauncher\-fccu
+.B \-M \-a
+.RI [ \-v ]
+.RI [ \-P ]
+.br
+.B tlauncher\-fccu
+.B \-R
+.I SESSION_DIR
+.SH DESCRIPTION
+.B tlauncher\-fccu
+launches TLauncher inside a
+.BR firejail (1)
+sandbox and records what it does: filesystem events, child processes, network
+connections, and, with
+.BR \-P ,
+the HTTP payloads it sends.
+.PP
+It is a personal security\-audit tool, not a production launcher. Visibility and
+isolation come first and usability second. It never calls
+.BR sudo ,
+never asks for a password, and never needs a capability beyond what
+.B firejail
+drops on its own.
+.PP
+With no options it runs sandbox\-only: TLauncher is isolated, one start line and
+one end line go to standard error, and nothing is written under the log
+directory. Monitoring and reporting are opt\-in.
+.SH OPTIONS
+.SS Basic
+.TP
+.BR \-v ", " \-\-verbose
+Show TLauncher output, the configuration summary, and the 2\-second countdown.
+.TP
+.BR \-n ", " \-\-offline
+Run the sandbox with no network access.
+.TP
+.BR \-f ", " \-\-file " " \fIPATH\fR
+Use the TLauncher jar at \fIPATH\fR instead of searching for it.
+.TP
+.BR \-h ", " \-\-help
+Print the long help to standard output and exit 0.
+.SS Monitoring
+.TP
+.BR \-M ", " \-\-monitor
+Enable monitoring and create a session directory.
+.TP
+.BR \-a ", " \-\-analyze
+After a
+.B \-M
+run, print the session analysis. Requires
+.BR \-M ;
+without it the flag warns and turns itself off.
+.TP
+.BR \-A ", " \-\-analyze\-only
+Analyse the previous session without running TLauncher, then exit.
+.SS Maintenance and reporting
+.TP
+.BR \-R ", " \-\-report " " \fISESSION_DIR\fR
+Regenerate
+.I INCIDENT_REPORT.md
+for a session directory, then exit.
+.TP
+.BR \-c ", " \-\-cleanup\-logs " " [\fIDAYS\fR]
+Compress sessions older than \fIDAYS\fR (default 7), prune compressed ones over
+the size cap, then exit. Also runs silently at the start of every
+.B \-M
+run.
+.TP
+.BR \-K ", " \-\-kill\-orphans
+Reap stray monitor processes from earlier sessions, then exit. Refuses while a
+live session holds the lock, and refuses while the lock state cannot be
+determined; see
+.B EXIT STATUS
+and
+.BR DIAGNOSTICS .
+.TP
+.BR \-B ", " \-\-save\-baseline " " \fISESSION_DIR\fR
+Derive the domain and IP baselines from a session you trust, then exit.
+.TP
+.B \-\-check\-deps
+Report each dependency (present or missing, required or optional, and what it is
+for), refresh the state file, then exit.
+.TP
+.B \-\-print\-man
+Write this manual page in roff to standard output and exit 0.
+.TP
+.B \-\-install\-man
+Install this manual page under
+.I $XDG_DATA_HOME/man/man1
+without root, and print the
+.B MANPATH
+hint when that root is not on the effective
+.BR MANPATH .
+.SS Network capture
+.TP
+.BR \-P ", " \-\-proxy
+Load the in\-process Java agent into every JVM the sandbox starts and capture
+HTTP and HTTPS at the application layer, where the payload is plain text. No CA
+trust is needed. The agent self\-disables on the Minecraft JVM. It is the only
+capture backend; the flag is skipped if the agent is not built.
+.SS Security checks
+.TP
+.BR \-m ", " \-\-mozilla
+Add a
+.I .mozilla
+check to the analysis output.
+.TP
+.BR \-ml ", " \-\-mozilla\-path " " \fIPATH\fR
+Use \fIPATH\fR as the Mozilla directory instead of the default.
+.SH EXIT STATUS
+.TP
+.B 0
+Success, including
+.BR \-\-help ,
+.BR \-\-print\-man ,
+and the standalone modes.
+.TP
+.B 1
+Usage error: unknown option, or a missing or invalid argument.
+.TP
+.B 2
+Refusal: a live session holds the lock.
+.TP
+.B 3
+A required dependency is missing.
+.TP
+.B 4
+Environment error: the lockfile is not writable, the TLauncher jar was not
+found, or the sandbox is unusable.
+.TP
+.B 5
+The lock state could not be determined.
+.PP
+When TLauncher itself runs, its own exit status is propagated unchanged rather
+than replaced by one of the above.
+.SH ENVIRONMENT
+.TP
+.B XDG_DATA_HOME
+Defaults to
+.IR $HOME/.local/share .
+Parent of the sandbox directory, the baseline files, and the installed manual
+page.
+.TP
+.B XDG_STATE_HOME
+Defaults to
+.IR $HOME/.local/state .
+Parent of the session log directory.
+.TP
+.B XDG_RUNTIME_DIR
+Defaults to
+.IR /run/user/UID ,
+falling back to
+.I /tmp
+when that is not a directory. Holds the session lockfile.
+.TP
+.B SUDO_USER
+When set, used as the real user, so that a run under
+.B sudo
+still uses the invoking user's paths. The script itself never calls
+.BR sudo .
+.TP
+.B SUDO_UID
+When set, used as the real UID for the default
+.B XDG_RUNTIME_DIR
+path.
+.TP
+.B SUDO_GID
+When set, read as the real GID. No current consumer.
+.TP
+.B USER
+Fallback identity when
+.B SUDO_USER
+is unset.
+.TP
+.B HOME
+Fallback home directory when the passwd entry cannot be read.
+.SH FILES
+.TP
+.I $XDG_DATA_HOME/tlauncher-sandbox
+The sandbox directory, mounted as the home directory inside firejail.
+.TP
+.I $XDG_STATE_HOME/tlauncher-logs/session_<TIMESTAMP>
+One directory per monitored session.
+.TP
+.I $XDG_STATE_HOME/tlauncher-logs/session_<TIMESTAMP>/master.log
+Timestamped log of every message the run emitted, errors and warnings included,
+with no escape sequences.
+.TP
+.I $XDG_STATE_HOME/tlauncher-logs/session_<TIMESTAMP>/INCIDENT_REPORT.md
+The aggregated per\-session report.
+.TP
+.I $XDG_RUNTIME_DIR/tlauncher-<USER>.lock
+The session lock. Zero bytes, never deleted by the tool, cleared by the system at
+logout.
+.TP
+.I $XDG_DATA_HOME/tlauncher-sandbox-baseline-domains.txt
+The domain regression baseline, written by
+.BR \-B .
+.TP
+.I $XDG_DATA_HOME/tlauncher-sandbox-baseline-ips.txt
+The IP regression baseline, written by
+.BR \-B .
+.SH DIAGNOSTICS
+All diagnostics go to standard error. Data output, including
+.BR \-\-help ,
+.BR \-\-print\-man ,
+and the generated report, goes to standard output, so it can be piped without
+redirecting standard error.
+.TP
+.B Refusing to kill: a TLauncher session is live & holds the lock.
+.B \-K
+found the lock held. The monitors it would have killed belong to that running
+session. Exit status 2.
+.TP
+.B Cannot determine whether a session is live: the lockfile is not writable.
+.B \-K
+could not open the lockfile, so it cannot tell a live session from a stale one
+and refuses rather than guess. Exit status 5. Check the owner and permissions
+printed with the message.
+.TP
+.B TLauncher already running (lock held on ...)
+A second instance tried to start while the first holds the lock. Exit status 2.
+.TP
+.B Detected orphaned monitor process(es) from a previous session
+Monitors survived an earlier run. They are not killed automatically; run
+.B \-K
+to reap them.
+.SH EXAMPLES
+.TP
+Sandbox only, no monitoring:
+.EX
+tlauncher\-fccu
+.EE
+Start and end lines on standard error, no session directory.
+.TP
+First time, or a full security audit:
+.EX
+tlauncher\-fccu \-v \-M \-a \-m
+.EE
+Full monitoring with immediate analysis.
+.TP
+With HTTP payload capture and the regression check:
+.EX
+tlauncher\-fccu \-M \-a \-P
+.EE
+Adds the network payload summary and the regression check to the report.
+.TP
+Save a baseline, reap monitors, tidy logs:
+.EX
+tlauncher\-fccu \-B logs/session_XXXX
+tlauncher\-fccu \-K
+tlauncher\-fccu \-c 7
+.EE
+.TP
+Review the previous session:
+.EX
+tlauncher\-fccu \-A
+.EE
+Analyse the logs without running TLauncher.
+.SH SECURITY
+The script never calls
+.BR sudo ,
+never asks for a password, and never needs a capability beyond what
+.B firejail
+drops. An optional dependency is probed with
+.B command \-v
+and degraded with a printed install hint; the hint is for the user to run, and
+the script never runs it.
+.PP
+The sandbox is created with
+.BI \-\-private= SANDBOX_DIR
+so the real home directory is out of reach, and the directories under
+.B PROTECTED_DIRS
+(browser profiles, SSH keys, GnuPG, keyrings, documents) are additionally
+blacklisted. That blacklist is believed redundant under
+.BR \-\-private ;
+it is kept deliberately, because verified redundancy is the only thing that
+would justify removing a control that guards private keys.
+.PP
+The tool observes and does not intervene. The hosts in
+.B KNOWN_TELEMETRY_LITERALS
+are reported when contacted, and are
+.B not
+blocked: no DNS override, no netfilter rule, nothing that would stop a single
+connection. A report line saying a host was contacted means exactly that.
+.PP
+With
+.BR \-P ,
+the Java agent reads request and response bodies in process, after TLS decrypt.
+It never modifies a request or a response, and reads only bodies that can be
+re\-read, so it cannot consume a stream the application still needs.
+.SH SEE ALSO
+.BR firejail (1),
+.BR flock (1),
+.BR inotifywait (1),
+.BR ss (8)
+.PP
+In the repository:
+.IR DESIGN.md " (why the conventions are what they are),"
+.IR docs/cli\-standard.md " (the normative command\-line standard),"
+.IR docs/cli\-surface.md " (the descriptive inventory)."
+.SH BUGS
+Known gaps, open items, and everything not verified against real data are
+tracked in
+.I AGENTS.md
+under "Known gaps", dated and append\-only. That section is authoritative; this
+page does not duplicate it.
+ROFF
+)"
+    printf '%s\n' "${roff//VERSION_PLACEHOLDER/$VERSION}"
+}
+
+# Install the manual page under XDG_DATA_HOME, no root. Also drops a symlink into
+# the user's bin dir when that exists & is on PATH, so `tlauncher-fccu` works as a
+# command. Safe only because SCRIPT_DIR resolves symlinks; see docs/cli-standard.md.
+install_man() {
+    local man_root="${XDG_DATA_HOME}/man"
+    local man_dir="${man_root}/man1"
+    local target="${man_dir}/${MAN_NAME}.1"
+
+    if ! mkdir -p "$man_dir" 2>/dev/null; then
+        log_error "Cannot create $(disp_path "$man_dir")"
+        return "$EX_ENV"
+    fi
+    if ! print_man > "$target" 2>/dev/null; then
+        log_error "Cannot write $(disp_path "$target")"
+        return "$EX_ENV"
+    fi
+    printf "Installed: %s\n" "$(disp_path "$target")"
+
+    # MANPATH hint, only when it is actually needed.
+    local effective
+    effective="$(manpath 2>/dev/null || printf '%s' "${MANPATH:-}")"
+    case ":${effective}:" in
+        *":${man_root}:"*) ;;
+        *)
+            printf "\n%s is not on your MANPATH. Add it with:\n" "$(disp_path "$man_root")"
+            printf "    export MANPATH=\"%s:\$MANPATH\"\n" "$(disp_path "$man_root")"
+            printf "Or read it directly:  man -l %s\n" "$(disp_path "$target")"
+            ;;
+    esac
+
+    # The command symlink, best effort & never outside HOME.
+    local bin_dir="${XDG_DATA_HOME}/../bin"
+    if [ -d "$bin_dir" ]; then
+        bin_dir="$(cd -P "$bin_dir" && pwd)"
+        case ":${PATH}:" in
+            *":${bin_dir}:"*)
+                local link="${bin_dir}/${MAN_NAME}"
+                if ln -sfn "${SCRIPT_DIR}/$(basename "${BASH_SOURCE[0]}")" "$link" 2>/dev/null; then
+                    printf "Linked:    %s -> %s\n" "$(disp_path "$link")" "$(disp_path "${SCRIPT_DIR}/run.sh")"
+                else
+                    printf "Could not link %s (manual page installed anyway).\n" "$(disp_path "$link")"
+                fi
+                ;;
+            *)
+                printf "%s exists but is not on PATH; no command symlink made.\n" "$(disp_path "$bin_dir")"
+                ;;
+        esac
+    fi
+    return "$EX_OK"
+}
+
 usage() {
     printf "${CYAN}╔═════════════════════════════════════════════════════════════════════════════╗${NC}\n"
     printf "${CYAN}║       TLauncher Sandboxed Launcher v%-8s                                  ║${NC}\n" "$VERSION"
@@ -1884,8 +2292,15 @@ usage() {
     printf "  ${BLUE}--check-deps${NC}           Report each dependency (present/missing, required\n"
     printf "                           vs optional, what it's for) & refresh the state file,\n"
     printf "                           then exit 0 if all required are present, 1 if not.\n"
-    printf "  ${CYAN}-K/-R/-c/-B/--check-deps/-A are standalone: they do their job and exit${NC}\n"
-    printf "  ${CYAN}without launching TLauncher. If several are given, the first wins.${NC}\n\n"
+    printf "  ${BLUE}--print-man${NC}            Write the manual page (roff) to stdout & exit 0.\n"
+    printf "                           ${CYAN}Pipe it: %s --print-man | man -l -${NC}\n" "$0"
+    printf "  ${BLUE}--install-man${NC}          Install the manual under %s/man/man1\n" "$(disp_path "$XDG_DATA_HOME")"
+    printf "                           ${CYAN}without root, & link the command into ~/.local/bin${NC}\n"
+    printf "                           ${CYAN}when that dir exists & is on PATH. Prints the${NC}\n"
+    printf "                           ${CYAN}MANPATH hint if it is needed.${NC}\n"
+    printf "  ${CYAN}-K/-R/-c/-B/--check-deps/--print-man/--install-man/-A are standalone:${NC}\n"
+    printf "  ${CYAN}they do their job and exit without launching TLauncher. If several${NC}\n"
+    printf "  ${CYAN}are given, the first wins.${NC}\n\n"
 
     printf "${YELLOW}NETWORK CAPTURE (opt-in, no sudo)${NC}\n"
     printf "  ${BLUE}-P, --proxy${NC}            Activate HTTP interception. Implies a session dir.\n"
@@ -2000,6 +2415,8 @@ main() {
                 shift 2
                 ;;
             --check-deps) CHECK_DEPS=true; shift ;;
+            --print-man) PRINT_MAN=true; shift ;;
+            --install-man) INSTALL_MAN=true; shift ;;
             -ml|--mozilla-path)
                 if [ -z "${2:-}" ]; then
                     die "$EX_USAGE" "--mozilla-path requires a path argument"
@@ -2030,6 +2447,18 @@ main() {
     done
 
     # ---- Standalone modes that never launch TLauncher ----
+    # --print-man writes DATA to stdout, so it must stay pipeable: nothing else may
+    # print before it. docs/cli-standard.md rule 1.
+    if [ "$PRINT_MAN" = true ]; then
+        print_man
+        exit "$EX_OK"
+    fi
+
+    if [ "$INSTALL_MAN" = true ]; then
+        install_man || exit $?
+        exit "$EX_OK"
+    fi
+
     if [ "$KILL_ORPHANS" = true ]; then
         # `|| exit` keeps errexit out of it & preserves kill_orphans' own status:
         # 2 when it refused because a session is live.
