@@ -95,12 +95,13 @@ c_http="$(aggregate_agent_logs "${ctmp}/http-intercept-*.log")"
 c_diag="$(aggregate_agent_logs "${ctmp}/agent-diag-*.log")"
 c_ok=true
 c_reason=""
-if printf '%s%s' "$c_http" "$c_diag" | grep -q 'stale'; then
-    c_ok=false; c_reason="stale previous-session line survived"
-fi
-if ! printf '%s' "$c_http" | grep -qF 'starterUpdateV1.json'; then
-    c_ok=false; c_reason="current-session line missing"
-fi
+case "${c_http}${c_diag}" in
+    *stale*) c_ok=false; c_reason="stale previous-session line survived" ;;
+esac
+case "$c_http" in
+    *'starterUpdateV1.json'*) ;;
+    *) c_ok=false; c_reason="current-session line missing" ;;
+esac
 rm -rf "$cwork"
 if [ "$c_ok" = true ]; then
     pass=$((pass + 1)); printf 'PASS  %s\n' "cross-contamination"

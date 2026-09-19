@@ -139,16 +139,17 @@ kout="$(XDG_RUNTIME_DIR="${KW}/run" XDG_DATA_HOME="${KW}/data" XDG_STATE_HOME="$
         bash "$RUN" -K 2>&1)"
 krc=$?
 rmdir "$kdir"
-if [ "$krc" -eq 5 ] && printf '%s' "$kout" | grep -q 'Cannot determine'; then
+if [ "$krc" -eq 5 ] && case "$kout" in *'Cannot determine'*) true ;; *) false ;; esac; then
     check "-K exits 5 when the lock state is indeterminable" true ""
 else
     check "-K exits 5 when the lock state is indeterminable" false "rc=$krc"
 fi
-if printf '%s' "$kout" | grep -q 'session is live & holds'; then
-    check "-K does not claim a live session when it cannot tell" false "it claimed a live session"
-else
-    check "-K does not claim a live session when it cannot tell" true ""
-fi
+case "$kout" in
+    *'session is live & holds'*)
+        check "-K does not claim a live session when it cannot tell" false "it claimed a live session" ;;
+    *)
+        check "-K does not claim a live session when it cannot tell" true "" ;;
+esac
 
 # (b) the lock stays HELD for the duration of the sweep, not just probed.
 bash -c 'exec -a "tlauncher-mon-locktest" sleep 20' >/dev/null 2>&1 &

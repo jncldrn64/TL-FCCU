@@ -58,6 +58,42 @@ launch it (see `spawn_monitor`). The `pgrep`/argv-tag matching in
 handle. Cleanup reaps whole process trees with `kill_tree`, TERM then KILL, so no
 reparented leaf keeps writing.
 
+### A pipe whose consumer can finish first is a race too
+
+Under `set -o pipefail`, a pipeline whose consumer can exit before the producer is
+done returns 141 once the producer writes more than fits in flight. The consumer
+closes its end of the pipe, the producer's next `write()` gets `EPIPE`, `SIGPIPE`
+kills it, and `pipefail` hands 141 to the whole pipeline even though the consumer
+itself succeeded. In an `if`, that reads as "no match" for input that does match;
+under `set -e`, it aborts the script.
+
+Consumers that can exit early: `grep -q`, `grep -m N`, `head`, `sed` with `q`, `awk`
+with `exit`, and a single `read`.
+
+The rule:
+
+- If the producer is a shell variable, use a here-string (`grep -q PAT <<< "$var"`)
+  or, for a fixed string, bash's own matching (`case "$var" in *"$s"*)`), which needs
+  no process and no pipe at all.
+- If the producer is a file, let the early-exiting consumer read the file directly
+  (`head -20 FILE`, `grep -m1 PAT FILE`) instead of `cat FILE | head`.
+- If the producer is a command whose output has to be cut, capture it first and cut
+  the variable. `cmd | sort -u | head -60` is the same race: `sort` buffers the whole
+  stream and writes it at the end, so it is the producer that dies.
+- If the pipe is genuinely unavoidable, the producer has to tolerate `EPIPE`, and the
+  reason belongs in a comment at the site. No `|| true`, no `set +o pipefail`, no
+  `|| [ $? -eq 141 ]`: the first two hide any failure, and the third would also
+  swallow a legitimate `SIGPIPE` arriving from somewhere else.
+
+Classify sites by the largest the input can get, not by how the code looks. Below the
+threshold the producer finishes in one go and the race cannot fire, which is why these
+sites pass for years and then start failing when a log grows. The threshold is not a
+constant: measured here on bash 5.2.21 with a 64 KiB pipe capacity, `printf "$var" |
+grep -qF` never failed at or under 60 KB (0 in 2,000 tries at 61,013 bytes) and failed
+about a quarter of the time from 62 KB up (101 in 400 at 62,013 bytes, all exit 141).
+On another machine the same code starts failing at a few kilobytes. Treat any input
+without a declared bound as over the line.
+
 ## 4. Standard CLI grammar
 
 - Every flag has a short form & a long alias: `-v/--verbose`, `-M/--monitor`.

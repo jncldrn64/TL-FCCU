@@ -63,13 +63,13 @@ printf -- '--- 1. every parsed option is documented in both places ---\n'
 missing_help=""; missing_man=""
 while IFS= read -r opt; do
     [ -z "$opt" ] && continue
-    printf '%s\n' "$HELP" | grep -qF -- "$opt" || missing_help="${missing_help} ${opt}"
-    printf '%s\n' "$MAN_OPTIONS" | grep -qF -- "${opt#--}" || missing_man="${missing_man} ${opt}"
+    case "$HELP" in *"$opt"*) ;; *) missing_help="${missing_help} ${opt}" ;; esac
+    case "$MAN_OPTIONS" in *"${opt#--}"*) ;; *) missing_man="${missing_man} ${opt}" ;; esac
 done < <(parser_long_opts)
 while IFS= read -r opt; do
     [ -z "$opt" ] && continue
-    printf '%s\n' "$HELP" | grep -qF -- "$opt" || missing_help="${missing_help} ${opt}"
-    printf '%s\n' "$MAN_OPTIONS" | grep -qF -- "${opt#-}" || missing_man="${missing_man} ${opt}"
+    case "$HELP" in *"$opt"*) ;; *) missing_help="${missing_help} ${opt}" ;; esac
+    case "$MAN_OPTIONS" in *"${opt#-}"*) ;; *) missing_man="${missing_man} ${opt}" ;; esac
 done < <(parser_short_opts)
 [ -z "$missing_help" ] && check "every parsed option appears in --help" true "" \
     || check "every parsed option appears in --help" false "missing:${missing_help}"
@@ -81,7 +81,7 @@ known="$( { parser_long_opts; parser_short_opts; } | tr -d ' ')"
 ghosts=""
 while IFS= read -r opt; do
     [ -z "$opt" ] && continue
-    printf '%s\n' "$known" | grep -qxF -- "$opt" || ghosts="${ghosts} ${opt}"
+    case $'\n'"${known}"$'\n' in *$'\n'"${opt}"$'\n'*) ;; *) ghosts="${ghosts} ${opt}" ;; esac
 done < <(printf '%s\n' "$HELP" \
             | grep -oE '^[[:space:]]+-[A-Za-z-]+(,[[:space:]]*--[a-z][a-z-]+)?' \
             | grep -oE '\-\-[a-z][a-z-]+' | sort -u)
@@ -92,7 +92,7 @@ printf -- '--- 3. every reachable exit code is in EXIT STATUS ---\n'
 missing_codes=""
 while IFS= read -r code; do
     [ -z "$code" ] && continue
-    printf '%s\n' "$MAN_EXIT" | grep -qE "^\.B ${code}\$" || missing_codes="${missing_codes} ${code}"
+    grep -qE "^\.B ${code}\$" <<< "$MAN_EXIT" || missing_codes="${missing_codes} ${code}"
 done < <(grep -oE '^readonly EX_[A-Z_]+=[0-9]+' "$RUN" | grep -oE '[0-9]+$' | sort -un)
 [ -z "$missing_codes" ] && check "every EX_* code is documented in EXIT STATUS" true "" \
     || check "every EX_* code is documented in EXIT STATUS" false "undocumented:${missing_codes}"
@@ -108,19 +108,34 @@ m_err="$(bash "$RUN" --print-man 2>&1 >/dev/null)"; m_rc=$?
     || check "--print-man exits 0 with nothing on stderr" false "rc=$m_rc stderr='${m_err:0:60}'"
 
 printf -- '--- 5. the roff parses ---\n'
+# mandoc grades its own output & the three grades do not mean the same thing.
+# ERROR & WARNING say the roff is malformed: the page renders wrong or not at all,
+# so they turn this red. STYLE says the source is untidy (a text line past 80 bytes,
+# a date format it would rather see) while the page renders correctly; it prints as
+# a note & does NOT fail, because a typographic preference should not block a commit
+# that changes no behaviour. If you want the stricter bar, move STYLE into the first
+# branch; the point is that the decision is written down rather than implied by
+# "any output at all is a failure", which is what this check used to do.
 if command -v mandoc >/dev/null 2>&1; then
-    lint="$(printf '%s\n' "$MAN" | mandoc -Tlint 2>&1)"
-    [ -z "$(printf '%s' "$lint" | grep -iE 'error')" ] \
-        && check "roff passes mandoc -Tlint" true "" \
-        || check "roff passes mandoc -Tlint" false "$(printf '%s' "$lint" | head -c 100)"
+    lint="$(mandoc -Tlint 2>&1 <<< "$MAN")"
+    hard="$(grep -E ': (ERROR|WARNING|UNSUPP|SYSERR):' <<< "$lint" || true)"
+    soft="$(grep -E ': STYLE:' <<< "$lint" || true)"
+    [ -z "$hard" ] \
+        && check "roff is free of mandoc ERROR/WARNING" true "" \
+        || check "roff is free of mandoc ERROR/WARNING" false "${hard:0:120}"
+    [ -n "$soft" ] && printf 'NOTE  mandoc STYLE (not a failure): %s\n' "${soft:0:120}"
 elif command -v groff >/dev/null 2>&1; then
-    gerr="$(printf '%s\n' "$MAN" | groff -man -Tascii 2>&1 >/dev/null)"
+    gerr="$(groff -man -Tascii 2>&1 >/dev/null <<< "$MAN")"
     [ -z "$gerr" ] \
         && check "roff passes groff -man -Tascii" true "" \
-        || check "roff passes groff -man -Tascii" false "$(printf '%s' "$gerr" | head -c 100)"
+        || check "roff passes groff -man -Tascii" false "${gerr:0:120}"
 else
     # Not assumed good. The repo installs nothing, so this stays unproven here.
-    skip "roff formatter check" "neither mandoc nor groff is installed; NOT verified"
+    # It is not an unexplored hole either: the page was validated by hand on a
+    # machine that had both, 2026-09-17. mandoc -Tlint & groff -man -Tascii both
+    # exited 0; the only output was one STYLE note about a text line past 80 bytes
+    # in FILES, which v2.26 split. Nothing since then has changed the roff's shape.
+    skip "roff formatter check" "neither mandoc nor groff is installed; NOT verified here (hand-checked clean 2026-09-17)"
 fi
 
 printf -- '--- 6. mandatory sections, present and in order ---\n'

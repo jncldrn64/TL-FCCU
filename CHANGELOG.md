@@ -4,6 +4,66 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.26 — 2026-09-19
+
+One bug, in eighteen places. `tests/doc-sync.sh` had been failing about one run in
+five & blaming a different, correctly documented option each time. The cause was not
+in the check: it was the shape `printf '%s' "$var" | grep -q PATTERN` under
+`set -o pipefail`, which returns 141 when the producer outruns what the pipe can
+hold. Every site with that shape is gone.
+
+### Fixed
+- Browser-directory & JAR detection in the session summary could miss a hit that was
+  really there. `printf "%s" "$new_files" | grep -qE ...` ran under `pipefail`, so a
+  `SIGPIPE` in `printf` made the `if` read as "no match" & the summary printed no
+  warning for a `.mozilla` directory the sandbox had actually grown. `$new_files` has
+  no bound: it is one line per file created during the session. For a tool whose only
+  job is to notice exactly that, this was the worst site in the repo to carry the
+  race. Both conditions now read the variable with a here-string, which involves no
+  pipe.
+- The same shape removed from the filesystem monitor's noise filter & from the risky-
+  domain match in the report. One line of `inotifywait` output & one domain name: both
+  small today, neither with a declared bound. Corrected for uniformity, not because
+  either was observed failing.
+- Eleven further sites, found by sweeping `run.sh` rather than by report, where the
+  early-exiting consumer was `head` or `grep -m` instead of `grep -q`: the HTTP table
+  (`sort -u | head -60`, where `sort` buffers the whole table & is the process that
+  dies), the new-process blocks, the incident report's new-files block, the timeline,
+  the summary's file & IP listings, the largest-files listing, the `--check-deps`
+  registry line, the orphan-PID `ps` lines & the two version banners. Under
+  `set -euo pipefail` these do not silently mis-answer, they abort the function, so
+  the failure mode was a report that stops halfway rather than one that lies. Both
+  are bad; the first one is worse, which is why it is listed first.
+- The three test suites carried the same shape: `doc-sync.sh` in six places,
+  `lock-exclusion.sh` in two, `report-states.sh` in two. Where the match is a fixed
+  string, they now use `case`, which spawns no process & opens no pipe at all.
+- The manual page had one text line past 80 bytes in `FILES`, which `mandoc -Tlint`
+  reports as `STYLE`. Split in two. The roff was valid before & after; this is
+  typography, not syntax.
+- `doc-sync.sh` check 5 treated any output from `mandoc` as a failure, so the page
+  would have gone red over that width note the moment anyone installed a formatter.
+  It now grades by severity: `ERROR`/`WARNING`/`UNSUPP`/`SYSERR` fail, `STYLE` prints
+  as a note & passes. The reasoning is written at the check so the next reader can
+  disagree with the line rather than guess where it is.
+
+### Added
+- `tests/run-all.sh`. Runs the three suites once, then re-runs the flakiness-sensitive
+  one `REPEATS` times, default 3. One green run never disproved this bug: the first
+  version of `doc-sync.sh` was green when it shipped & was already broken. The proof
+  run for this release was `REPEATS=200`, 200/200 green.
+- `DESIGN.md` principle 3 gains the rule this bug came from: under `pipefail`, a
+  pipeline whose consumer can exit first is a race, the consumers that do it
+  (`grep -q`, `grep -m N`, `head`, `sed` with `q`, `awk` with `exit`, a single
+  `read`), what to write instead depending on whether the producer is a variable, a
+  file, or a command, & the explicit refusal of `|| true`, `set +o pipefail`, &
+  `|| [ $? -eq 141 ]` as fixes. It also records that the threshold is not portable:
+  measured here on bash 5.2.21, nothing failed at 61,013 bytes in 2,000 tries & about
+  a quarter of runs failed at 62,013, which is the 64 KiB pipe capacity, not the
+  4 KiB figure this machine was expected to show.
+
+### Changed
+- `VERSION` 2.25 -> 2.26.
+
 ## v2.25 — 2026-09-17
 
 Three review findings from the previous PR, & the command-line documentation

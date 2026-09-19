@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.25"
+VERSION="2.26"
 
 # Directory holding this script, used to find helpers like scripts/build-agent.sh.
 # Resolved once, & it really does survive being called through a symlink now.
@@ -406,7 +406,7 @@ warn_orphans() {
     log_warn "Detected orphaned monitor process(es) from a previous session:"
     local p
     for p in $pids; do
-        printf "    PID %s: %s\n" "$p" "$(ps -o args= -p "$p" 2>/dev/null | head -c 100)" >&2
+        printf "    PID %s: %s\n" "$p" "$(head -c 100 <<< "$(ps -o args= -p "$p" 2>/dev/null)")" >&2
     done
     log_warn "These are NOT being killed automatically. Run '$0 -K' to terminate them."
 }
@@ -502,7 +502,7 @@ kill_orphans() {
     log_warn "Found orphaned monitor process(es); terminating:"
     local p
     for p in $pids; do
-        printf "    PID %s: %s\n" "$p" "$(ps -o args= -p "$p" 2>/dev/null | head -c 120)" >&2
+        printf "    PID %s: %s\n" "$p" "$(head -c 120 <<< "$(ps -o args= -p "$p" 2>/dev/null)")" >&2
     done
     for p in $pids; do kill_tree "$p" TERM; done
     sleep 1
@@ -618,7 +618,7 @@ check_deps() {
         fi
         if [ "$required" = yes ]; then tag="required"; else tag="optional"; fi
         # State line as recorded in the .ini (source & date come from the registry).
-        reg="$(grep -E "^${pkg} =" "$DEPS_FILE" 2>/dev/null | head -n1 | sed -E 's/^[^=]+= //')"
+        reg="$(sed -E 's/^[^=]+= //' <<< "$(grep -m1 -E "^${pkg} =" "$DEPS_FILE" 2>/dev/null)")"
         printf "  ${BLUE}%-14s${NC} %-9s %-8s [%s]\n" "$pkg" "$tag" "$live" "$reg"
         printf "                 needs it for: %s\n" "$feature"
     done
@@ -840,7 +840,7 @@ monitor_filesystem() {
             --format "[%T] %e %w%f" \
             "$SANDBOX_DIR" 2>&1 | while IFS= read -r line; do
                 printf "%s\n" "$line" >> "$SESSION_DIR/files.log"
-                if [ -z "$NOISE_REGEX" ] || ! printf "%s" "$line" | grep -qE "$NOISE_REGEX"; then
+                if [ -z "$NOISE_REGEX" ] || ! grep -qE "$NOISE_REGEX" <<< "$line"; then
                     printf "%s\n" "$line" >> "$SESSION_DIR/signal.log"
                 fi
             done
@@ -1234,7 +1234,7 @@ report_regression_check() {
             local d
             while IFS= read -r d; do
                 [ -z "$d" ] && continue
-                if [ -n "$RISK_DOMAIN_REGEX" ] && printf '%s' "$d" | grep -qE "$RISK_DOMAIN_REGEX"; then
+                if [ -n "$RISK_DOMAIN_REGEX" ] && grep -qE "$RISK_DOMAIN_REGEX" <<< "$d"; then
                     printf "🚨 NEW RISKY DOMAIN: \`%s\`\n" "$d"
                 else
                     printf "⚠ NEW DOMAIN: \`%s\`\n" "$d"
@@ -1323,10 +1323,12 @@ report_network_capture() {
                 # State 1: agent active, log has entries.
                 printf "_Mode: Java agent, in-process after TLS decrypt. Every JVM except the game._\n\n"
                 printf "| Method | Host | Path |\n|--------|------|------|\n"
-                grep -E '^\[[0-9:.]+\] (GET|POST|PUT|HEAD|DELETE|PATCH|OPTIONS) ' "$ilog" \
+                local http_rows
+                http_rows="$(grep -E '^\[[0-9:.]+\] (GET|POST|PUT|HEAD|DELETE|PATCH|OPTIONS) ' "$ilog" \
                     | sed -E 's/^\[[0-9:.]+\] //' \
                     | awk '{m=$1; h=$2; $1=""; $2=""; sub(/^ +/,""); print "| "m" | "h" | "$0" |"}' \
-                    | sort -u | head -60
+                    | sort -u)"
+                head -60 <<< "$http_rows"
                 printf "\n### Flagged: POST/PUT with body\n\n"
                 if grep -qE '^\[[0-9:.]+\] (POST|PUT) ' "$ilog"; then
                     awk '
@@ -1391,13 +1393,13 @@ generate_incident_report() {
         local any_proc=false
         if [ -f "${session}/java-processes.log" ] && grep -q "NEW:" "${session}/java-processes.log" 2>/dev/null; then
             printf '```\n'
-            grep "NEW:" "${session}/java-processes.log" 2>/dev/null | head -40
+            head -40 <<< "$(grep "NEW:" "${session}/java-processes.log" 2>/dev/null)"
             printf '```\n'
             any_proc=true
         fi
         if [ -f "${session}/processes.log" ] && grep -q "NEW:" "${session}/processes.log" 2>/dev/null; then
             printf "\n_Sandboxes:_\n\n\`\`\`\n"
-            grep "NEW:" "${session}/processes.log" 2>/dev/null | head -20
+            head -20 <<< "$(grep "NEW:" "${session}/processes.log" 2>/dev/null)"
             printf '```\n'
             any_proc=true
         fi
@@ -1431,7 +1433,7 @@ generate_incident_report() {
             local nf; nf="$(grep -E "CREATE|MOVED_TO" "$fslog" 2>/dev/null | awk '{print $NF}' | sort -u)"
             if [ -n "$nf" ]; then
                 local total; total="$(printf '%s\n' "$nf" | grep -c . || true)"; total=${total:-0}
-                printf '```\n%s\n```\n' "$(printf '%s\n' "$nf" | head -60)"
+                printf '```\n%s\n```\n' "$(head -60 <<< "$nf")"
                 [ "$total" -gt 60 ] && printf "\n_%d more files in signal.log / files.log._\n" "$((total - 60))"
             else
                 printf "_None._\n"
@@ -1504,11 +1506,11 @@ generate_timeline() {
 
         # Java processes (first-seen events)
         if [ -f "${session}/java-processes.log" ] && [ -s "${session}/java-processes.log" ]; then
-            grep '^\[' "${session}/java-processes.log" 2>/dev/null | head -20 | sed 's/^/[JAVA] /' >> "$temp_timeline" || true
+            grep -m20 '^\[' "${session}/java-processes.log" 2>/dev/null | sed 's/^/[JAVA] /' >> "$temp_timeline" || true
         fi
 
         if [ -s "$temp_timeline" ]; then
-            sort "$temp_timeline" 2>/dev/null | head -100 || cat "$temp_timeline" | head -100
+            head -100 <<< "$(sort "$temp_timeline" 2>/dev/null || cat "$temp_timeline")"
             local total_events=$(wc -l < "$temp_timeline" 2>/dev/null || echo 0)
             if [ "$total_events" -gt 100 ]; then
                 printf "\n(Showing first 100 of %d events - see individual logs for complete data)\n" "$total_events"
@@ -1646,13 +1648,13 @@ analyze_session() {
             printf "${YELLOW}New files: %d${NC}\n\n" "$new_count"
 
             # Check for suspicious patterns
-            if printf "%s" "$new_files" | grep -qE "\.(mozilla|firefox|chrome)"; then
+            if grep -qE "\.(mozilla|firefox|chrome)" <<< "$new_files"; then
                 printf "${RED}⚠ WARNING: Browser directories detected!${NC}\n"
                 printf "%s\n" "$new_files" | grep -E "\.(mozilla|firefox|chrome)" | sed 's/^/  /'
                 printf "\n"
             fi
 
-            if printf "%s" "$new_files" | grep -qE "\.jar$"; then
+            if grep -qE "\.jar$" <<< "$new_files"; then
                 printf "${YELLOW}ℹ New JAR files (updates):${NC}\n"
                 printf "%s\n" "$new_files" | grep "\.jar$" | sed 's/^/  /'
                 printf "\n"
@@ -1660,7 +1662,7 @@ analyze_session() {
 
             # Show first 20 files
             printf "${BLUE}Recent files (first 20):${NC}\n"
-            printf "%s\n" "$new_files" | head -20 | sed 's/^/  /'
+            head -20 <<< "$new_files" | sed 's/^/  /'
             if [ "$new_count" -gt 20 ]; then
                 printf "  ... and %d more\n" $((new_count - 20))
             fi
@@ -1678,7 +1680,7 @@ analyze_session() {
 
         if [ "$ip_count" -gt 0 ]; then
             printf "${BLUE}Unique IPs contacted: %d${NC}\n\n" "$ip_count"
-            printf "%s\n" "$ips" | sed 's/^/  /' | head -20
+            head -20 <<< "$ips" | sed 's/^/  /'
             if [ "$ip_count" -gt 20 ]; then
                 printf "  ... and %d more\n" $((ip_count - 20))
             fi
@@ -1786,9 +1788,10 @@ check_mozilla_directory() {
     else
         printf "${RED}Status: Contains data - manual inspection recommended${NC}\n"
         printf "\nLargest files:\n"
-        find "$sandbox_mozilla" -type f -printf "%s %p\n" 2>/dev/null | \
-            sort -rn | head -10 | \
-            awk '{printf "  %8d bytes  %s\n", $1, $2}' || echo "  (none found)"
+        local biggest
+        biggest="$(find "$sandbox_mozilla" -type f -printf "%s %p\n" 2>/dev/null | sort -rn)"
+        head -10 <<< "$biggest" \
+            | awk '{printf "  %8d bytes  %s\n", $1, $2}' || echo "  (none found)"
     fi
 
     # Compare with real mozilla if it exists
@@ -2080,8 +2083,8 @@ with no escape sequences.
 The aggregated per\-session report.
 .TP
 .I $XDG_RUNTIME_DIR/tlauncher-<USER>.lock
-The session lock. Zero bytes, never deleted by the tool, cleared by the system at
-logout.
+The session lock. Zero bytes, never deleted by the tool.
+The system clears it at logout.
 .TP
 .I $XDG_DATA_HOME/tlauncher-sandbox-baseline-domains.txt
 The domain regression baseline, written by
@@ -2615,8 +2618,8 @@ main() {
             printf "User: %s (UID: %s)\n" "$REAL_USER" "$REAL_UID"
             printf "Home: %s\n" "$REAL_HOME"
             printf "Sandbox: %s\n" "$SANDBOX_DIR"
-            printf "Java: %s\n" "$(java -version 2>&1 | head -n1)"
-            printf "Firejail: %s\n" "$(firejail --version 2>&1 | head -n1)"
+            printf "Java: %s\n" "$(head -n1 <<< "$(java -version 2>&1)")"
+            printf "Firejail: %s\n" "$(head -n1 <<< "$(firejail --version 2>&1)")"
             printf "\nConfiguration:\n"
             printf "  Verbose: %s\n" "$VERBOSE"
             printf "  Offline: %s\n" "$OFFLINE_MODE"
