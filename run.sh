@@ -840,7 +840,7 @@ monitor_filesystem() {
             --format "[%T] %e %w%f" \
             "$SANDBOX_DIR" 2>&1 | while IFS= read -r line; do
                 printf "%s\n" "$line" >> "$SESSION_DIR/files.log"
-                if [ -z "$NOISE_REGEX" ] || ! printf "%s" "$line" | grep -qE "$NOISE_REGEX"; then
+                if [ -z "$NOISE_REGEX" ] || ! grep -qE "$NOISE_REGEX" <<< "$line"; then
                     printf "%s\n" "$line" >> "$SESSION_DIR/signal.log"
                 fi
             done
@@ -1234,7 +1234,7 @@ report_regression_check() {
             local d
             while IFS= read -r d; do
                 [ -z "$d" ] && continue
-                if [ -n "$RISK_DOMAIN_REGEX" ] && printf '%s' "$d" | grep -qE "$RISK_DOMAIN_REGEX"; then
+                if [ -n "$RISK_DOMAIN_REGEX" ] && grep -qE "$RISK_DOMAIN_REGEX" <<< "$d"; then
                     printf "🚨 NEW RISKY DOMAIN: \`%s\`\n" "$d"
                 else
                     printf "⚠ NEW DOMAIN: \`%s\`\n" "$d"
