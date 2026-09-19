@@ -1646,13 +1646,13 @@ analyze_session() {
             printf "${YELLOW}New files: %d${NC}\n\n" "$new_count"
 
             # Check for suspicious patterns
-            if printf "%s" "$new_files" | grep -qE "\.(mozilla|firefox|chrome)"; then
+            if grep -qE "\.(mozilla|firefox|chrome)" <<< "$new_files"; then
                 printf "${RED}⚠ WARNING: Browser directories detected!${NC}\n"
                 printf "%s\n" "$new_files" | grep -E "\.(mozilla|firefox|chrome)" | sed 's/^/  /'
                 printf "\n"
             fi
 
-            if printf "%s" "$new_files" | grep -qE "\.jar$"; then
+            if grep -qE "\.jar$" <<< "$new_files"; then
                 printf "${YELLOW}ℹ New JAR files (updates):${NC}\n"
                 printf "%s\n" "$new_files" | grep "\.jar$" | sed 's/^/  /'
                 printf "\n"
