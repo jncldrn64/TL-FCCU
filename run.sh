@@ -2083,8 +2083,8 @@ with no escape sequences.
 The aggregated per\-session report.
 .TP
 .I $XDG_RUNTIME_DIR/tlauncher-<USER>.lock
-The session lock. Zero bytes, never deleted by the tool, cleared by the system at
-logout.
+The session lock. Zero bytes, never deleted by the tool.
+The system clears it at logout.
 .TP
 .I $XDG_DATA_HOME/tlauncher-sandbox-baseline-domains.txt
 The domain regression baseline, written by

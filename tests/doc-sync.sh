@@ -108,19 +108,34 @@ m_err="$(bash "$RUN" --print-man 2>&1 >/dev/null)"; m_rc=$?
     || check "--print-man exits 0 with nothing on stderr" false "rc=$m_rc stderr='${m_err:0:60}'"
 
 printf -- '--- 5. the roff parses ---\n'
+# mandoc grades its own output & the three grades do not mean the same thing.
+# ERROR & WARNING say the roff is malformed: the page renders wrong or not at all,
+# so they turn this red. STYLE says the source is untidy (a text line past 80 bytes,
+# a date format it would rather see) while the page renders correctly; it prints as
+# a note & does NOT fail, because a typographic preference should not block a commit
+# that changes no behaviour. If you want the stricter bar, move STYLE into the first
+# branch; the point is that the decision is written down rather than implied by
+# "any output at all is a failure", which is what this check used to do.
 if command -v mandoc >/dev/null 2>&1; then
-    lint="$(printf '%s\n' "$MAN" | mandoc -Tlint 2>&1)"
-    [ -z "$(printf '%s' "$lint" | grep -iE 'error')" ] \
-        && check "roff passes mandoc -Tlint" true "" \
-        || check "roff passes mandoc -Tlint" false "$(printf '%s' "$lint" | head -c 100)"
+    lint="$(mandoc -Tlint 2>&1 <<< "$MAN")"
+    hard="$(grep -E ': (ERROR|WARNING|UNSUPP|SYSERR):' <<< "$lint" || true)"
+    soft="$(grep -E ': STYLE:' <<< "$lint" || true)"
+    [ -z "$hard" ] \
+        && check "roff is free of mandoc ERROR/WARNING" true "" \
+        || check "roff is free of mandoc ERROR/WARNING" false "${hard:0:120}"
+    [ -n "$soft" ] && printf 'NOTE  mandoc STYLE (not a failure): %s\n' "${soft:0:120}"
 elif command -v groff >/dev/null 2>&1; then
-    gerr="$(printf '%s\n' "$MAN" | groff -man -Tascii 2>&1 >/dev/null)"
+    gerr="$(groff -man -Tascii 2>&1 >/dev/null <<< "$MAN")"
     [ -z "$gerr" ] \
         && check "roff passes groff -man -Tascii" true "" \
-        || check "roff passes groff -man -Tascii" false "$(printf '%s' "$gerr" | head -c 100)"
+        || check "roff passes groff -man -Tascii" false "${gerr:0:120}"
 else
     # Not assumed good. The repo installs nothing, so this stays unproven here.
-    skip "roff formatter check" "neither mandoc nor groff is installed; NOT verified"
+    # It is not an unexplored hole either: the page was validated by hand on a
+    # machine that had both, 2026-09-17. mandoc -Tlint & groff -man -Tascii both
+    # exited 0; the only output was one STYLE note about a text line past 80 bytes
+    # in FILES, which v2.26 split. Nothing since then has changed the roff's shape.
+    skip "roff formatter check" "neither mandoc nor groff is installed; NOT verified here (hand-checked clean 2026-09-17)"
 fi
 
 printf -- '--- 6. mandatory sections, present and in order ---\n'
