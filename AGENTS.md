@@ -409,6 +409,25 @@ correctness & the documentation standard. The binding part is already enforced:
 whatever the gate decides, the log files stay clean, which `_log_emit` guarantees by
 writing the file from a separate branch that never carries colour.
 
+2026-09-19: the roff note above is superseded for the part it can be. The page WAS
+machine-validated, by hand, on a machine with both formatters: `mandoc -Tlint` exited
+0 with one `STYLE` note (a text line past 80 bytes in `FILES`, split in v2.26) &
+`groff -man -Tascii` exited 0 with empty stderr. That validation was external to this
+container, so `tests/doc-sync.sh` still reports SKIP here & still should: nothing
+installed a formatter. The SKIP message now carries the date of that check so the
+reader knows it is an unrun check, not an unexplored one. Re-validate if the roff's
+shape changes.
+
+2026-09-19: the SIGPIPE threshold measured here does not match the one reported with
+the finding. The report put it at 4,096 bytes, bash's stdio buffer, & measured
+`tests/doc-sync.sh` (7,231 bytes of input) failing about one run in five. On this
+machine, bash 5.2.21 with a 64 KiB pipe capacity, the same 7 KB input never failed in
+3,000 tries, & the race does not appear at all until roughly 62 KB, where it fails
+about a quarter of the time. Both measurements are real; they are different machines.
+The consequence is that the threshold cannot be used as a bound on which sites
+matter, so v2.26 fixed every site of that shape rather than only the large ones. If
+anyone finds what makes the two machines differ, write it here.
+
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.
