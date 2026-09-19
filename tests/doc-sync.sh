@@ -63,13 +63,13 @@ printf -- '--- 1. every parsed option is documented in both places ---\n'
 missing_help=""; missing_man=""
 while IFS= read -r opt; do
     [ -z "$opt" ] && continue
-    printf '%s\n' "$HELP" | grep -qF -- "$opt" || missing_help="${missing_help} ${opt}"
-    printf '%s\n' "$MAN_OPTIONS" | grep -qF -- "${opt#--}" || missing_man="${missing_man} ${opt}"
+    case "$HELP" in *"$opt"*) ;; *) missing_help="${missing_help} ${opt}" ;; esac
+    case "$MAN_OPTIONS" in *"${opt#--}"*) ;; *) missing_man="${missing_man} ${opt}" ;; esac
 done < <(parser_long_opts)
 while IFS= read -r opt; do
     [ -z "$opt" ] && continue
-    printf '%s\n' "$HELP" | grep -qF -- "$opt" || missing_help="${missing_help} ${opt}"
-    printf '%s\n' "$MAN_OPTIONS" | grep -qF -- "${opt#-}" || missing_man="${missing_man} ${opt}"
+    case "$HELP" in *"$opt"*) ;; *) missing_help="${missing_help} ${opt}" ;; esac
+    case "$MAN_OPTIONS" in *"${opt#-}"*) ;; *) missing_man="${missing_man} ${opt}" ;; esac
 done < <(parser_short_opts)
 [ -z "$missing_help" ] && check "every parsed option appears in --help" true "" \
     || check "every parsed option appears in --help" false "missing:${missing_help}"
@@ -81,7 +81,7 @@ known="$( { parser_long_opts; parser_short_opts; } | tr -d ' ')"
 ghosts=""
 while IFS= read -r opt; do
     [ -z "$opt" ] && continue
-    printf '%s\n' "$known" | grep -qxF -- "$opt" || ghosts="${ghosts} ${opt}"
+    case $'\n'"${known}"$'\n' in *$'\n'"${opt}"$'\n'*) ;; *) ghosts="${ghosts} ${opt}" ;; esac
 done < <(printf '%s\n' "$HELP" \
             | grep -oE '^[[:space:]]+-[A-Za-z-]+(,[[:space:]]*--[a-z][a-z-]+)?' \
             | grep -oE '\-\-[a-z][a-z-]+' | sort -u)
@@ -92,7 +92,7 @@ printf -- '--- 3. every reachable exit code is in EXIT STATUS ---\n'
 missing_codes=""
 while IFS= read -r code; do
     [ -z "$code" ] && continue
-    printf '%s\n' "$MAN_EXIT" | grep -qE "^\.B ${code}\$" || missing_codes="${missing_codes} ${code}"
+    grep -qE "^\.B ${code}\$" <<< "$MAN_EXIT" || missing_codes="${missing_codes} ${code}"
 done < <(grep -oE '^readonly EX_[A-Z_]+=[0-9]+' "$RUN" | grep -oE '[0-9]+$' | sort -un)
 [ -z "$missing_codes" ] && check "every EX_* code is documented in EXIT STATUS" true "" \
     || check "every EX_* code is documented in EXIT STATUS" false "undocumented:${missing_codes}"
