@@ -74,6 +74,13 @@
   An idea is dropped when its complexity outweighs a benefit someone can measure, never
   because it sounds risky. Before dropping it, check what its proposer meant: dropping
   the wrong reading of a word rejects some other idea.
+- Workflow: work goes through a pull request. If `push`, creating a branch or opening
+  the PR returns `403`, stop & say that write permission is missing. Never work around
+  it by uploading loose files by hand.
+- Tests: a suite that has ever failed intermittently runs N times, not once, because
+  one green run proves nothing about a failure that shows up one run in five. It's
+  listed in `REPEATED` in `tests/run-all.sh` & stays there after the fix, so the bug
+  can't come back unseen. N is `REPEATS`, 3 by default; raise it for proof.
 
 ## Prose floor
 

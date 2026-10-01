@@ -771,3 +771,30 @@ again. Each was weighed & dropped on 2026-10-01.
   problem was size, & "Decisions get a file of their own" answered it.
 
 **Status:** in force.
+
+## 2026-10-01: Work goes through a PR, & a 403 stops it
+
+**Context.** Every change since #1 reached `main` through a pull request, but nothing
+here said so, nor what to do when the push is refused. The other repo wrote both down:
+a refused write is a missing permission to report, & a hand upload of loose files is
+the workaround that skips the review the PR exists for.
+
+**Decision.** `CLAUDE.md`, bullet "Workflow": work goes through a PR, & a `403` from
+`push`, branch creation or the PR stops the work & is reported.
+
+**Status:** in force.
+
+## 2026-10-01: An intermittent suite runs N times
+
+**Context.** `tests/doc-sync.sh` failed about one run in five & passed the four in
+between, so a single green run proved nothing. The cause was the `SIGPIPE` race that
+`docs/DESIGN.md` principle 3 now describes. #27 fixed it & added `tests/run-all.sh`,
+which reruns that suite `REPEATS` times, 3 by default. The rule lived only in that
+script's header comment, so nothing told the next suite to do the same.
+
+**Decision.** `CLAUDE.md`, bullet "Tests": a suite that has ever failed intermittently
+goes in `REPEATED` & stays there after its fix. Suites that drive real processes & locks
+& were never seen failing intermittently run once, because repeating them costs
+minutes. The other repo has no such rule; it's one of the two this repo proposes to it.
+
+**Status:** in force.
