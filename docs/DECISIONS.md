@@ -653,3 +653,29 @@ design, & a trigger that depends on spotting a claim would have missed it. Exist
 wasn't swept for unrun claims; the rule applies to what gets written from here.
 
 **Status:** in force.
+
+## 2026-10-01: The plugin's original text outranks the floor
+
+**Context.** The prose bullet names how to install the plugin & nothing else. The other
+repo found the cost of that: the plugin's text sat attached to a whole session & nobody
+opened it, because installing was the only route the rule named. This repo's "Prose
+floor" is a summary of the same material, so it carries the same gap.
+
+**Decision.** `CLAUDE.md`, section "Prose floor": having the original in reach, by any
+route, means reading it before writing prose, & it outranks the floor. On 2026-10-01 the
+plugin wasn't installed in the session that wrote this, & no copy was found on disk, so
+this rule wasn't exercised then.
+
+**Status:** in force.
+
+## 2026-10-01: An idea is dropped on measured cost, after checking what it meant
+
+**Context.** An idea can sound risky & still be cheap, & a word can carry two meanings.
+The other repo dropped a proposal by reading one of its words in the wrong sense, &
+withdrew the objection once the meaning was checked. No such case is recorded here. It
+travels with the threshold rule because both decide when something gets built.
+
+**Decision.** `CLAUDE.md`, bullet "Promises": an idea is dropped when its complexity
+outweighs a measurable benefit, & only after checking what its proposer meant.
+
+**Status:** in force.

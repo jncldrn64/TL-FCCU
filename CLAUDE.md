@@ -71,12 +71,20 @@
   When a threshold fires, the decision it opens answers three things before anything is
   planned: what is getting hard, with the number that shows it; the options & what each
   costs; the run that rules out the ones that don't work.
+  An idea is dropped when its complexity outweighs a benefit someone can measure, never
+  because it sounds risky. Before dropping it, check what its proposer meant: dropping
+  the wrong reading of a word rejects some other idea.
 
 ## Prose floor
 
 Eight rules, each with this repo's baseline, measured on 2026-10-01, & the command that
 recounts it. **No baseline may rise.** A PR that raises one added a violation. History
 that isn't rewritten keeps its count, so a baseline only falls when live text is fixed.
+
+**If the plugin's original text is in reach during a session, it's read & it outranks
+this floor.** Installed or attached to the conversation, the trigger is having it, not
+how it arrived: before writing prose, check whether it's there, & if it is, open it. The
+floor below is a summary of it, & a summary is what's left when the original isn't.
 
 1. Before delivering, grep for the five intensifiers in the rule 1 command below. With the
    plugin installed, its full lists apply too. Baseline: 1 hit, in a published

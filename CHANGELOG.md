@@ -4,6 +4,17 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.39 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.35 until the next code PR.
+
+### Added
+- `CLAUDE.md`, "Prose floor": when the plugin's original text is in reach, installed or
+  attached, it's read before writing prose & it outranks the floor.
+- `CLAUDE.md`, bullet "Promises": an idea is dropped on a measured cost, after checking
+  what its proposer meant. `docs/DECISIONS.md` has an entry for each rule.
+
 ## v2.38 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
