@@ -106,6 +106,13 @@ m_err="$(bash "$RUN" --print-man 2>&1 >/dev/null)"; m_rc=$?
 { [ "$m_rc" -eq 0 ] && [ -z "$m_err" ]; } \
     && check "--print-man exits 0 with nothing on stderr" true "" \
     || check "--print-man exits 0 with nothing on stderr" false "rc=$m_rc stderr='${m_err:0:60}'"
+# An unexpected argument's hint must name the program, not echo the argument back.
+# Until v2.44 the `*)` arm passed "$1" & printed `Run 'zzbogus --help' for usage`.
+u_err="$(bash "$RUN" zzbogus 2>&1 >/dev/null)"; u_rc=$?
+{ [ "$u_rc" -eq 1 ] && grep -qF "Run '${RUN} --help'" <<< "$u_err" \
+    && ! grep -qF "Run 'zzbogus --help'" <<< "$u_err"; } \
+    && check "an unexpected argument's hint names the program" true "" \
+    || check "an unexpected argument's hint names the program" false "rc=$u_rc stderr='${u_err:0:80}'"
 
 printf -- '--- 5. the roff parses ---\n'
 # mandoc grades its own output & the three grades do not mean the same thing.
