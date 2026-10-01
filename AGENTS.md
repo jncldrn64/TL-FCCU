@@ -104,6 +104,10 @@ arm of `main()`'s `case` prints `Run '%s --help'` with `"$1"` where its neighbou
 --help' for usage` & exited 1. It was found while replacing the line anchors in
 `docs/cli/cli-surface.md`, & the fix belongs in a code PR.
 
+2026-10-01: closed in v2.44, the unexpected-argument hint above. The `*)` arm passes
+`"$0"`, & `tests/doc-sync.sh` now fails if the hint echoes the argument back. Run here,
+`bash run.sh foo` prints `Run 'run.sh --help' for usage`.
+
 Find another open item while reading `docs/DESIGN.md` or `CHANGELOG.md` that isn't closed with
 verified evidence? Add it here instead of quietly fixing it or re-scoping it. A decision
 goes in `docs/DECISIONS.md`. A documentation idea that nobody knows is wanted yet goes in
