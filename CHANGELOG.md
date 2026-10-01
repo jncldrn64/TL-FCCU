@@ -4,6 +4,16 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.54 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.53 until the next code PR.
+
+### Added
+- `docs/TEMPORARY-CONTEXT.md` notes that ROADMAP Phase 4's jar-difference check may never
+  fire, because firejail mounts `bin/` read-only, & what the next real session should
+  look at to settle it.
+
 ## v2.53 — 2026-10-01
 
 ROADMAP Phase 3, first part: the binary archive, for `TLauncher.jar`. `VERSION` goes
