@@ -2,11 +2,11 @@
 
 ## Ordering principle
 
-A tool that lies about its own state corrupts everything built on top of it. The
-binary archive this roadmap ends at exists so that months later you can say which
-binary ran on which day. If the layer that reports the run lies, the binary archive
-inherits the lie. So the order is fixed: first the report stops lying, then the agent sees what
-runs, then the binaries get archived. Phases don't get reordered for convenience.
+A tool that lies about its own state corrupts everything built on top of it. The binary
+archive this roadmap ends at exists so that months later you can say which binary ran on
+which day. If the layer that reports the run lies, the binary archive inherits the lie.
+So the order is fixed: first the report stops lying, then the agent sees what runs, then
+the binaries get archived. Phases don't get reordered for convenience.
 
 Work now moves by numbered phases, not loose rounds. Each phase carries a one-line
 objective, the scope it touches, a verifiable acceptance criterion, its blockers,
