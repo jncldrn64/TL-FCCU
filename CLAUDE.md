@@ -64,6 +64,13 @@
   When lost context is rebuilt, an inference is written as one, opening `**Hypothesis:**`
   with its basis in view, never as fact. In doubt between inferring & stating the gap,
   state the gap: `**No recoverable origin.**`
+- Promises: no rule here prescribes a future mechanism. A threshold, an acceptance
+  criterion or a method rule may force a decision; it can't make that decision in advance.
+  Any sentence that names a concrete syntax, protocol or API goes with its run, the command
+  & what it printed or a pointer to where they're written, wherever the sentence sits.
+  When a threshold fires, the decision it opens answers three things before anything is
+  planned: what is getting hard, with the number that shows it; the options & what each
+  costs; the run that rules out the ones that don't work.
 
 ## Prose floor
 

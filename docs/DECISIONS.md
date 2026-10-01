@@ -632,3 +632,24 @@ that replaces the sentence in "The temporary context is adopted" that tied quote
 having no glossary.
 
 **Status:** in force.
+
+## 2026-10-01: A rule can force a decision, never make it in advance
+
+**Context.** Months can pass between writing a rule & the day it fires. A mechanism the
+rule names by then may not exist, may not work, or may have stopped being the best one.
+The other repo lost weeks to one: a threshold named a loading mechanism that nobody had
+run, & the first run killed it in seconds.
+
+This repo already works this way without saying so. `docs/DESIGN.md` keeps `run.sh` one file as a property & refuses a line-count
+threshold as decoration, & its pipe section states the `SIGPIPE` threshold with the bash
+version, the pipe size & the counts from the run that measured it.
+
+**Decision.** `CLAUDE.md` says it under "Promises": no rule prescribes a future mechanism,
+a sentence naming a syntax, protocol or API goes with its run, & a fired threshold opens a
+decision that answers three questions.
+
+The trigger for the run is mechanical on purpose: the sentence that caused it read as
+design, & a trigger that depends on spotting a claim would have missed it. Existing text
+wasn't swept for unrun claims; the rule applies to what gets written from here.
+
+**Status:** in force.
