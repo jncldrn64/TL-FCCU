@@ -4,6 +4,30 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.28 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.26 until the next code PR.
+
+### Changed
+- `AGENTS.md` is a door again, as it was born: purpose, hard constraints, the map, a
+  pointer on to `CLAUDE.md`, & only the Known gaps still open. It goes from 449 lines to
+  102.
+- The Known gaps section as it stood until 2026-10-01, 367 lines in 35 entries, moved
+  unedited to the end of `docs/DECISIONS.md`. A diff confirms the moved text matches the
+  old section byte for byte.
+- Ten items still open were restated in the new Known gaps, each checked against the
+  current code. Two names were updated, `RISK_DOMAIN_LITERALS` & `KNOWN_TELEMETRY_LITERALS`,
+  & the agent's open item narrowed to the unseen POST body.
+- `CLAUDE.md`'s reading order says it's a door too, the one Claude Code reads first. Its
+  Known gaps text & the prose baselines now point at where the history sits.
+- `docs/DECISIONS.md`'s preamble no longer says that moving old entries means deleting
+  them. A new entry records the move & why.
+
+### Added
+- One `docs/TEMPORARY-CONTEXT.md` entry: the author's note that the audit should have
+  started with each repo on its own.
+
 ## v2.27 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
