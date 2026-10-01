@@ -180,9 +180,10 @@ before committing.
 
 ## Write scope
 
-This repo (TLauncher_FCCU) is the only write target. Any other repository cloned into
-the session is read-only context: copy FROM it, never write INTO it. Do not carry
-another repo's conventions into this one (language, format).
+This repo (TL-FCCU on GitHub, TLauncher_FCCU before it was renamed) is the only write
+target. Any other repository cloned into the session is read-only context: copy FROM it,
+never write INTO it. Do not carry another repo's conventions into this one (language,
+format).
 If unsure which repo you're writing to, stop and ask.
 
 ## Displayed version

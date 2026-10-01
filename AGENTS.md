@@ -23,6 +23,8 @@ using it. Visibility & isolation come first, usability second.
 - `run.sh`: the whole launcher, one bash script.
 - `scripts/TLHttpAgent.java` & its helpers, `scripts/build-agent.sh`: the `-P` Java
   agent (built into two gitignored jars, never committed).
+- `tests/`: the regression suites, run together with `bash tests/run-all.sh`, which
+  repeats the ones that used to fail intermittently.
 - `docs/DESIGN.md`: the conventions, read before coding.
 - `CHANGELOG.md`: what changed & when.
 - `docs/ROADMAP.md`: the phased plan, read when the work belongs to a phase.
