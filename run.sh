@@ -157,7 +157,7 @@ NOISE_PATTERNS=(
     '\.lock$'
 )
 # Pre-joined into a single ERE; exported so the (separate-process) monitors see it.
-# _PATTERNS, per docs/cli-standard.md rule 6: regular expressions, joined RAW.
+# _PATTERNS, per docs/cli/cli-standard.md rule 6: regular expressions, joined RAW.
 #
 # NOT escaped, deliberately: unlike the domain lists, these entries ARE regexes &
 # are written as such on purpose (`\.sqlite-wal$` anchors an extension, `GPUCache/`
@@ -189,7 +189,7 @@ join_literals_ere() {
     printf '%s' "$out"
 }
 
-# _LITERALS, per docs/cli-standard.md rule 6: this array holds LITERAL substrings &
+# _LITERALS, per docs/cli/cli-standard.md rule 6: this array holds LITERAL substrings &
 # is joined with escaping. A *_PATTERNS array holds regular expressions & is joined
 # raw. The two used to be told apart only by a comment, which is how a literal ends
 # up silently treated as a regex.
@@ -206,7 +206,7 @@ RISK_DOMAIN_LITERALS=(
 RISK_DOMAIN_REGEX="$(join_literals_ere "${RISK_DOMAIN_LITERALS[@]}")"
 
 
-# _LITERALS: literal hostnames, joined with escaping. See docs/cli-standard.md rule 6.
+# _LITERALS: literal hostnames, joined with escaping. See docs/cli/cli-standard.md rule 6.
 #
 # Telemetry & ad hosts seen in TLauncher traffic, kept as a named reference list.
 #
@@ -337,7 +337,7 @@ log_warn() {
 
 # Exit codes, one per condition. Before this, `1` covered five distinct failures &
 # a caller could not tell a missing dependency from an unknown flag without reading
-# stderr. docs/cli-standard.md is normative for these & the man page's EXIT STATUS
+# stderr. docs/cli/cli-standard.md is normative for these & the man page's EXIT STATUS
 # section lists every one; tests/doc-sync.sh fails if a code here is undocumented.
 readonly EX_OK=0            # success, including --help, --print-man & standalone modes
 readonly EX_USAGE=1         # unknown option, missing or invalid argument
@@ -1870,7 +1870,7 @@ trap cleanup EXIT INT TERM HUP QUIT
 # MANUAL PAGE (roff, embedded)
 # ==========================================
 
-# The manual page lives here & nowhere else. docs/cli-standard.md makes that
+# The manual page lives here & nowhere else. docs/cli/cli-standard.md makes that
 # normative: a .1 file checked into the tree is a second copy that drifts from the
 # script, & docs/DESIGN.md principle 9 already keeps the program in one file. The
 # manual is part of the program's contract, so it ships in the same file.
@@ -2190,8 +2190,8 @@ re\-read, so it cannot consume a stream the application still needs.
 .PP
 In the repository:
 .IR docs/DESIGN.md " (why the conventions are what they are),"
-.IR docs/cli\-standard.md " (the normative command\-line standard),"
-.IR docs/cli\-surface.md " (the descriptive inventory)."
+.IR docs/cli/cli\-standard.md " (the normative command\-line standard),"
+.IR docs/cli/cli\-surface.md " (the descriptive inventory)."
 .SH BUGS
 Known gaps, open items, and everything not verified against real data are
 tracked in
@@ -2205,7 +2205,7 @@ ROFF
 
 # Install the manual page under XDG_DATA_HOME, no root. Also drops a symlink into
 # the user's bin dir when that exists & is on PATH, so `tlauncher-fccu` works as a
-# command. Safe only because SCRIPT_DIR resolves symlinks; see docs/cli-standard.md.
+# command. Safe only because SCRIPT_DIR resolves symlinks; see docs/cli/cli-standard.md.
 install_man() {
     local man_root="${XDG_DATA_HOME}/man"
     local man_dir="${man_root}/man1"
@@ -2460,7 +2460,7 @@ main() {
 
     # ---- Standalone modes that never launch TLauncher ----
     # --print-man writes DATA to stdout, so it must stay pipeable: nothing else may
-    # print before it. docs/cli-standard.md rule 1.
+    # print before it. docs/cli/cli-standard.md rule 1.
     if [ "$PRINT_MAN" = true ]; then
         print_man
         exit "$EX_OK"

@@ -570,3 +570,19 @@ basis; what can't be rebuilt says `**No recoverable origin.**` This repo already
 `CLAUDE.md` says it under "State honesty".
 
 **Status:** in force.
+
+## 2026-10-01: The CLI module lives in docs/cli/
+
+**Context.** `cli-standard.md` & `cli-surface.md` came in with #25 & #26 as a pair: one
+says what the command line must do, the other records what it does. They sat loose in
+`docs/` next to documents that govern the whole repo. The audit of 2026-10-01 chose a
+folder for them; that choice was written only in the v2.27 rewrite, reverted in v2.28,
+so it had no entry until now.
+
+**Decision.** Both move to `docs/cli/` with their file names unchanged; the only edit
+inside them is the paths they cite of each other. Every live reference follows: `CLAUDE.md`, `AGENTS.md`'s map, the two documents themselves, the
+comments in `run.sh`, the header of `tests/doc-sync.sh`, & the man page's SEE ALSO, which
+a user sees. History in `CHANGELOG.md`, this file & `docs/TEMPORARY-CONTEXT.md` keeps
+the old paths.
+
+**Status:** in force.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regression net for documentation/code sync (docs/cli-standard.md).
+# Regression net for documentation/code sync (docs/cli/cli-standard.md).
 #
 # The repo deliberately keeps a long `--help` AND a full manual page, which
 # duplicates CONTENT on purpose. That is only affordable if it cannot duplicate
