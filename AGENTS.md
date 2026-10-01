@@ -16,23 +16,23 @@ using it. Visibility & isolation come first, usability second.
 - Never wrap shared state in a `( ... )` subshell. That exact bug orphaned the
   monitors & grew one `files.log` to 51 MB. Hold locks with `exec N>FILE` plus
   `flock` in the same scope, & track background jobs by `$!`.
-- Read `DESIGN.md` before you write any code.
+- Read `docs/DESIGN.md` before you write any code.
 
 ## Map of the repo
 
 - `run.sh`: the whole launcher, one bash script.
 - `scripts/TLHttpAgent.java` & its helpers, `scripts/build-agent.sh`: the `-P` Java
   agent (built into two gitignored jars, never committed).
-- `DESIGN.md`: the conventions, read before coding.
+- `docs/DESIGN.md`: the conventions, read before coding.
 - `CHANGELOG.md`: what changed & when.
-- `ROADMAP.md`: the phased plan, read when the work belongs to a phase.
+- `docs/ROADMAP.md`: the phased plan, read when the work belongs to a phase.
 - `docs/DECISIONS.md`: why things are the way they are, append-only. Its last entry
   holds the Known gaps section as it stood until 2026-10-01, moved there unedited.
 
 ## Where it continues
 
-`CLAUDE.md` pins how docs, commits & the CHANGELOG are written. `DESIGN.md` holds the
-code conventions & is read before writing any code. `ROADMAP.md` says what comes next,
+`CLAUDE.md` pins how docs, commits & the CHANGELOG are written. `docs/DESIGN.md` holds
+the code conventions & is read before writing any code. `docs/ROADMAP.md` says what comes next,
 & `docs/DECISIONS.md` says why things are the way they are. Nothing here repeats them.
 
 ## Known gaps
@@ -90,7 +90,7 @@ nor `groff` is installed & `tests/doc-sync.sh` reports SKIP. It was validated by
 another machine with both, clean except one style note that v2.26 fixed. Re-validate if
 the roff's shape changes. First recorded 2026-09-17.
 
-Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't closed with
+Find another open item while reading `docs/DESIGN.md` or `CHANGELOG.md` that isn't closed with
 verified evidence? Add it here instead of quietly fixing it or re-scoping it. A decision
 goes in `docs/DECISIONS.md`. A new documentation idea goes here too, as a note for the
 author; don't add a doc file on your own.

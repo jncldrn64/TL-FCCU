@@ -1,9 +1,10 @@
 # CLAUDE.md: project standard
 
 - Read AGENTS.md first (purpose, hard constraints, repo map, known gaps), then
-  DESIGN.md before writing code, & ROADMAP.md when the work belongs to a phase.
+  docs/DESIGN.md before writing code, & docs/ROADMAP.md when the work belongs to a phase.
   This file just pins the doc/format standard.
-- Documentation lives at repo root: AGENTS.md, DESIGN.md, CHANGELOG.md, ROADMAP.md.
+- Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; DESIGN.md,
+  ROADMAP.md, DECISIONS.md & the CLI module (cli-standard.md, cli-surface.md) in docs/.
   Do NOT create a new doc file without asking me first (this already lives in AGENTS.md).
 - This repo does not describe other repos. Another repo's name may appear as historical
   provenance, where a convention came from, never as operational information. No document
