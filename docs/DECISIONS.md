@@ -679,3 +679,40 @@ travels with the threshold rule because both decide when something gets built.
 outweighs a measurable benefit, & only after checking what its proposer meant.
 
 **Status:** in force.
+
+## 2026-10-01: The floor, measured against the plugin's original
+
+**Context.** The author attached the plugin's upstream archive to the session on
+2026-10-01, the first time its text was in reach here. It ships no LICENSE, so it was
+read in the session & nothing from it is committed. Its `CLAUDE.md` lists 24 rules; two
+skills & a reference file carry the word lists & a voice profile with numbers.
+
+**What the floor covers.** It covers three rules in full, which are no em dash, no
+parenthesis in a heading (prose rule 4) & no narration of what was searched for (prose
+rule 5). Five more are covered in part. Unsourced numbers & invented history or
+attributions meet "State honesty" & "Promises", intensifiers meet prose rule 1, which
+listed 5 words against the original's 26, & quoting exactly meets the temporary
+context's verbatim rule. The other 16 have no line here.
+
+**What the text shows.** Each rule with a word list was grepped over the corpus, 23,471
+words outside code blocks, with the original's own lists. Nine of the 16 uncovered rules
+gave zero hits once each hit was read, in AI verbs, transitions, filler phrases, academic
+tells, weasel phrases, dramatic headings, narrated references, exclamation marks &
+"Whether you're". Five hits were dropped after reading. Two were relative clauses, "a
+line that said", & three were literal uses of navigation in code. The other seven rules,
+such as hollow claims & repeated points, can't be counted with a grep & weren't.
+
+Of the original's intensifiers, two show up beyond the one hit prose rule 1 already
+counted, 8 times & 2 times. Rule 1's command now lists them, & its baseline goes from 1
+to 11.
+
+**One gap is structural.** The voice profile puts sentence length at a mean of 18.3 words
+with a standard deviation of 15.3. This corpus, cut at `.`, `!` & `?`, gives 17.3 & 10.3:
+close on the mean, flatter on the spread. Prose rule 8 catches three flat sentences in a
+row & nothing wider. Whether that needs a rule is noted in `docs/TEMPORARY-CONTEXT.md`.
+
+**Decision.** Rule 1 adds the two words the corpus uses. The other lists stay in the
+plugin, read from it when it's in reach. The coverage count goes in `CLAUDE.md` next to
+the rule that makes the original outrank the floor.
+
+**Status:** in force.

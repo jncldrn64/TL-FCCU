@@ -4,6 +4,23 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.40 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.35 until the next code PR.
+
+### Added
+- `docs/DECISIONS.md` measures the prose floor against the plugin's original, read in
+  the session & not committed: 3 of its 24 rules covered in full, 5 in part.
+- `CLAUDE.md`, "Prose floor", says that count next to the rule that makes the original
+  outrank the floor.
+- `docs/TEMPORARY-CONTEXT.md` notes that sentence length here spreads less than the
+  voice profile's, with no decision yet.
+
+### Changed
+- Prose rule 1 greps two more intensifiers, the two the corpus uses. Its baseline goes
+  from 1 hit to 11, 3 of them in live text.
+
 ## v2.39 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

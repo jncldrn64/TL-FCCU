@@ -85,10 +85,13 @@ that isn't rewritten keeps its count, so a baseline only falls when live text is
 this floor.** Installed or attached to the conversation, the trigger is having it, not
 how it arrived: before writing prose, check whether it's there, & if it is, open it. The
 floor below is a summary of it, & a summary is what's left when the original isn't.
+Measured against the original on 2026-10-01, the floor & the rest of this file cover 3 of
+its 24 rules in full & 5 in part; `docs/DECISIONS.md` has the count & what it found.
 
-1. Before delivering, grep for the five intensifiers in the rule 1 command below. With the
-   plugin installed, its full lists apply too. Baseline: 1 hit, in a published
-   `CHANGELOG.md` section, where the word isn't an intensifier.
+1. Before delivering, grep for the seven intensifiers in the rule 1 command below. With
+   the plugin installed, its full lists apply too. Baseline: 11 hits, 8 in history that
+   isn't edited (5 in `CHANGELOG.md`, 3 in `docs/DECISIONS.md`) & 3 live, one each in
+   `docs/DESIGN.md`, `docs/ROADMAP.md` & `docs/cli/cli-surface.md`.
 2. Contrastive parallelism ("not X, but Y", "X, not Y") at most once every 500 words per
    file. Baseline: `docs/DESIGN.md` at one every 330 words, over the ceiling; every other
    file under it, the closest `docs/cli/cli-surface.md` at one every 533.
@@ -122,7 +125,7 @@ C=$(git ls-files '*.md' ':!:CLAUDE.md' ':!:*TEMPORARY-CONTEXT.md')
 wc -w $C | tail -1
 
 # Rule 1, the word list.
-grep -niwE "very|absolutely|clearly|simply|probably" $C
+grep -niwE "very|absolutely|clearly|simply|probably|actually|really" $C
 
 # Rule 2, per file: words, then hits. Divide the first by the second.
 for f in $C; do printf '%s %s %s\n' "$f" "$(wc -w < "$f")" "$(grep -ciE \

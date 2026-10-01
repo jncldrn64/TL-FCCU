@@ -210,3 +210,4 @@ bare parenthesis (AGENTS "Hard constraints (don't break these)"); rule 6, 102 li
 (93 in cli-surface); rule 7, 26 paragraphs over five sentences; rule 8, 15 flat triples of
 295, 5.1%. The adapted commands live in commit e7bcfd1's CLAUDE.md.
 
+**2026-10-01, Claude.** Sentence-length spread is flatter than the voice profile: sd 10.3 here vs 15.3 in the profile, means close (17.3 vs 18.3), cut at .!? only. Also only ~10.6% of sentences over 30 words vs the profile's p90 at 36. Rule 8 only sees 3-in-a-row. Unknown whether a spread rule is worth it or whether the corpus being technical docs makes the profile the wrong yardstick. Mine from today: sd 10.0, mean 16.7, so I didn't fix it either.
