@@ -5,7 +5,8 @@
 > `## YYYY-MM-DD: <title>`.
 >
 > Until 2026-10-01 decisions lived with the open items in `AGENTS.md`, section "Known
-> gaps". That text sits unedited at the end of this file.
+> gaps". That text sits unedited in this file, entry of 2026-10-01 "Known gaps up to
+> this date, moved here unedited".
 
 ## 2026-10-01: Decisions get a file of their own
 
@@ -524,5 +525,19 @@ to run it. The Backlog of `docs/ROADMAP.md` has one line on 2026-10-01, from com
 **Decision.** Each Backlog item gets a line opening `**Entered:**` with that date & PR,
 as `CLAUDE.md` says under "Dates". The one line there is dated in the same PR that writes
 the rule.
+
+**Status:** in force.
+
+## 2026-10-01: A pointer to a decision cites its date & title
+
+**Context.** Three lines placed the moved Known gaps history by position: `AGENTS.md`
+called it "the last entry" of this file & said it sat "at the end", & this file's own
+header said the same. All three were true when written in v2.29 & false from v2.31, the
+first time an entry was appended after it. Nothing checked them; a reread found them.
+
+**Decision.** A pointer to an entry here cites its date & title, as `CLAUDE.md` says
+under "Decisions". Both are fixed once written, since entries are never edited. The three
+lines now cite "Known gaps up to this date, moved here unedited" by date & title. The
+header changed too: it isn't an entry, it's the file's rules.
 
 **Status:** in force.

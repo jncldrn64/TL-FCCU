@@ -14,6 +14,9 @@
 - Decisions go in docs/DECISIONS.md, append-only, one entry each, opening with
   `## YYYY-MM-DD: <title>`. Open items go in the "Known gaps" section of AGENTS.md,
   append-only, dated. Never scatter them.
+  A pointer to a DECISIONS entry cites its date & title, never a line number or a place
+  in the file ("the last entry"). One is added where a line would otherwise read as
+  arbitrary or as contradicting the rest of its document.
 - What was observed & would be lost if nobody wrote it, & isn't known yet to be wanted,
   goes in docs/TEMPORARY-CONTEXT.md: one line, the date & who noted it, written without
   asking. Each line is later placed or discarded. Its full rules live in that file.
