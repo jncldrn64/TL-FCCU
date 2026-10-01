@@ -28,6 +28,7 @@ using it. Visibility & isolation come first, usability second.
 - `docs/ROADMAP.md`: the phased plan, read when the work belongs to a phase.
 - `docs/DECISIONS.md`: why things are the way they are, append-only. Its last entry
   holds the Known gaps section as it stood until 2026-10-01, moved there unedited.
+- `docs/TEMPORARY-CONTEXT.md`: what was observed & isn't placed yet, normally empty.
 
 ## Where it continues
 
