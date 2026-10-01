@@ -71,6 +71,9 @@
   When a threshold fires, the decision it opens answers three things before anything is
   planned: what is getting hard, with the number that shows it; the options & what each
   costs; the run that rules out the ones that don't work.
+  An idea is dropped when its complexity outweighs a benefit someone can measure, never
+  because it sounds risky. Before dropping it, check what its proposer meant: dropping
+  the wrong reading of a word rejects some other idea.
 
 ## Prose floor
 
