@@ -172,3 +172,11 @@ is a separate program, built & audited on its own terms, not a slice of the laun
 carved out for navigation. So the condition that would move something out of `run.sh`
 is that: it becomes a program in its own right, audited separately, the way `scripts/`
 already is. Nothing in the launcher's own logic currently is.
+
+## 10. An intermittent test runs N times
+
+A suite that has ever failed intermittently runs `REPEATS` times, 3 by default, not
+once. One green run proves nothing about a failure that shows up one run in five,
+which is how `tests/doc-sync.sh` behaved until its `SIGPIPE` race was fixed. Such a
+suite goes in `REPEATED` in `tests/run-all.sh` & stays there after the fix, so the bug
+can't come back unseen. Raise `REPEATS` for proof.

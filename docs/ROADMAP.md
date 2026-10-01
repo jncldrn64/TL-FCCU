@@ -16,6 +16,10 @@ shares; this copies its phase habit, & since 2026-10-01 its `docs/` layout too.
 
 Status values: `pending`, `in progress`, `closed (YYYY-MM-DD)`.
 
+A parked item enters a phase already in progress only if leaving it out makes a pending
+increment impossible to deliver, or forces redoing work already delivered. Anything else
+waits for the next phase.
+
 ## Phase 0: the report stops lying
 
 Status: `closed (2026-07-22)`
