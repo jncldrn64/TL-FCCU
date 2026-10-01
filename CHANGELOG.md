@@ -4,6 +4,18 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.32 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.30 until the next code PR.
+
+### Added
+- `CLAUDE.md`, under "Commits": a PR title carries the commit format & type. The 12
+  merged PRs without one (#1 to #6, #11, #17, #22, #25 to #27) are registered in
+  `docs/DECISIONS.md` & left as they are.
+- `CLAUDE.md`, under "Commits": the per-file table in a PR body is copied from
+  `git diff --numstat`, run as the last step. `docs/DECISIONS.md` says why.
+
 ## v2.31 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
