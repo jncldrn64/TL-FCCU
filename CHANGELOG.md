@@ -4,6 +4,22 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.42 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.35 until the next code PR.
+
+### Added
+- `docs/DECISIONS.md` registers the audit's past violations, frozen as published, says
+  the author's web edits carry a type, & lists six ideas the audit dropped with why.
+- `AGENTS.md`'s map lists `tests/` & `bash tests/run-all.sh`.
+
+### Changed
+- `docs/TEMPORARY-CONTEXT.md`: the session dump of v2.31 is emptied. Its lines went to
+  PRs #34 to #43 & to this one; three open ideas stay. The full dump is commit `0bc1fd7`.
+- `CLAUDE.md`'s Write scope names the repo as TL-FCCU, its name on GitHub, & as
+  TLauncher_FCCU, its name before the rename.
+
 ## v2.41 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
