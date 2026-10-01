@@ -37,7 +37,7 @@
 - Commits: "<type>: <short imperative summary>", type in {add, chg, fix, rmv, doc}.
   add=new capability, chg=behavior change, fix=bugfix, rmv=feature removed, doc=docs only.
   The commit BODY does NOT re-narrate the change: 1-2 lines max plus a reference to the
-  CHANGELOG section. Detail lives in CHANGELOG (what) and DESIGN/AGENTS (why), not in the
+  CHANGELOG section. Detail lives in CHANGELOG (what) and docs/DECISIONS.md (why), not in the
   commit message. (Keep the automatic Co-Authored-By / Claude-Session trailer.)
 - PR title: the same format as the commit, with the same type. The PR list then reads
   like `git log` & filters by type from either side.

@@ -98,5 +98,5 @@ the roff's shape changes. First recorded 2026-09-17.
 
 Find another open item while reading `docs/DESIGN.md` or `CHANGELOG.md` that isn't closed with
 verified evidence? Add it here instead of quietly fixing it or re-scoping it. A decision
-goes in `docs/DECISIONS.md`. A new documentation idea goes here too, as a note for the
-author; don't add a doc file on your own.
+goes in `docs/DECISIONS.md`. A documentation idea that nobody knows is wanted yet goes in
+`docs/TEMPORARY-CONTEXT.md`; don't add a doc file on your own.
