@@ -586,3 +586,19 @@ a user sees. History in `CHANGELOG.md`, this file & `docs/TEMPORARY-CONTEXT.md` 
 the old paths.
 
 **Status:** in force.
+
+## 2026-10-01: Prose gets a measured floor
+
+**Context.** The prose rule named two skills from an external plugin & stopped there.
+Their word lists are long, but a list catches words. It doesn't catch long paragraphs,
+bullets that run on, or sentences that all come out the same length. The other repo hit
+that limit first & answered with eight rules, each with a number & the command that
+recounts it. An English adaptation was written here in the v2.27 rewrite, which v2.28
+reverted.
+
+**Decision.** `CLAUDE.md` gets a "Prose floor" section with those eight rules, adapted to
+English, & the baselines measured on 2026-10-01 over the current corpus. The commands come
+from the reverted rewrite with the paths updated. No baseline may rise. Nothing already
+written is rewritten to lower one; that happens when someone fixes live text.
+
+**Status:** in force.

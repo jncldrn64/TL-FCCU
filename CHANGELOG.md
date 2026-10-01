@@ -4,6 +4,20 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.36 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.35 until the next code PR.
+
+### Added
+- `CLAUDE.md`, section "Prose floor": eight measurable prose rules, each with its
+  baseline from 2026-10-01 & the command that recounts it. No baseline may rise.
+- `docs/DECISIONS.md` says why the plugin alone fell short.
+
+### Changed
+- `CLAUDE.md`'s prose bullet points to the floor, which holds with the plugin & without
+  it.
+
 ## v2.35 — 2026-10-01
 
 The CLI module moves into its own folder. The only change a user can see is two lines of

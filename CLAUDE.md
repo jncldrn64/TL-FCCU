@@ -42,7 +42,8 @@
   as the last step before writing the body. Never from `--stat`, which folds additions &
   deletions into one number, never rebuilt from memory, & never run before a last edit.
 - Prose (docs, comments): English, applying no-ai-slop-writing-rules:rossmann-voice
-  and no-ai-slop-writing-rules:no-ai-slop. Keep the existing voice.
+  and no-ai-slop-writing-rules:no-ai-slop. Keep the existing voice. The plugin alone
+  catches little, so "Prose floor" below holds with it & without it.
   docs/TEMPORARY-CONTEXT.md is exempt.
 - Prose-skill dependency: those two skills are NOT vendored here. They come from the
   external plugin `no-ai-slop-writing-rules` (realrossmanngroup,
@@ -60,6 +61,94 @@
   When lost context is rebuilt, an inference is written as one, opening `**Hypothesis:**`
   with its basis in view, never as fact. In doubt between inferring & stating the gap,
   state the gap: `**No recoverable origin.**`
+
+## Prose floor
+
+Eight rules, each with this repo's baseline, measured on 2026-10-01, & the command that
+recounts it. **No baseline may rise.** A PR that raises one added a violation. History
+that isn't rewritten keeps its count, so a baseline only falls when live text is fixed.
+
+1. Before delivering, grep for the five intensifiers in the rule 1 command below. With the
+   plugin installed, its full lists apply too. Baseline: 1 hit, in a published
+   `CHANGELOG.md` section, where the word isn't an intensifier.
+2. Contrastive parallelism ("not X, but Y", "X, not Y") at most once every 500 words per
+   file. Baseline: `docs/DESIGN.md` at one every 330 words, over the ceiling; every other
+   file under it, the closest `docs/cli/cli-surface.md` at one every 533.
+3. A CHANGELOG bullet stays at 60 words or fewer; if the change doesn't fit, it's two
+   bullets. Baseline: **43 bullets over the ceiling**, all in published sections.
+4. A heading carries a parenthesis only when it holds data, such as a verification state
+   or a number. Baseline: 1, `AGENTS.md`'s "Hard constraints (don't break these)".
+5. Saying "not verified" about the code is required (see "State honesty"). Narrating
+   what was searched for & not found while writing is not.
+6. A claim about the code anchors on something that survives a refactor, a function name
+   or a greppable quote, never a line number. Baseline: 102 anchors, 93 of them in
+   `docs/cli/cli-surface.md` & 3 in `docs/ROADMAP.md`, all due to be replaced. The other 6
+   are history that isn't edited: 3 in `CHANGELOG.md`, 3 in `docs/DECISIONS.md`.
+7. A paragraph of running prose has at most five sentences; if it doesn't fit, it's two
+   paragraphs. Lists, tables & glossary lines are out of scope. Baseline: 27 paragraphs
+   over the ceiling: `docs/DECISIONS.md` 19, all in append-only entries, `docs/DESIGN.md`
+   5, `docs/ROADMAP.md` 2 & `AGENTS.md` 1.
+8. Three consecutive sentences of similar length are the sign that the text is going
+   flat, & rule 7 doesn't catch it. The measure is the share of consecutive sentence
+   triples whose lengths sit within 3 words of each other. Baseline: **4.6%**, 18 flat
+   triples of 389.
+
+The corpus is every tracked `.md` file except two. `CLAUDE.md` is the standard itself, &
+editing it would move the numbers it declares. `docs/TEMPORARY-CONTEXT.md` is exempt by
+design. The commands, from the repo root:
+
+```sh
+C=$(git ls-files '*.md' ':!:CLAUDE.md' ':!:*TEMPORARY-CONTEXT.md')
+
+# Words in the corpus.
+wc -w $C | tail -1
+
+# Rule 1, the word list.
+grep -niwE "very|absolutely|clearly|simply|probably" $C
+
+# Rule 2, per file: words, then hits. Divide the first by the second.
+for f in $C; do printf '%s %s %s\n' "$f" "$(wc -w < "$f")" "$(grep -ciE \
+  "\b(is|are|was|were)(n't| not) [^,.;]{2,45}[,;] (it's|it is|they're|they are|but)\b|\b[a-z]+, not (a|an|the|of|by|to|with|in|on|for) [a-z]" \
+  "$f")"; done
+
+# Rule 3, CHANGELOG bullets over 60 words, continuation lines included.
+awk '/^- /{if(b)print w; b=1; w=NF; next} /^  [^ ]/ && b{w+=NF; next}
+     {if(b)print w; b=0} END{if(b)print w}' CHANGELOG.md | awk '$1>60' | wc -l
+
+# Rule 4, headings with a parenthesis, per file.
+grep -cE "^#{1,4} .*\(.*\)" $C
+
+# Rule 6, line-number anchors, per file.
+grep -oE "\b[A-Za-z_./-]+\.(sh|java|md|py):[0-9]+" $C | cut -d: -f1 | sort | uniq -c
+
+# Rules 7 & 8, one extractor. It drops code blocks, tables, headings, quotes, bullets &
+# their indented continuation lines, & keeps paragraphs of more than 15 words.
+python3 - $C <<'EOF'
+import io,re,sys
+P,tot=[],0
+for f in sys.argv[1:]:
+    out,inc=[],False
+    for l in io.open(f,encoding='utf-8').read().split('\n'):
+        if l.strip().startswith('```'): inc=not inc; out.append(''); continue
+        if inc or re.match(r'^\s*[|#>]',l) or re.match(r'^\s*[-*+] ',l) \
+           or re.match(r'^\s{2,}\S',l) or re.match(r'^\s*\d+\. ',l):
+            out.append(''); continue
+        out.append(l)
+    ps=[p for p in re.split(r'\n\s*\n','\n'.join(out)) if len(p.split())>15]
+    for p in ps:
+        o=[len(x.split()) for x in re.split(r'(?<=[.:;!?])\s+',p) if x.strip()]
+        if len(o)>5: tot+=1; print(f"rule 7: {f}: {len(o)} sentences")
+        if len(o)>=3: P.append(o)
+t=sum(len(o)-2 for o in P)
+pl=sum(1 for o in P for i in range(len(o)-2) if max(o[i:i+3])-min(o[i:i+3])<=3)
+print(f"rule 7: {tot} paragraphs over five sentences")
+print(f"rule 8: {pl} flat of {t} triples = {100*pl/t:.1f}%")
+EOF
+```
+
+The rule 2 count depends on its regular expression: changing it changes the number &
+breaks the comparison with the baseline. If it needs tuning, recount every file at once
+& rewrite the baseline with its new date.
 
 ## Third-party vendoring
 
