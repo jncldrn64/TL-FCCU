@@ -513,3 +513,16 @@ recorded here, & the practice was never written.
 last step before the body is written, as `CLAUDE.md` says under "Commits".
 
 **Status:** in force.
+
+## 2026-10-01: A Backlog item carries the date & PR it entered with
+
+**Context.** An item parked in the Backlog says nothing about how long it has waited or
+what brought it. That can be recovered with `git log -S`, but only by someone who thinks
+to run it. The Backlog of `docs/ROADMAP.md` has one line on 2026-10-01, from commit
+`4af5c66` of 2026-07-22, merged in #10.
+
+**Decision.** Each Backlog item gets a line opening `**Entered:**` with that date & PR,
+as `CLAUDE.md` says under "Dates". The one line there is dated in the same PR that writes
+the rule.
+
+**Status:** in force.
