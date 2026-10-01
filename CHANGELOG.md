@@ -4,6 +4,17 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.41 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.35 until the next code PR.
+
+### Fixed
+- `CLAUDE.md` said the why lives in DESIGN & AGENTS. Since v2.29 it lives in
+  `docs/DECISIONS.md`, & the commit rule now says so.
+- `AGENTS.md`'s Known gaps sent new documentation ideas there, which v2.30 gave to
+  `docs/TEMPORARY-CONTEXT.md`. The closing paragraph now points there.
+
 ## v2.40 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
