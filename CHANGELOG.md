@@ -4,6 +4,23 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.37 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.35 until the next code PR.
+
+### Added
+- `docs/GLOSSARY.md`, what the standard's words mean today. Thirteen terms, each citing
+  the DECISIONS entry or CHANGELOG section it came from.
+- `CLAUDE.md`, under "Decisions": an entry that introduces or refines a term writes its
+  glossary line in the same PR. The doc list & `AGENTS.md`'s map name the new file.
+- `docs/DECISIONS.md` writes down that a PR opens as a draft. It was the practice since
+  #28, with no live line saying so.
+
+### Changed
+- `docs/TEMPORARY-CONTEXT.md`: a quote becomes required when an entry names a term the
+  glossary doesn't have. It stays the default whenever the words are at hand.
+
 ## v2.36 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

@@ -602,3 +602,33 @@ from the reverted rewrite with the paths updated. No baseline may rise. Nothing 
 written is rewritten to lower one; that happens when someone fixes live text.
 
 **Status:** in force.
+
+## 2026-10-01: A PR opens as a draft
+
+**Context.** Every PR since #28 opened as a draft & the author merged it, & the audit of
+2026-10-01 chose that on purpose. The choice was written only in the v2.27 rewrite, which
+v2.28 reverted, so nothing live said it.
+
+**Decision.** A PR opens as a draft. The author marks it ready & merges it.
+
+**Status:** in force.
+
+## 2026-10-01: The standard's words get a glossary
+
+**Context.** `docs/DECISIONS.md` is append-only, so an entry keeps the meaning a word had
+on its date. Once a term is refined, the only place that said what it means is frozen,
+& a reader has to walk every later entry to know where it stands. The other repo keeps a
+glossary for this. A first version was written here in the v2.27 rewrite & reverted.
+
+**Decision.** `docs/GLOSSARY.md` says what each term means today & is corrected when it
+ages; each line cites the entry or CHANGELOG section it came from. A DECISIONS entry that
+introduces or refines a term writes its line in the same PR. The file starts with thirteen
+terms, all with a live source, & leaves out the reverted draft's terms whose sources were
+reverted too.
+
+The temporary context's quote rule tightens with it. A quote stays the default when the
+words are at hand, & becomes required when an entry names a term with no glossary line;
+that replaces the sentence in "The temporary context is adopted" that tied quotes to
+having no glossary.
+
+**Status:** in force.

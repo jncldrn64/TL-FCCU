@@ -5,7 +5,7 @@
   Last, docs/TEMPORARY-CONTEXT.md: normally empty, read anyway because one line there can
   contradict what you were about to propose. This file just pins the doc/format standard.
 - Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; DESIGN.md,
-  ROADMAP.md, DECISIONS.md & TEMPORARY-CONTEXT.md in docs/; the CLI module
+  ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md in docs/; the CLI module
   (cli-standard.md, cli-surface.md) in docs/cli/.
   Do NOT create a new doc file without asking me first (this already lives in AGENTS.md).
 - This repo does not describe other repos. Another repo's name may appear as historical
@@ -17,6 +17,9 @@
   A pointer to a DECISIONS entry cites its date & title, never a line number or a place
   in the file ("the last entry"). One is added where a line would otherwise read as
   arbitrary or as contradicting the rest of its document.
+  A DECISIONS entry that introduces or refines a term writes its line in docs/GLOSSARY.md
+  in the same PR. DECISIONS keeps why a term changed; GLOSSARY keeps what it means today &
+  is corrected.
 - What was observed & would be lost if nobody wrote it, & isn't known yet to be wanted,
   goes in docs/TEMPORARY-CONTEXT.md: one line, the date & who noted it, written without
   asking. Each line is later placed or discarded. Its full rules live in that file.

@@ -29,8 +29,9 @@ the fact that there was one.
 
 **So when an entry comes from the author's words & those words are at hand, they go in
 verbatim**, uncorrected: spelling, punctuation & language as they came. Correcting them is
-the same mistake as summarizing: cleaning is deciding. This repo has no glossary, so the
-trigger is simpler than a vocabulary check: the quote goes in whenever the words exist.
+the same mistake as summarizing: cleaning is deciding. The quote goes in whenever the words
+exist. **It's required when the entry names a term with no line in `docs/GLOSSARY.md`**:
+such an entry coins vocabulary, & coining it wrong costs a session to undo.
 
 **A quote is never reconstructed.** If the words aren't at hand, the entry says so. An
 invented quote is worse than none. **It's limited to the technical observation**: what

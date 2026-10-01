@@ -29,6 +29,7 @@ using it. Visibility & isolation come first, usability second.
 - `docs/DECISIONS.md`: why things are the way they are, append-only. Its
   entry of 2026-10-01 "Known gaps up to this date, moved here unedited" holds the
   Known gaps section as it stood until then.
+- `docs/GLOSSARY.md`: what the standard's words mean today, each with its source.
 - `docs/TEMPORARY-CONTEXT.md`: what was observed & isn't placed yet, normally empty.
 - `docs/cli/`: the CLI module. `cli-standard.md` says what the command line must do,
   `cli-surface.md` records what it does today.
