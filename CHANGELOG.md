@@ -4,6 +4,18 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.38 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.35 until the next code PR.
+
+### Added
+- `CLAUDE.md`, bullet "Promises": no rule prescribes a future mechanism, & a sentence
+  naming a syntax, protocol or API goes with its run.
+- The same bullet: a threshold that fires opens a decision answering three questions
+  before anything is planned. `docs/DECISIONS.md` says why, & where `docs/DESIGN.md`
+  already did this unwritten.
+
 ## v2.37 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
