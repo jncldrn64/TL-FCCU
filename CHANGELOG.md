@@ -4,6 +4,29 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.30 — 2026-10-01
+
+The documents move into `docs/`, & the temporary context arrives. The only change a user
+can see is one line of the man page; `VERSION` goes from 2.26 to 2.30, closing the
+desfase the four doc-only sections left open.
+
+### Added
+- `docs/TEMPORARY-CONTEXT.md`, for what was observed & would be lost if nobody wrote it
+  down, before anyone knows whether it's wanted. One line each, no permission needed, & a
+  quote of the author's own words when they're at hand. Its first entry: four CLI rules
+  that might hold in general.
+- `CLAUDE.md` names it in the reading order & the doc list, exempts it from the prose &
+  em dash rules, & says in one line what goes there.
+
+### Changed
+- `DESIGN.md` & `ROADMAP.md` live in `docs/` now. Both are pure renames, so their history
+  follows them. `CLAUDE.md`, `AGENTS.md` & `CHANGELOG.md` stay at the root.
+- Every reference that named their old place now names the new one: `AGENTS.md`,
+  `CLAUDE.md`, `docs/cli-standard.md`, three comments in `run.sh`, & the man page's SEE
+  ALSO, which now reads `docs/DESIGN.md`.
+- `CLAUDE.md`'s doc list names both places & every file in them. It used to list four
+  files at the root & miss the CLI module.
+
 ## v2.29 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

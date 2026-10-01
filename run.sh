@@ -17,13 +17,13 @@
 # dependency by hand, outside this script, is the user's job; the script itself
 # stays unprivileged.
 #
-# CONVENTIONS: DESIGN.md sits next to this script & holds the style guide. XDG
+# CONVENTIONS: docs/DESIGN.md holds the style guide. XDG
 # paths everywhere, zero sudo, flock in the same scope, background jobs tracked
 # by $!, standard CLI grammar, silent by default but never mute. A new feature
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.26"
+VERSION="2.30"
 
 # Directory holding this script, used to find helpers like scripts/build-agent.sh.
 # Resolved once, & it really does survive being called through a symlink now.
@@ -246,7 +246,7 @@ fi
 # WHY: log_error & log_warn used to printf straight to stderr, so they carried no
 # timestamp & never reached ${SESSION_DIR}/master.log. Reading a past session's
 # master.log showed the run but not the errors in it, which is the worst possible
-# hole in a tool whose whole claim (DESIGN.md principle 9) is that an auditor can
+# hole in a tool whose whole claim (docs/DESIGN.md principle 9) is that an auditor can
 # read it end to end. All four levels now share this function, so the timestamp
 # format & the file write cannot drift apart again.
 #
@@ -1872,7 +1872,7 @@ trap cleanup EXIT INT TERM HUP QUIT
 
 # The manual page lives here & nowhere else. docs/cli-standard.md makes that
 # normative: a .1 file checked into the tree is a second copy that drifts from the
-# script, & DESIGN.md principle 9 already keeps the program in one file. The
+# script, & docs/DESIGN.md principle 9 already keeps the program in one file. The
 # manual is part of the program's contract, so it ships in the same file.
 #
 # Kept in sync with usage() by tests/doc-sync.sh, which fails if an option or an
@@ -2189,7 +2189,7 @@ re\-read, so it cannot consume a stream the application still needs.
 .BR ss (8)
 .PP
 In the repository:
-.IR DESIGN.md " (why the conventions are what they are),"
+.IR docs/DESIGN.md " (why the conventions are what they are),"
 .IR docs/cli\-standard.md " (the normative command\-line standard),"
 .IR docs/cli\-surface.md " (the descriptive inventory)."
 .SH BUGS

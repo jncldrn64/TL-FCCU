@@ -1,9 +1,12 @@
 # CLAUDE.md: project standard
 
 - Read AGENTS.md first (purpose, hard constraints, repo map, known gaps), then
-  DESIGN.md before writing code, & ROADMAP.md when the work belongs to a phase.
-  This file just pins the doc/format standard.
-- Documentation lives at repo root: AGENTS.md, DESIGN.md, CHANGELOG.md, ROADMAP.md.
+  docs/DESIGN.md before writing code, & docs/ROADMAP.md when the work belongs to a phase.
+  Last, docs/TEMPORARY-CONTEXT.md: normally empty, read anyway because one line there can
+  contradict what you were about to propose. This file just pins the doc/format standard.
+- Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; DESIGN.md,
+  ROADMAP.md, DECISIONS.md, TEMPORARY-CONTEXT.md & the CLI module (cli-standard.md,
+  cli-surface.md) in docs/.
   Do NOT create a new doc file without asking me first (this already lives in AGENTS.md).
 - This repo does not describe other repos. Another repo's name may appear as historical
   provenance, where a convention came from, never as operational information. No document
@@ -11,6 +14,9 @@
 - Decisions go in docs/DECISIONS.md, append-only, one entry each, opening with
   `## YYYY-MM-DD: <title>`. Open items go in the "Known gaps" section of AGENTS.md,
   append-only, dated. Never scatter them.
+- What was observed & would be lost if nobody wrote it, & isn't known yet to be wanted,
+  goes in docs/TEMPORARY-CONTEXT.md: one line, the date & who noted it, written without
+  asking. Each line is later placed or discarded. Its full rules live in that file.
 - CHANGELOG.md: Keep a Changelog. ONE file that grows by section, never one per round.
   Newest section on TOP (descending). Every section header is
   `## vX.Y — YYYY-MM-DD`, then ### Added / ### Changed / ### Fixed / ### Removed.
@@ -27,6 +33,7 @@
   commit message. (Keep the automatic Co-Authored-By / Claude-Session trailer.)
 - Prose (docs, comments): English, applying no-ai-slop-writing-rules:rossmann-voice
   and no-ai-slop-writing-rules:no-ai-slop. Keep the existing voice.
+  docs/TEMPORARY-CONTEXT.md is exempt.
 - Prose-skill dependency: those two skills are NOT vendored here. They come from the
   external plugin `no-ai-slop-writing-rules` (realrossmanngroup,
   https://github.com/realrossmanngroup/no_ai_slop_writing_rules), installed per session
@@ -35,6 +42,7 @@
   references it at runtime instead of copying it (see Write scope, Third-party vendoring).
 - Em dash (`—`): banned in all prose (no-ai-slop rule 1). Allowed only as a format token
   in CHANGELOG date headers (`## vX.Y — YYYY-MM-DD`). History is not normalized.
+  docs/TEMPORARY-CONTEXT.md is exempt.
 - State honesty: never mark something "working/tested" without a real run in a real
   environment. If it wasn't verified, say so (this is already the AGENTS.md rule).
 

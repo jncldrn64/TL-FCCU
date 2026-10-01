@@ -57,7 +57,7 @@ is the single copy.
   creating the directory as needed, **without root**, and prints the `MANPATH` hint
   when that root is not already on the effective `MANPATH`.
 
-Rationale: a `.1` file in the tree is a second copy that drifts. DESIGN.md
+Rationale: a `.1` file in the tree is a second copy that drifts. docs/DESIGN.md
 principle 9 keeps the program in one file; the manual is part of the program's
 contract, so it lives there too.
 
@@ -94,7 +94,7 @@ Rules:
 - `SECURITY` carries what `--help` shows under `SECURITY CHECKS`, expanded. `--help`
   keeps the short version.
 - `BUGS` points at AGENTS.md Known gaps. It does not copy them.
-- The reasoning behind a design decision stays in `DESIGN.md`. The manual page
+- The reasoning behind a design decision stays in `docs/DESIGN.md`. The manual page
   describes behaviour; it does not justify architecture.
 
 ## 4. Presentation rules
