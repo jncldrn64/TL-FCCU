@@ -814,3 +814,17 @@ go, & a PR that changes what it counts reruns the command. The 126 in
 the corpus weren't swept; the rule applies to what gets written or touched from here.
 
 **Status:** in force.
+
+## 2026-10-01: A new Known gap carries the run that shows it
+
+**Context.** The other repo found that all three gaps listed in its architecture
+document were false, & the oldest had been dead for weeks. None carried a command, so
+nobody could recheck them. Here, Known gaps is append-only & closes an entry with a new
+dated line, so the other repo's rule to delete a gap in the PR that closes it doesn't
+apply. Its other half does: the entry of 2026-10-01 on the unexpected-argument hint
+already carried its run, & the one that closed it in v2.44 could point to the same run.
+
+**Decision.** `CLAUDE.md`, under "Decisions": a new Known gaps entry carries the command
+or run that shows the gap. Entries already written stay as they are.
+
+**Status:** in force.

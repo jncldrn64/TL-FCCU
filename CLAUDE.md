@@ -13,7 +13,8 @@
   here depends on another repo to be understood or worked on.
 - Decisions go in docs/DECISIONS.md, append-only, one entry each, opening with
   `## YYYY-MM-DD: <title>`. Open items go in the "Known gaps" section of AGENTS.md,
-  append-only, dated. Never scatter them.
+  append-only, dated. Never scatter them. A new Known gaps entry carries the command or
+  the run that shows the gap, so the next reader can check it's still open.
   A pointer to a DECISIONS entry cites its date & title, never a line number or a place
   in the file ("the last entry"). One is added where a line would otherwise read as
   arbitrary or as contradicting the rest of its document.
