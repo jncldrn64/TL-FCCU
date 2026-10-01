@@ -38,9 +38,11 @@
   with its basis in view. Its counterpart is **No recoverable origin**, for what can't be
   rebuilt. Source: 2026-10-01 "An inference is marked as one, & in doubt the gap is
   stated".
-- **Known gap**: a dated, append-only entry in `AGENTS.md`, section "Known gaps", for
-  something open or not verified against real data. Until 2026-10-01 that section held
-  decisions too. Source: 2026-10-01 "Decisions get a file of their own".
+- **Known gap**: a dated entry in `docs/ARCHITECTURE.md`, section "Known gaps", for
+  something open or not verified against real data, with the run that shows it. It's
+  removed in the PR that closes it. Until 2026-10-01 the section lived in `AGENTS.md`,
+  append-only, & held decisions too. Sources: 2026-10-01 "Decisions get a file of their
+  own" & "Known gaps move to the description of the code, & close by removal".
 - **line anchor**: a reference by line number, a file name, a colon & the number. Not
   allowed in new text, because the next edit moves it. Source: 2026-10-01 "Prose gets a
   measured floor".

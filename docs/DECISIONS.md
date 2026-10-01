@@ -881,3 +881,46 @@ grep -ohE '`[A-Za-z_][A-Za-z0-9_]*`' $LIVE | tr -d '`' | grep _ | sort -u \
 ```
 
 **Status:** in force.
+
+## 2026-10-01: Description of the code gets its own file, starting as a seed
+
+**Context.** Text that describes what the code does lived in three places that exist
+for other jobs, & it rotted in each. `docs/DESIGN.md` prescribes, yet its resource table
+said `cleanup` removes the lockfile, false since v2.24, & its size line said "near 2,000
+lines, 47 prefixed functions" against 2640 & 55. `docs/cli/cli-surface.md` had 96 stale
+line anchors & two wrong counts, & ROADMAP Phase 5 described code that had changed.
+
+Renaming DESIGN to an architecture document was dropped earlier because DESIGN
+prescribes, & that still holds. What moves is only its descriptive part, about 20 lines
+of 188. The other repo keeps such a file, with its open gaps inside it.
+
+**Decision.** `docs/ARCHITECTURE.md` starts as a seed: the description that already
+existed, checked against the code on 2026-10-01, plus the Known gaps. It lists the areas
+of `run.sh` it doesn't describe yet, & one is added when a code PR touches it.
+
+A full description, about 250 to 350 lines by the other repo's ratio, wasn't written,
+because its benefit hasn't been measured. If keeping the seed costs more than it saves,
+its parts go back where they were.
+
+**Status:** in force.
+
+## 2026-10-01: Known gaps move to the description of the code, & close by removal
+
+**Context.** Known gaps sat in `AGENTS.md`, the file other tools read first, & 18 lines
+in other files pointed into it, two of them in what the program prints: the man page's
+BUGS & a line of the incident report. So `AGENTS.md` couldn't be a plain entry point,
+& every change to it reached other files. The author asked for it to be an island.
+
+The section was also append-only, closing an entry with a new dated line, while its
+history up to 2026-10-01 already sits in this file. In the other repo, open gaps are part
+of the description of the code & are removed when they close.
+
+**Decision.** The open gaps move to `docs/ARCHITECTURE.md`, section "Known gaps". Eight
+move word for word; the two closed this day, with their closing lines, are removed, &
+CHANGELOG v2.44 & v2.47 keep their trail. A gap is removed in the PR that closes it & a
+new one carries its run.
+
+Every pointer follows, the man page & the report line included. `AGENTS.md` keeps the purpose, the hard constraints as a summary of `docs/DESIGN.md`, &
+the map, & nothing points into it.
+
+**Status:** in force.

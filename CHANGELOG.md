@@ -4,6 +4,34 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.49 — 2026-10-01
+
+Known gaps leave `AGENTS.md` for a new description of the code. A user sees two lines
+change, the man page's BUGS & one line of the incident report, so `VERSION` goes from
+2.47 to 2.49.
+
+### Added
+- `docs/ARCHITECTURE.md`, a seed: the repo file by file, the paths on disk, each
+  resource & how it resets, the size of `run.sh` with its commands, & the areas not
+  described yet. Every part was checked against the code on 2026-10-01.
+- `docs/DECISIONS.md` says why the file exists & why Known gaps moved into it.
+
+### Changed
+- Known gaps lives in `docs/ARCHITECTURE.md`. A gap is removed in the PR that closes it,
+  & a new one carries its run. The eight open entries moved word for word; the two
+  closed in v2.44 & v2.47 were removed.
+- The man page's BUGS, the incident report's empty-agent line, `CLAUDE.md`, the
+  glossary, `docs/cli/cli-standard.md` & ROADMAP Phase 2 point at the new place.
+- `AGENTS.md` is an entry point nothing depends on: purpose, hard constraints & map.
+  `CLAUDE.md` starts the reading at `docs/ARCHITECTURE.md`.
+- `docs/DESIGN.md` keeps its rules & drops the path list, resource table & size line,
+  now in `docs/ARCHITECTURE.md`. Rule 2's baseline for it falls to one every 392 words.
+
+### Fixed
+- `docs/DESIGN.md`'s resource table said `cleanup` removes the lockfile, false since
+  v2.24, & its size line said 2,000 lines & 47 functions against 2640 & 55.
+- `AGENTS.md` called the author "he". It now says "the author".
+
 ## v2.48 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
