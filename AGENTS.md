@@ -27,14 +27,13 @@ A personal security-audit sandbox for TLauncher: it runs the launcher under `fir
 - `CHANGELOG.md`: what changed & when.
 - `docs/ROADMAP.md`: the phased plan, read when the work belongs to a phase.
 - `docs/DECISIONS.md`: why things are the way they are, append-only.
-- `docs/GLOSSARY.md`: what the standard's words mean today, each with its source.
+- `docs/GLOSSARY.md`: what the standard's & the launcher's words mean today, each with its
+  source.
 - `docs/TEMPORARY-CONTEXT.md`: what was observed & isn't placed yet, normally empty.
 - `docs/cli/`: the CLI module. `cli-standard.md` says what the command line must do,
   `cli-surface.md` records what it does today.
 
 ## Where it continues
 
-`CLAUDE.md` holds the working method, how docs, commits & PRs are written. Read
-`docs/ARCHITECTURE.md` for what the code is & what's open, then `docs/DESIGN.md` before
-writing any code. `docs/ROADMAP.md` says what comes next, & `docs/DECISIONS.md` says why
-things are the way they are. Nothing here repeats them.
+`CLAUDE.md` holds the working method, how docs, commits & PRs are written, & the order
+in which the documents are read. Nothing here repeats it.

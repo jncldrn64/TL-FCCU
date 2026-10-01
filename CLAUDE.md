@@ -3,7 +3,10 @@
 - Read docs/REQUIREMENTS.md first (what has to be true, & for whom), then
   docs/ARCHITECTURE.md (the repo, what the code is today, known gaps), docs/DESIGN.md
   before writing code, & docs/ROADMAP.md when the work belongs to a phase.
-  Last, docs/TEMPORARY-CONTEXT.md: normally empty, read anyway because one line there can
+  docs/DECISIONS.md isn't read whole: list its entries with `grep '^## ' docs/DECISIONS.md`
+  & read the ones the work touches. Before proposing a change to the docs' structure or
+  the method, read its entry "Ideas the audit dropped, & why", which exists so nobody
+  proposes them again. Last, docs/TEMPORARY-CONTEXT.md: normally empty, read anyway because one line there can
   contradict what you were about to propose. This file is the working method: how docs,
   commits & PRs are written & how a claim gets checked. Code conventions, tests included,
   live in docs/DESIGN.md; phase rules in docs/ROADMAP.md.

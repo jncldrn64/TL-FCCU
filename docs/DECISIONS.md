@@ -1012,3 +1012,20 @@ rotation. That rests on the hypothesis in 2026-10-01 "The launcher's words enter
 glossary, & archive always takes a qualifier", & the author can correct both.
 
 **Status:** in force.
+
+## 2026-10-01: Decisions re-enter the reading path by their headings
+
+**Context.** Until 2026-10-01 the decisions sat in `AGENTS.md`'s Known gaps, which a
+session read first. Once they moved to `docs/DECISIONS.md`, no reading order named that
+file. Its entry "Ideas the audit dropped, & why" exists so a later session doesn't
+propose those ideas again, & a session following `CLAUDE.md` never read it. The audit of
+2026-10-01 found it; the other repo reads its decisions file second for that reason.
+
+**Decision.** `CLAUDE.md` doesn't make the file required reading: it holds about 10,000
+words, 4,568 of them the moved Known gaps history, & would double the reading. A session
+lists the entries with `grep '^## ' docs/DECISIONS.md`, reads the ones its work touches,
+& reads "Ideas the audit dropped, & why" before proposing a change to the docs' structure
+or the method. `AGENTS.md` stops restating the reading order, which had already drifted
+from `CLAUDE.md`'s, & points to `CLAUDE.md` for it.
+
+**Status:** in force.
