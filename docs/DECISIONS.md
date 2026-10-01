@@ -500,3 +500,16 @@ under "Commits". The 12 titles are history & stay as they are: registered here, 
 renamed. The count must not grow.
 
 **Status:** in force.
+
+## 2026-10-01: The PR file table comes from numstat, run last
+
+**Context.** The table of added & deleted lines per file is the one part of a PR body that
+is supposed to be mechanical, so nobody checks it again. A wrong mechanical number is worse
+than none. The other repo got it wrong twice, once by reading `--stat`, which prints one
+number for both, & once by running the command & editing afterwards. No such error is
+recorded here, & the practice was never written.
+
+**Decision.** The table is copied from `git diff --numstat origin/main...HEAD` run as the
+last step before the body is written, as `CLAUDE.md` says under "Commits".
+
+**Status:** in force.
