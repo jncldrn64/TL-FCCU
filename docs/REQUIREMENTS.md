@@ -1,5 +1,8 @@
 # REQUIREMENTS.md: what has to be true, & for whom
 
+> **Role:** normative, the highest over the product. **Regime:** corrected, each change with
+> its decision. **Origin:** 2026-10-01, "The project's purpose gets a file of its own".
+>
 > This file says **what has to be true** for the launcher to be right, & for whom. It
 > carries no dates & no order of work: that's `docs/ROADMAP.md`. It doesn't say why one
 > shape won over another: that's `docs/DECISIONS.md`, which is append-only & keeps the

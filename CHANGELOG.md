@@ -1,8 +1,31 @@
-# Changelog
+# CHANGELOG.md: what changed & when
+
+> **Role:** history, what changed & when. **Regime:** grows by section, newest on top; a
+> published section isn't rewritten. **Origin:** 2026-06-30.
 
 Every notable change to the launcher (`run.sh` & its helpers). The format follows
-[Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
-newest on top, headers `## vX.Y — YYYY-MM-DD`.
+[Keep a Changelog](https://keepachangelog.com/), with headers `## vX.Y — YYYY-MM-DD`.
+
+## v2.56 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.53 until the next code PR.
+
+### Added
+- `CLAUDE.md`, "Document types & which one wins": each document is normative, descriptive,
+  history, plan, transit or door, & the type decides who wins a disagreement, the code
+  included.
+- `CLAUDE.md`, "Common document format": line 1, an opening quote block with Role, Regime
+  & Origin, numbered sections, bold fields & the dated-entry header.
+- A third inference marker, `**Why it was noted:**`, & the glossary's "document type".
+- `docs/DECISIONS.md` says why.
+
+### Changed
+- Every canonical document opens with its Role, Regime & Origin block.
+- Line 1 of `docs/DESIGN.md`, `docs/ROADMAP.md`, `CHANGELOG.md` & both CLI documents
+  follows `# NAME.md: what it holds`.
+- `docs/ROADMAP.md`'s phase fields are bold.
+- `docs/TEMPORARY-CONTEXT.md`: one of the four rules in the CLI-docs line is placed.
 
 ## v2.55 — 2026-10-01
 

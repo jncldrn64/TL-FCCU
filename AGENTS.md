@@ -1,5 +1,9 @@
 # AGENTS.md: start here
 
+> **Role:** door, for tools that look for this name. It wins over nothing & nothing depends
+> on it. **Regime:** corrected. **Origin:** 2026-06-30; an island since 2026-10-01, "Known
+> gaps move to the description of the code, & close by removal".
+
 A personal security-audit sandbox for TLauncher: it runs the launcher under `firejail`
 & records what it touches. `docs/REQUIREMENTS.md` says who it's for & what it isn't.
 

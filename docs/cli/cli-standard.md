@@ -1,4 +1,8 @@
-# Command-line documentation standard
+# cli-standard.md: what the command line must do
+
+> **Role:** normative over the command line. `docs/REQUIREMENTS.md` & `docs/DESIGN.md`
+> outrank it. **Regime:** corrected. **Origin:** 2026-09-17, CHANGELOG v2.25, moved on
+> 2026-10-01, "The CLI module lives in docs/cli/".
 
 Normative. This says what `run.sh` **must** satisfy, not what it happens to do
 today. `docs/cli/cli-surface.md` is the descriptive counterpart: it records the surface

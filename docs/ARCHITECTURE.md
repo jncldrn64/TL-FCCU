@@ -1,5 +1,9 @@
 # ARCHITECTURE.md: what the code is today
 
+> **Role:** descriptive: what the code is today, & the open gaps. **Regime:** corrected; a gap
+> is removed in the PR that closes it. **Origin:** 2026-10-01, "Description of the code gets
+> its own file, starting as a seed".
+>
 > Everything here was checked against the code on the date its section names. What
 > couldn't be checked says so. This file describes; `docs/DESIGN.md` prescribes how the
 > code must be written, & where the two disagree on what the code does, the code wins &

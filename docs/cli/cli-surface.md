@@ -1,4 +1,8 @@
-# CLI surface inventory
+# cli-surface.md: what the command line exposes today
+
+> **Role:** descriptive: what the command line exposes today. Where it disagrees with the
+> code, the code wins. **Regime:** corrected. **Origin:** 2026-09-17, CHANGELOG v2.24, moved
+> on 2026-10-01, "The CLI module lives in docs/cli/".
 
 What `run.sh` actually exposes today, verified line by line against the code as it
 stands after the v2.24 fixes in this same PR. This documents; it changes nothing.

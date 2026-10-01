@@ -1,4 +1,8 @@
-# ROADMAP
+# ROADMAP.md: what comes next, in what order
+
+> **Role:** plan: the phases & the Backlog. It changes no rule. **Regime:** corrected; a
+> closed phase stays. **Origin:** 2026-07-22, CHANGELOG v2.10, moved into `docs/` on
+> 2026-10-01.
 
 ## Ordering principle
 
@@ -14,7 +18,7 @@ objective, the scope it touches, a verifiable acceptance criterion, its blockers
 author's other project & a separate repository whose documentation standard this one
 shares; this copies its phase habit, & since 2026-10-01 its `docs/` layout too.
 
-Status values: `pending`, `in progress`, `closed (YYYY-MM-DD)`.
+**Status values:** `pending`, `in progress`, `closed (YYYY-MM-DD)`.
 
 A parked item enters a phase already in progress only if leaving it out makes a pending
 increment impossible to deliver, or forces redoing work already delivered. Anything else
@@ -22,12 +26,12 @@ waits for the next phase.
 
 ## Phase 0: the report stops lying
 
-Status: `closed (2026-07-22)`
+**Status:** `closed (2026-07-22)`
 
-Objective: the output describes its own state with no false claims, & a regression
+**Objective:** the output describes its own state with no false claims, & a regression
 net proves it without launching TLauncher.
 
-Scope:
+**Scope:**
 - Fix the false proxy claim. In a `-P` run with the agent active, mitmproxy is
   skipped, so no `mitm.flow` exists, & `report_payload_summary` prints "Payload
   capture was **disabled** ... run without `-P/--proxy`" while the agent section a
@@ -40,20 +44,20 @@ Scope:
   check that the report prints the right state for each. This is the equivalent of
   the MIDI repo's fixtures.
 
-Acceptance: `bash -n run.sh` clean, the four states each verified against a
+**Acceptance:** `bash -n run.sh` clean, the four states each verified against a
 synthetic session, zero change to sandbox behavior. All of it checkable without
 launching TLauncher.
 
-Blocks: everything after it reads this report, so a lying report poisons Phase 1's
+**Blocks:** everything after it reads this report, so a lying report poisons Phase 1's
 own verification.
 
 ## Phase 1: the agent sees
 
-Status: `closed (2026-07-22)`
+**Status:** `closed (2026-07-22)`
 
-Objective: capture the HTTP traffic that is lost today.
+**Objective:** capture the HTTP traffic that is lost today.
 
-Scope:
+**Scope:**
 - Set `JAVA_TOOL_OPTIONS` in the sandbox environment so any JVM that starts loads
   the agent, JVM 2 & JVM 3 included, not only the starter.
 - Hook `by.gdev.http.download.impl.HttpServiceImpl` in addition to
@@ -65,7 +69,7 @@ Scope:
 - Make `run.sh` build the agent, or say precisely that a manual step is needed. The
   current message doesn't carry enough. Audit the man page in the same pass.
 
-Acceptance: one real session captures the GET to `starterUpdateV1.json`. If it
+**Acceptance:** one real session captures the GET to `starterUpdateV1.json`. If it
 doesn't, diagnostic mode states why.
 
 v2.12 built the injection: `JAVA_TOOL_OPTIONS` with absolute in-sandbox paths, the
@@ -88,23 +92,23 @@ all three JVMs across both HttpClient families. Acceptance met, phase closed. Th
 diagnostic listener earned its place four times over; it is the reason each miss had a
 cause instead of a shrug.
 
-Blocks: Phase 2.
+**Blocks:** Phase 2.
 
 ## Phase 2: cut what can't work
 
-Status: `closed (2026-07-23)`
+**Status:** `closed (2026-07-23)`
 
-Objective: take the dead ends out of the way so they stop confusing the reader.
+**Objective:** take the dead ends out of the way so they stop confusing the reader.
 
-Scope:
+**Scope:**
 - The mitmproxy fallback is confirmed to miss HttpClient5. Decide between removing
   it & degrading it to a label with no ambiguity, & record the decision in
   AGENTS.md Known gaps.
 - Sweep the other options against the same bar: does each do what it says.
 
-Acceptance: no documented option promises something it doesn't do.
+**Acceptance:** no documented option promises something it doesn't do.
 
-Blocked by: Phase 1. The fallback doesn't get pulled before the main path works.
+**Blocked by:** Phase 1. The fallback doesn't get pulled before the main path works.
 
 Closed in v2.21. The decision went to removal: `-P` is agent-only now, the `[PORT]`
 argument & every mitmproxy path (`monitor_mitmproxy`, the proxy env injection, the
@@ -118,11 +122,11 @@ session, unlike Phase 1: `bash -n` clean, `-h` carries no mitmproxy or `[PORT]` 
 
 ## Phase 3: binary archive
 
-Status: `in progress`
+**Status:** `in progress`
 
-Objective: assert, months later, which binary ran & when.
+**Objective:** assert, months later, which binary ran & when.
 
-Scope:
+**Scope:**
 - Save each `starter-core` & each `TLauncher.jar` seen, with its SHA256, ISO date,
   size, & source URL.
 - A stable path outside the sandbox, because the sandbox gets overwritten every run.
@@ -131,7 +135,7 @@ Scope:
 - An automatic mode & a manual mode, with a default that makes sense & is justified.
 - A retention policy: how much is kept, & what happens at the cap.
 
-Acceptance: two sessions in a row produce one copy of the same binary & two
+**Acceptance:** two sessions in a row produce one copy of the same binary & two
 sighting entries in the manifest.
 
 Progress, v2.53 (2026-10-01). By the author's choice `TLauncher.jar` is archived &
@@ -144,15 +148,15 @@ stub `firejail`: one copy & two lines, `new` then `sighting`. Why each choice:
 `docs/DECISIONS.md`, entry of 2026-10-01 "The binary archive starts with TLauncher.jar,
 automatic, capped by count".
 
-Blocks: Phase 4.
+**Blocks:** Phase 4.
 
 ## Phase 4: promotion & binary selection
 
-Status: `pending`
+**Status:** `pending`
 
-Objective: end the manual moving of jars.
+**Objective:** end the manual moving of jars.
 
-Scope:
+**Scope:**
 - Detect that the sandbox jar differs from the home jar, show both hashes, & ask
   before promoting. Never promote without asking.
 - At the prompt, warn that promoting can change startup behavior: one version
@@ -162,19 +166,19 @@ Scope:
 - Cut the per-session re-update. `run.sh` copies the home jar into the sandbox
   every run, so `UpdateCore` re-applies the cached `starter-core` on every start.
 
-Acceptance: a session with no changes doesn't re-download or re-copy the same
+**Acceptance:** a session with no changes doesn't re-download or re-copy the same
 binary.
 
-Blocked by: Phase 3.
+**Blocked by:** Phase 3.
 
 ## Phase 5: cleanup survives every death it can see
 
-Status: `closed (2026-10-01)`
+**Status:** `closed (2026-10-01)`
 
-Objective: cleanup runs on every death the kernel lets the script observe, not only
+**Objective:** cleanup runs on every death the kernel lets the script observe, not only
 on the ones it happens to trap today.
 
-Scope, as the code stood when this phase was written:
+**Scope**, as the code stood when this phase was written:
 - The `cleanup` trap reads `trap cleanup EXIT INT TERM`. Bash runs the EXIT trap on a
   normal exit or a trapped signal only, so an untrapped fatal signal (HUP, QUIT)
   kills the shell without running `cleanup()` & orphans every monitor, including the
@@ -192,7 +196,7 @@ Scope, as the code stood when this phase was written:
   monitor per session. Cosmetic, cleared on reboot. Fix: a per-loop temp path reaped
   by the cleanup path instead of a fresh `mktemp` per cycle.
 
-Acceptance: stub-driven & checkable without launching TLauncher, the way the rest of
+**Acceptance:** stub-driven & checkable without launching TLauncher, the way the rest of
 the repo tests. A monitored stub session killed with SIGHUP leaves
 `pgrep -f 'tlauncher-mon-'` empty; with a stub monitor deliberately held alive,
 `flock -n` on the lockfile succeeds from a second shell, proving no child still
@@ -222,7 +226,7 @@ The SIGHUP check didn't, for the reason the v2.24 note gives: bash 5.2.21 runs t
 trap on an untrapped HUP, so the check proves no monitor survives but can't see whether
 the trap line names HUP.
 
-Blocked by: nothing. This phase is independent of Phases 3 & 4 & touches no code
+**Blocked by:** nothing. This phase is independent of Phases 3 & 4 & touches no code
 they touch, so it can land before or after them. The number records when the work
 arrived, not a dependency; the Ordering principle above constrains 0 through 2,
 which had to run in sequence, & says nothing that forces 5 behind 3.
