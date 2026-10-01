@@ -924,3 +924,19 @@ Every pointer follows, the man page & the report line included. `AGENTS.md` keep
 the map, & nothing points into it.
 
 **Status:** in force.
+
+## 2026-10-01: Two rules go back to the files that own them
+
+**Context.** An audit of the documents on 2026-10-01 found two rules that the session
+had written into `CLAUDE.md` though this repo already gave their subject to another
+file. The rule on what may join a phase in progress, from the entry "What may enter a
+phase already in progress", belongs with the phase conventions at the top of
+`docs/ROADMAP.md`. The rerun of intermittent suites, from "An intermittent suite runs
+N times", is a test convention, & `docs/DESIGN.md` holds the code's conventions.
+
+**Decision.** The phase rule moves to the head of `docs/ROADMAP.md` & the test rule
+becomes `docs/DESIGN.md` principle 10, both with their wording kept. `CLAUDE.md` stops
+calling itself the doc & format standard only & names what it holds: the working
+method. The two earlier entries keep their wording; this one records the move.
+
+**Status:** in force.

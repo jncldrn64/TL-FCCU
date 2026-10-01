@@ -3,7 +3,9 @@
 - Read docs/ARCHITECTURE.md first (the repo, what the code is today, known gaps), then
   docs/DESIGN.md before writing code, & docs/ROADMAP.md when the work belongs to a phase.
   Last, docs/TEMPORARY-CONTEXT.md: normally empty, read anyway because one line there can
-  contradict what you were about to propose. This file just pins the doc/format standard.
+  contradict what you were about to propose. This file is the working method: how docs,
+  commits & PRs are written & how a claim gets checked. Code conventions, tests included,
+  live in docs/DESIGN.md; phase rules in docs/ROADMAP.md.
 - Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; ARCHITECTURE.md,
   DESIGN.md, ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md in docs/; the
   CLI module (cli-standard.md, cli-surface.md) in docs/cli/. AGENTS.md is the entry for
@@ -39,9 +41,6 @@
 - Dates: ISO 8601 (YYYY-MM-DD) everywhere I author them by hand.
   A Backlog item in docs/ROADMAP.md is born with a line opening `**Entered:**`: the date
   it entered & the PR that brought it, taken from `git log -S` on the file, not memory.
-- Phases: a parked item enters a phase already in progress only if leaving it out makes
-  a pending increment impossible to deliver, or forces redoing work already delivered.
-  Anything else waits for the next phase.
 - Commits: "<type>: <short imperative summary>", type in {add, chg, fix, rmv, doc}.
   add=new capability, chg=behavior change, fix=bugfix, rmv=feature removed, doc=docs only.
   The commit BODY does NOT re-narrate the change: 1-2 lines max plus a reference to the
@@ -85,10 +84,6 @@
 - Workflow: work goes through a pull request. If `push`, creating a branch or opening
   the PR returns `403`, stop & say that write permission is missing. Never work around
   it by uploading loose files by hand.
-- Tests: a suite that has ever failed intermittently runs N times, not once, because
-  one green run proves nothing about a failure that shows up one run in five. It's
-  listed in `REPEATED` in `tests/run-all.sh` & stays there after the fix, so the bug
-  can't come back unseen. N is `REPEATS`, 3 by default; raise it for proof.
 
 ## Prose floor
 

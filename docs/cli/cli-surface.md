@@ -206,8 +206,10 @@ Sections, in order, each a `printf "${YELLOW}NAME${NC}"` line:
 
 ### What is duplicated, and between which documents
 
-There is no man page & no README, so the duplication that exists is between
-`--help` and the four root docs. It is small & mostly deliberate:
+Written in v2.24, when there was no man page & no README, so the duplication it found
+is between `--help` & the four documents then at the repo root. It was small & mostly
+deliberate. The man page arrived in v2.25, & `docs/cli/cli-standard.md` section 3 now
+divides content between it & `--help`:
 
 - **`WHAT'S NEW` deliberately refuses to duplicate.** Its body reads:
 

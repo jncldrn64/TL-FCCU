@@ -37,7 +37,7 @@ keep using it. Visibility & isolation come first, usability second.
 
 ## Where it continues
 
-`CLAUDE.md` pins how docs, commits & the CHANGELOG are written. `docs/ARCHITECTURE.md`
-describes the code & lists what's open. `docs/DESIGN.md` holds the code conventions & is
-read before writing any code. `docs/ROADMAP.md` says what comes next, &
-`docs/DECISIONS.md` says why things are the way they are. Nothing here repeats them.
+`CLAUDE.md` holds the working method, how docs, commits & PRs are written. Read
+`docs/ARCHITECTURE.md` for what the code is & what's open, then `docs/DESIGN.md` before
+writing any code. `docs/ROADMAP.md` says what comes next, & `docs/DECISIONS.md` says why
+things are the way they are. Nothing here repeats them.
