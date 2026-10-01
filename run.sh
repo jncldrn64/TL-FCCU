@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.35"
+VERSION="2.44"
 
 # Directory holding this script, used to find helpers like scripts/build-agent.sh.
 # Resolved once, & it really does survive being called through a symlink now.
@@ -2452,7 +2452,7 @@ main() {
             *)
                 printf "${RED}Error: Unexpected argument '%s'${NC}\n\n" "$1" >&2
                 printf "If specifying TLauncher file, use: ${BLUE}-f %s${NC}\n" "$1" >&2
-                printf "Run '${BLUE}%s --help${NC}' for usage\n" "$1" >&2
+                printf "Run '${BLUE}%s --help${NC}' for usage\n" "$0" >&2
                 exit "$EX_USAGE"
                 ;;
         esac

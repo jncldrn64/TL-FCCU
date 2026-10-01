@@ -4,6 +4,21 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.44 — 2026-10-01
+
+One fix a user can see, in the hint printed for an unexpected argument. `VERSION` goes
+from 2.35 to 2.44, closing the desfase the eight doc-only sections left open.
+
+### Fixed
+- An unexpected argument's hint named the argument as the program: `run.sh foo` said
+  `Run 'foo --help' for usage`. The `*)` arm of `main()` now passes `"$0"`, as the
+  `-*)` arm next to it already did.
+
+### Added
+- `tests/doc-sync.sh` checks that the hint names the program & never echoes the
+  argument back. It failed against the old code before the fix & passes after it.
+- `AGENTS.md` Known gaps closes the entry that recorded the bug.
+
 ## v2.43 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
