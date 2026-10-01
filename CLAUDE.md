@@ -78,6 +78,11 @@ Eight rules, each with this repo's baseline, measured on 2026-10-01, & the comma
 recounts it. **No baseline may rise.** A PR that raises one added a violation. History
 that isn't rewritten keeps its count, so a baseline only falls when live text is fixed.
 
+**If the plugin's original text is in reach during a session, it's read & it outranks
+this floor.** Installed or attached to the conversation, the trigger is having it, not
+how it arrived: before writing prose, check whether it's there, & if it is, open it. The
+floor below is a summary of it, & a summary is what's left when the original isn't.
+
 1. Before delivering, grep for the five intensifiers in the rule 1 command below. With the
    plugin installed, its full lists apply too. Baseline: 1 hit, in a published
    `CHANGELOG.md` section, where the word isn't an intensifier.
