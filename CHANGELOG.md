@@ -4,6 +4,23 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.50 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.49 until the next code PR.
+
+### Changed
+- The rule on what may join a phase in progress moves from `CLAUDE.md` to the head of
+  `docs/ROADMAP.md`, with the other phase conventions.
+- The rerun of intermittent suites moves from `CLAUDE.md` to `docs/DESIGN.md` as
+  principle 10. `docs/DECISIONS.md` records both moves.
+- `CLAUDE.md` describes itself as the working method, not only the doc & format
+  standard, & names where code & phase rules live. `AGENTS.md` says the same.
+
+### Fixed
+- `docs/cli/cli-surface.md` section 5 said there is no man page, in the present tense.
+  It now dates its audit to v2.24 & points to the division `cli-standard.md` makes.
+
 ## v2.49 — 2026-10-01
 
 Known gaps leave `AGENTS.md` for a new description of the code. A user sees two lines
