@@ -36,6 +36,7 @@ derives from the three XDG variables, as `docs/DESIGN.md` principle 1 requires:
 | Lockfile | `LOCKFILE` | `$XDG_RUNTIME_DIR/tlauncher-<user>.lock` |
 | IP & domain baselines | `BASELINE_IPS`, `BASELINE_DOMAINS` | `$XDG_DATA_HOME/tlauncher-sandbox-baseline-{ips,domains}.txt` |
 | Dependency registry | `DEPS_FILE` | `$XDG_DATA_HOME/tlauncher-sandbox-deps.ini` |
+| Binary archive | `BINARY_ARCHIVE_DIR` | `$XDG_DATA_HOME/tlauncher-binary-archive`, with `manifest.tsv` (`BINARY_ARCHIVE_MANIFEST`) |
 
 `XDG_RUNTIME_DIR` falls back to `/tmp` when the directory doesn't exist.
 
@@ -53,18 +54,21 @@ that every resource has one of these paths; this is the list of them.
 | Dependency registry | `deps_ensure_file` | Delete to re-inventory |
 | Orphaned monitors | a session that died where no trap runs | `kill_orphans`, through `-K/--kill-orphans` |
 | Monitor scratch files | `first_seen_loop`, one `.seen_*.cur` per loop in the session dir | `cleanup()` |
+| Binary archive copies | `binary_archive_add`, at the end of every launch & through `-J/--archive-jar` | `binary_archive_prune` keeps `BINARY_ARCHIVE_KEEP` copies; delete the directory to reset |
+| Binary archive manifest | `binary_archive_add`, one line per sighting or prune | Never trimmed by the script; delete it with the copies to reset |
 
 `cleanup()` is trapped on `EXIT INT TERM HUP QUIT`.
 
 ## 4. Size
 
-`run.sh` has 2640 lines & 55 functions, 16 of them under the five area prefixes
-(`log_`, `deps_`, `kill_`, `monitor_`, `report_`). Counted on 2026-10-01 with:
+`run.sh` has 2773 lines & 57 functions, 18 of them under the six area prefixes
+(`log_`, `deps_`, `kill_`, `monitor_`, `report_`, `binary_archive_`). Counted on
+2026-10-01 with:
 
 ```sh
 wc -l < run.sh
 grep -cE '^[a-z_]+\(\) \{' run.sh
-grep -cE '^(log|deps|kill|monitor|report)_[a-z_]+\(\) \{' run.sh
+grep -cE '^(log|deps|kill|monitor|report|binary_archive)_[a-z_]+\(\) \{' run.sh
 ```
 
 ## 5. The command line
@@ -74,9 +78,9 @@ Described in `docs/cli/cli-surface.md`: flags, environment, exit codes, presenta
 
 ## 6. Not described yet
 
-`run.sh` is split by 17 banners, each a comment line under a `# ====` rule, listed with
+`run.sh` is split by 18 banners, each a comment line under a `# ====` rule, listed with
 `grep -A1 '^# ====' run.sh | grep '^# [A-Z]' | sort -u`. USAGE & MANUAL PAGE are covered
-by section 5 & `docs/cli/cli-standard.md`.
+by section 5 & `docs/cli/cli-standard.md`, BINARY ARCHIVE by section 7.
 
 Nothing here describes the other 15 yet:
 CONFIGURATION, LOGGING, PROCESS HELPERS, REQUIREMENTS, TLAUNCHER DETECTION, SANDBOX
@@ -84,7 +88,28 @@ SETUP, MONITORING SETUP, EXECUTION, SUMMARY GENERATION, INCIDENT REPORT, TIMELIN
 RETENTION, ANALYSIS, CLEANUP & MAIN. Neither does it describe the Java agent in
 `scripts/`. Sections 2 to 4 touch some of these areas without describing how they work.
 
-## 7. Known gaps
+## 7. The binary archive
+
+Checked 2026-10-01 against `binary_archive_add` & `binary_archive_prune`, & run by
+`tests/binary-archive.sh`, 12/12 that day. It answers which `TLauncher.jar` ran & when.
+
+At the end of every launch, after TLauncher exits & whatever its exit code,
+`run_sandboxed` hands the sandbox jar to `binary_archive_add`. firejail mounts `bin/`
+read-only, so that jar is still the one that started. `-J/--archive-jar` does the same
+for the home jar & exits without launching. The copy is named `TLauncher-<sha256>.jar`;
+a jar whose hash is already there gets no second copy.
+
+Each call writes one line to `manifest.tsv`, tab-separated: date in ISO 8601, event,
+kind, SHA256, size in bytes, session id or `-`, & source. The event is `new` when a copy
+was made & `sighting` when one existed. The source is the home jar's path as the
+terminal shows it, with `~` for the home directory.
+
+A sighting touches the copy, so its mtime is the last time it was seen. Past
+`BINARY_ARCHIVE_KEEP`, 10, `binary_archive_prune` deletes the copy seen longest ago &
+writes a `pruned` line. Manifest lines are never removed. Writers take an exclusive
+`flock` on the manifest's fd 201, so a `-J` & the end of a run don't interleave.
+
+## 8. Known gaps
 
 What is open or not verified against real data. A gap is removed in the PR that closes
 it, & `CHANGELOG.md` keeps the trail. A new gap carries the command or run that shows
@@ -128,6 +153,20 @@ it. A package that was `absent` & got installed later shows `present` live under
 goes to stderr, & `NO_COLOR` isn't read at all. Deferred on purpose. The log files stay
 clean whatever the gate decides, because `_log_emit` writes the file from a branch that
 never carries colour. First recorded 2026-09-17.
+
+2026-10-01: the binary archive keeps only `TLauncher.jar`, though Phase 3's scope also
+names `starter-core`. Nothing here says where that file lands, & the nearest record, a
+Known gap moved unedited to `docs/DECISIONS.md`, gives the starter JVMs' working
+directory, `.tlauncher/starter/`, & no file. Closing this needs a real session that
+shows the file's path & the URL it came from. `grep -n starter run.sh` shows the gap,
+every hit a comment or `--help` text.
+
+2026-10-01: the manifest's source column holds a local path where Phase 3's scope asks
+for the source URL. The script never sees where the user downloaded `TLauncher.jar`
+from. Shown by `awk -F'\t' '!/^#/ {print $7}'` on any `manifest.tsv`.
+
+2026-10-01: the automatic archive at the end of a launch has run only against a stub
+`firejail` in `tests/binary-archive.sh`, never after a real TLauncher session.
 
 2026-10-01: the man page's roff isn't machine-validated here, because neither `mandoc`
 nor `groff` is installed & `tests/doc-sync.sh` reports SKIP. It was validated by hand on

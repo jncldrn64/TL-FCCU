@@ -4,6 +4,33 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.53 — 2026-10-01
+
+ROADMAP Phase 3, first part: the binary archive, for `TLauncher.jar`. `VERSION` goes
+from 2.49 to 2.53, closing the desfase the doc-only sections left.
+
+### Added
+- The binary archive, under `$XDG_DATA_HOME/tlauncher-binary-archive`. Every launch ends
+  by copying the jar that ran there, once per SHA256, & writing a line to
+  `manifest.tsv`: date, event, kind, hash, size, session & source.
+- `-J/--archive-jar` archives the found or `-f` jar & exits without launching.
+- A cap of 10 copies, `BINARY_ARCHIVE_KEEP`. Past it the copy seen longest ago is deleted
+  & a `pruned` line written; manifest lines are never removed.
+- `tests/binary-archive.sh`, 12 checks, in `tests/run-all.sh`. It runs the Phase 3
+  acceptance against a stub `firejail`.
+- `docs/ARCHITECTURE.md` describes the archive, with its path, resources & three new
+  Known gaps: `starter-core`, the missing source URL, & no real run yet.
+- `docs/DECISIONS.md` says why each choice.
+
+### Changed
+- `--help`, the man page (OPTIONS, EXIT STATUS, ENVIRONMENT, FILES),
+  `docs/cli/cli-surface.md` & `docs/cli/cli-standard.md` list `-J` & its exit code 4.
+- `docs/ROADMAP.md`: Phase 3 is `in progress`, & the Backlog drops "Binary-archive
+  rotation", which the count cap covers.
+- `docs/GLOSSARY.md`: binary archive, manifest & sighting describe what's built.
+- `docs/DESIGN.md` names `-J` among the standalone modes & `binary_archive_` among the
+  prefixes.
+
 ## v2.52 — 2026-10-01
 
 Documentation & comments only. `run.sh` changes in three comments, no behaviour, so

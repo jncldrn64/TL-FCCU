@@ -95,7 +95,7 @@ without a declared bound as over the line.
 - Flags stay combinable unless they genuinely conflict, & a no-op combination
   warns instead of failing silently. `-a` without `-M` prints a warning & turns
   itself off rather than dying.
-- The standalone modes (`-K`, `-R`, `-c`, `-B`, `-A`) do their one job & exit
+- The standalone modes (`-K`, `-R`, `-c`, `-B`, `-J`, `-A`) do their one job & exit
   without launching TLauncher.
 - `usage()` is part of the contract. It describes what the current parser
   actually does, so audit it the moment a flag changes.
@@ -156,7 +156,8 @@ size with the command that counts it. The reasons:
   navigation saves; the whole thing has to be held in one head, so it lives in one
   file.
 - Bash has no namespaces. Splitting buys navigation, not isolation. The per-area
-  function prefixes (`log_`, `deps_`, `kill_`, `monitor_`, `report_`) already do the
+  function prefixes (`log_`, `deps_`, `kill_`, `monitor_`, `report_`,
+  `binary_archive_`) already do the
   isolation a reader needs, in one file, found with `grep`.
 - Splitting adds a failure mode that does not exist today. The script resolves its own
   `SCRIPT_DIR` only to find the `scripts/` helpers; a `lib/` layout would make it load
