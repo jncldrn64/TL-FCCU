@@ -746,10 +746,14 @@ first_seen_loop() {
     local logfile="$1" seen="$2" producer="$3" interval="${4:-2}"
     local ended="${seen}.ended"
     : > "$seen"; : > "$ended"
-    local ts cur line
+    # One scratch file per loop, next to SEENFILE inside the session dir, overwritten
+    # each cycle. A fresh mktemp per cycle leaked one file into /tmp every time a
+    # TERM or KILL landed mid-cycle; this path can't leak outside the session, &
+    # cleanup() removes it.
+    local cur="${seen}.cur"
+    local ts line
     while true; do
         ts="$(date '+%Y-%m-%d %H:%M:%S.%3N')"
-        cur="$(mktemp)"
         eval "$producer" > "$cur" 2>/dev/null || true
         # Newly appeared lines.
         while IFS= read -r line; do
@@ -767,7 +771,6 @@ first_seen_loop() {
                 printf '[%s] ENDED: %s\n' "$ts" "$line" >> "$logfile"
             fi
         done < "$seen"
-        rm -f "$cur"
         sleep "$interval"
     done
 }
@@ -1843,6 +1846,8 @@ cleanup() {
     fi
     # Safety net: kill anything still tagged with THIS session id.
     [ -n "${SESSION_ID:-}" ] && pkill -f "tlauncher-mon-${SESSION_ID}" 2>/dev/null || true
+    # first_seen_loop's per-loop scratch files, once nothing writes them any more.
+    [ -n "${SESSION_DIR:-}" ] && rm -f "${SESSION_DIR}"/.seen_*.cur 2>/dev/null || true
 
     # The lockfile is NOT removed here, on purpose. flock(2) lives on the open file
     # description, not on the path, so unlinking it does not release anything: it
