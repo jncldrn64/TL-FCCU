@@ -4,6 +4,34 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.27 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.26 until the next code PR.
+
+### Added
+- `docs/DECISIONS.md`, append-only, for why things are the way they are. Its first seven
+  entries record the audit of 2026-10-01: decisions leave Known gaps, the method is the
+  author's standard, PR titles carry a type, past violations are frozen, the docs move,
+  & references have to resolve.
+- `docs/GLOSSARY.md`, starting with the standard's own words. "Baseline" gets both of its
+  senses, the launcher's `-B` files & the standard's frozen count, because they collide.
+- `docs/TEMPORARY-CONTEXT.md`, for what was observed & isn't placed yet. Its one entry:
+  four CLI rules that might hold in general, with the author's own words.
+- `CLAUDE.md` sections "Pull requests", "Tests", "References", "Glossary" & "Temporary
+  context", plus a prose floor of eight rules, each with its command & this repo's
+  baseline.
+
+### Changed
+- `CLAUDE.md` is rewritten as the author's standard, whole, with no pointer to another
+  repo. Decisions go to `docs/DECISIONS.md` & Known gaps keeps what isn't verified. The
+  doc list names `docs/`, & the repo is called TL-FCCU, its name on GitHub.
+- `ROADMAP.md` no longer names another repo as the source of its phase habit or its
+  fixtures.
+- `AGENTS.md`: the map lists `tests/`, `CLAUDE.md` & every file in `docs/`, & "Hard
+  constraints" loses a parenthesis that held no data. A Known gaps entry records that the
+  reference check doesn't exist yet.
+
 ## v2.26 — 2026-09-19
 
 One bug, in eighteen places. `tests/doc-sync.sh` had been failing about one run in
