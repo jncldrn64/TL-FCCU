@@ -58,3 +58,9 @@ the comment question; the rest is open. The middle of the quote is left out beca
 names another repo.
 > "la verdad no estoy seguro"
 > "hasta donde se esos CLI docs eras para el --help y el manpage de el proyecto ejecutable cli, por lo que en cierta forma entiendo que tambien habla de reglamentos en comentarios, y como tratar a los comentarios.... debemos expandir esto o buscar alternativa..."
+
+**2026-10-01, Claude, from the author's words.** The audit of 2026-10-01 compared two repos
+side by side before reading what each of this repo's own files was born to hold, & the
+author thinks it should have started by analysing each repo on its own. Matters for the
+next audit of this kind: read every file's first commit & its blame before comparing.
+> "de hecho creo que tambien hubieramos comenzado por analizar cada repo por separado"
