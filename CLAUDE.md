@@ -14,6 +14,9 @@
 - Decisions go in docs/DECISIONS.md, append-only, one entry each, opening with
   `## YYYY-MM-DD: <title>`. Open items go in the "Known gaps" section of AGENTS.md,
   append-only, dated. Never scatter them.
+  A pointer to a DECISIONS entry cites its date & title, never a line number or a place
+  in the file ("the last entry"). One is added where a line would otherwise read as
+  arbitrary or as contradicting the rest of its document.
 - What was observed & would be lost if nobody wrote it, & isn't known yet to be wanted,
   goes in docs/TEMPORARY-CONTEXT.md: one line, the date & who noted it, written without
   asking. Each line is later placed or discarded. Its full rules live in that file.
@@ -26,6 +29,8 @@
   may leave the latest CHANGELOG version ahead of the version the program prints; that
   desfase is intentional & closes in the next code PR (see "Displayed version").
 - Dates: ISO 8601 (YYYY-MM-DD) everywhere I author them by hand.
+  A Backlog item in docs/ROADMAP.md is born with a line opening `**Entered:**`: the date
+  it entered & the PR that brought it, taken from `git log -S` on the file, not memory.
 - Commits: "<type>: <short imperative summary>", type in {add, chg, fix, rmv, doc}.
   add=new capability, chg=behavior change, fix=bugfix, rmv=feature removed, doc=docs only.
   The commit BODY does NOT re-narrate the change: 1-2 lines max plus a reference to the

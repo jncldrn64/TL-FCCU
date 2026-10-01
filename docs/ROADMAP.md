@@ -210,3 +210,4 @@ which had to run in sequence, & says nothing that forces 5 behind 3.
 
 Archive rotation, hash comparison against public sources, & whatever else surfaces.
 No date commitment.
+**Entered:** 2026-07-22, #10.

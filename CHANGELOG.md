@@ -4,6 +4,23 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.33 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.30 until the next code PR.
+
+### Added
+- `CLAUDE.md`, under "Dates": a Backlog item opens with an `**Entered:**` line, the date
+  & PR taken from `git log -S`. The one Backlog line in `docs/ROADMAP.md` gets it:
+  2026-07-22, #10.
+- `CLAUDE.md`, under "Decisions": a pointer to a DECISIONS entry cites its date & title,
+  never a line number or a place in the file.
+
+### Fixed
+- Three lines placed the moved Known gaps history as the last entry of
+  `docs/DECISIONS.md`, at its end. v2.31 appended entries after it & made them false. Two
+  in `AGENTS.md` & the header of `docs/DECISIONS.md` now cite the entry by date & title.
+
 ## v2.32 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

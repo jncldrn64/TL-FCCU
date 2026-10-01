@@ -26,8 +26,9 @@ using it. Visibility & isolation come first, usability second.
 - `docs/DESIGN.md`: the conventions, read before coding.
 - `CHANGELOG.md`: what changed & when.
 - `docs/ROADMAP.md`: the phased plan, read when the work belongs to a phase.
-- `docs/DECISIONS.md`: why things are the way they are, append-only. Its last entry
-  holds the Known gaps section as it stood until 2026-10-01, moved there unedited.
+- `docs/DECISIONS.md`: why things are the way they are, append-only. Its
+  entry of 2026-10-01 "Known gaps up to this date, moved here unedited" holds the
+  Known gaps section as it stood until then.
 - `docs/TEMPORARY-CONTEXT.md`: what was observed & isn't placed yet, normally empty.
 
 ## Where it continues
@@ -40,9 +41,10 @@ the code conventions & is read before writing any code. `docs/ROADMAP.md` says w
 
 What isn't verified against real data, & what is known to be open. Dated &
 append-only. Everything this section recorded until 2026-10-01, decisions included, sits
-unedited at the end of `docs/DECISIONS.md`. The items below are the ones still open from
-it, each checked against the code on 2026-10-01. Don't report any of them as working
-without a fresh run in a real environment.
+unedited in `docs/DECISIONS.md`, entry of 2026-10-01 "Known gaps up to this date, moved
+here unedited". The items below are the ones still open from it, each checked against
+the code on 2026-10-01. Don't report any of them as working without a fresh run in a
+real environment.
 
 2026-10-01: nothing here has run end to end in this repo's own test environment. It has
 no `firejail`, `inotifywait` or `ss`, so the suites drive the launcher through stubs &
