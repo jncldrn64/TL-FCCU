@@ -554,3 +554,19 @@ places without a rule, like `tests/doc-sync.sh` saying its roff check needs `man
 write that with the steps, as `CLAUDE.md` says under "State honesty".
 
 **Status:** in force.
+
+## 2026-10-01: An inference is marked as one, & in doubt the gap is stated
+
+**Context.** When context is lost, the failure isn't writing something false believing it
+true. It's writing something plausible that reads as fact: a stated gap gets noticed, a
+tidy explanation on a weak basis doesn't. It happened on 2026-10-01. After this session's
+context was compressed, Claude wrote three prose numbers into the other repo from the
+compression summary, unlabelled & called unchanged. They were right, but nothing on the
+page showed it, & the next PR there had to measure them again & say what each one was.
+
+**Decision.** A rebuilt fact either carries its source or opens `**Hypothesis:**` with its
+basis; what can't be rebuilt says `**No recoverable origin.**` This repo already wrote
+"Hypothesis to confirm:" in Known gaps before 2026-10-01, so the marker isn't new here.
+`CLAUDE.md` says it under "State honesty".
+
+**Status:** in force.

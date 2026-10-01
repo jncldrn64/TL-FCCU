@@ -57,6 +57,9 @@
   environment. If it wasn't verified, say so (this is already the AGENTS.md rule).
   An instruction to verify something carries its conditions, not only its steps: what has
   to be true for the steps to work goes in writing next to them.
+  When lost context is rebuilt, an inference is written as one, opening `**Hypothesis:**`
+  with its basis in view, never as fact. In doubt between inferring & stating the gap,
+  state the gap: `**No recoverable origin.**`
 
 ## Third-party vendoring
 
