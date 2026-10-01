@@ -93,7 +93,7 @@ Rules:
   codes exist only in `docs/cli/cli-surface.md`, which a user never reads.
 - `SECURITY` carries what `--help` shows under `SECURITY CHECKS`, expanded. `--help`
   keeps the short version.
-- `BUGS` points at AGENTS.md Known gaps. It does not copy them.
+- `BUGS` points at the Known gaps in `docs/ARCHITECTURE.md`. It does not copy them.
 - The reasoning behind a design decision stays in `docs/DESIGN.md`. The manual page
   describes behaviour; it does not justify architecture.
 

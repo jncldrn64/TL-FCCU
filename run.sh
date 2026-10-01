@@ -170,8 +170,8 @@ NOISE_REGEX="$(IFS='|'; printf '%s' "${NOISE_PATTERNS[*]}")"
 # WHY: the arrays below hold literal substrings, not expressions, but they are
 # joined with `|` & fed to `grep -E`. Today's entries carry no metacharacters, so
 # the raw join happens to work. The moment a literal domain goes in, its dots stop
-# meaning dots: `res.tlauncher.ru` would also match `resXtlauncherYru`. AGENTS.md
-# leaves adding the `tlauncher.ru` family open as the author's call, so that entry
+# meaning dots: `res.tlauncher.ru` would also match `resXtlauncherYru`. The Known
+# gaps leave adding the `tlauncher.ru` family open as the author's call, so that entry
 # is one edit away. A false positive in an audit tool costs trust in the whole
 # report, so the escape happens here rather than in the reader's head.
 ere_escape() {
@@ -1346,7 +1346,7 @@ report_network_capture() {
             else
                 # State 2: agent active, log empty.
                 printf "_Mode: Java agent active, but it logged no HTTP requests._\n"
-                printf "_TLauncher may route through an HTTP class the matcher misses, or a hook may have failed to bind, or it made no outbound HTTP. Check_ \`agent-diag.log\` _for each JVM: a_ \`SAW\` _line names a class the agent found, a missing_ \`HOOKED\` _or an_ \`ERROR\` _line says the hook did not take. See_ \`AGENTS.md\` _Known gaps._\n\n"
+                printf "_TLauncher may route through an HTTP class the matcher misses, or a hook may have failed to bind, or it made no outbound HTTP. Check_ \`agent-diag.log\` _for each JVM: a_ \`SAW\` _line names a class the agent found, a missing_ \`HOOKED\` _or an_ \`ERROR\` _line says the hook did not take. See_ \`docs/ARCHITECTURE.md\` _Known gaps._\n\n"
             fi
             ;;
         off)
@@ -2200,8 +2200,8 @@ In the repository:
 .SH BUGS
 Known gaps, open items, and everything not verified against real data are
 tracked in
-.I AGENTS.md
-under "Known gaps", dated and append\-only. That section is authoritative; this
+.I docs/ARCHITECTURE.md
+under "Known gaps", dated, each removed when it closes. That section is authoritative; this
 page does not duplicate it.
 ROFF
 )"

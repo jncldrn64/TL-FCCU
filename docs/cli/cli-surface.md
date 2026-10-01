@@ -105,7 +105,7 @@ against the parser: every documented flag still reaches a live code path.
 | `HOME` | `getent passwd` result wins; `$HOME` is the fallback | Base for `REAL_HOME` |
 
 The `SUDO_*` reads are defensive, not an invitation: the hard constraint is zero
-`sudo` (`AGENTS.md`, "Hard constraints"). They exist so that a user who ignores that
+`sudo` (`docs/DESIGN.md` principle 2). They exist so that a user who ignores that
 & runs under `sudo` still gets their own paths rather than root's.
 
 `NO_COLOR` is **not** read. See section 4.

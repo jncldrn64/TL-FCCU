@@ -1,22 +1,24 @@
 # CLAUDE.md: project standard
 
-- Read AGENTS.md first (purpose, hard constraints, repo map, known gaps), then
+- Read docs/ARCHITECTURE.md first (the repo, what the code is today, known gaps), then
   docs/DESIGN.md before writing code, & docs/ROADMAP.md when the work belongs to a phase.
   Last, docs/TEMPORARY-CONTEXT.md: normally empty, read anyway because one line there can
   contradict what you were about to propose. This file just pins the doc/format standard.
-- Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; DESIGN.md,
-  ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md in docs/; the CLI module
-  (cli-standard.md, cli-surface.md) in docs/cli/.
-  Do NOT create a new doc file without asking me first (this already lives in AGENTS.md).
+- Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; ARCHITECTURE.md,
+  DESIGN.md, ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md in docs/; the
+  CLI module (cli-standard.md, cli-surface.md) in docs/cli/. AGENTS.md is the entry for
+  tools that look for that name: it points here & nothing depends on it.
+  Do NOT create a new doc file without asking me first.
   One exception by kind: a `README.md` inside a subfolder that only explains that folder,
   such as how to run `tests/`, isn't a canonical doc & needs no separate permission.
 - This repo does not describe other repos. Another repo's name may appear as historical
   provenance, where a convention came from, never as operational information. No document
   here depends on another repo to be understood or worked on.
 - Decisions go in docs/DECISIONS.md, append-only, one entry each, opening with
-  `## YYYY-MM-DD: <title>`. Open items go in the "Known gaps" section of AGENTS.md,
-  append-only, dated. Never scatter them. A new Known gaps entry carries the command or
-  the run that shows the gap, so the next reader can check it's still open.
+  `## YYYY-MM-DD: <title>`. Open items go in the "Known gaps" section of
+  docs/ARCHITECTURE.md, dated, & never anywhere else. A new gap carries the command or
+  the run that shows it, so the next reader can check it's still open, & a gap is
+  removed in the PR that closes it; CHANGELOG keeps the trail.
   A pointer to a DECISIONS entry cites its date & title, never a line number or a place
   in the file ("the last entry"). One is added where a line would otherwise read as
   arbitrary or as contradicting the rest of its document.
@@ -64,7 +66,7 @@
   in CHANGELOG date headers (`## vX.Y — YYYY-MM-DD`). History is not normalized.
   docs/TEMPORARY-CONTEXT.md is exempt.
 - State honesty: never mark something "working/tested" without a real run in a real
-  environment. If it wasn't verified, say so (this is already the AGENTS.md rule).
+  environment. If it wasn't verified, say so.
   An instruction to verify something carries its conditions, not only its steps: what has
   to be true for the steps to work goes in writing next to them.
   When lost context is rebuilt, an inference is written as one, opening `**Hypothesis:**`
@@ -106,7 +108,7 @@ its 24 rules in full & 5 in part; `docs/DECISIONS.md` has the count & what it fo
    isn't edited (5 in `CHANGELOG.md`, 3 in `docs/DECISIONS.md`) & 3 live, one each in
    `docs/DESIGN.md`, `docs/ROADMAP.md` & `docs/cli/cli-surface.md`.
 2. Contrastive parallelism ("not X, but Y", "X, not Y") at most once every 500 words per
-   file. Baseline: `docs/DESIGN.md` at one every 330 words, over the ceiling; every other
+   file. Baseline: `docs/DESIGN.md` at one every 392 words, over the ceiling; every other
    file under it, the closest `docs/cli/cli-surface.md` at one every 533.
 3. A CHANGELOG bullet stays at 60 words or fewer; if the change doesn't fit, it's two
    bullets. Baseline: **43 bullets over the ceiling**, all in published sections.

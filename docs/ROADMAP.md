@@ -104,13 +104,13 @@ Blocked by: Phase 1. The fallback doesn't get pulled before the main path works.
 
 Closed in v2.21. The decision went to removal: `-P` is agent-only now, the `[PORT]`
 argument & every mitmproxy path (`monitor_mitmproxy`, the proxy env injection, the
-report branch, `MITM_ALLOWLIST`, `scripts/mitm_report.py`) are gone, & the decision is
-dated in AGENTS.md Known gaps. The `usage()` sweep found only the `-P` fallback
-over-promising; the rest matched the parser (Phase 0 audited it, re-checked here). This
-acceptance is verifiable without a real TLauncher session, unlike Phase 1: `bash -n`
-clean, `-h` carries no mitmproxy or `[PORT]` claim, `--check-deps` no longer lists
-`mitmdump`, & the report's regression net stays green (5/5) with a `legacy-mitm` fixture
-proving a removed-mode session promises nothing.
+report branch, `MITM_ALLOWLIST`, `scripts/mitm_report.py`) are gone, & the decision was
+dated in Known gaps, whose history now sits in `docs/DECISIONS.md`. The `usage()` sweep
+found only the `-P` fallback over-promising; the rest matched the parser (Phase 0
+audited it, re-checked here). This acceptance is verifiable without a real TLauncher
+session, unlike Phase 1: `bash -n` clean, `-h` carries no mitmproxy or `[PORT]` claim,
+`--check-deps` no longer lists `mitmdump`, & the report's regression net stays green
+(5/5) with a `legacy-mitm` fixture proving a removed-mode session promises nothing.
 
 ## Phase 3: binary archive
 
