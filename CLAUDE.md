@@ -31,6 +31,11 @@
   The commit BODY does NOT re-narrate the change: 1-2 lines max plus a reference to the
   CHANGELOG section. Detail lives in CHANGELOG (what) and DESIGN/AGENTS (why), not in the
   commit message. (Keep the automatic Co-Authored-By / Claude-Session trailer.)
+- PR title: the same format as the commit, with the same type. The PR list then reads
+  like `git log` & filters by type from either side.
+- PR body: the per-file table is copied from `git diff --numstat origin/main...HEAD`, run
+  as the last step before writing the body. Never from `--stat`, which folds additions &
+  deletions into one number, never rebuilt from memory, & never run before a last edit.
 - Prose (docs, comments): English, applying no-ai-slop-writing-rules:rossmann-voice
   and no-ai-slop-writing-rules:no-ai-slop. Keep the existing voice.
   docs/TEMPORARY-CONTEXT.md is exempt.
