@@ -22,9 +22,9 @@ keep using it. Visibility & isolation come first, usability second.
 ## 2. What has to be true
 
 Two things order every phase, & `docs/ROADMAP.md`, "Ordering principle", states them:
-the report of a run doesn't lie about that run, & the archive lets someone say months
-later which binary ran on which day. In the ROADMAP's words, if the layer that reports
-the run lies, the archive inherits the lie.
+the report of a run doesn't lie about that run, & the binary archive lets someone say
+months later which binary ran on which day. In the ROADMAP's words, if the layer that
+reports the run lies, the binary archive inherits the lie.
 
 ## 3. What it isn't
 

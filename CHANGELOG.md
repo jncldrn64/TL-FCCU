@@ -4,6 +4,27 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.52 — 2026-10-01
+
+Documentation & comments only. `run.sh` changes in three comments, no behaviour, so
+`VERSION` stays & `run.sh -h` keeps printing 2.49 until the next code PR.
+
+### Added
+- `docs/GLOSSARY.md`: eight launcher terms, before Phases 3 & 4 use them. Binary archive,
+  session archive, home jar, sandbox jar, promotion, manifest, sighting & starter-core;
+  the ones not built yet say so.
+- `docs/DECISIONS.md` says why, & marks as a hypothesis what the Backlog's rotation item
+  meant.
+
+### Changed
+- "Archive" always takes a qualifier: session archive for the `logs.tar.gz` of
+  `cleanup_logs`, binary archive for Phase 3's store. `docs/ROADMAP.md`,
+  `docs/REQUIREMENTS.md` & three comments in `run.sh` follow.
+- The glossary's header says the launcher's words enter as a phase is about to use them.
+
+### Removed
+- `docs/TEMPORARY-CONTEXT.md`'s line on the missing launcher vocabulary, now placed.
+
 ## v2.51 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

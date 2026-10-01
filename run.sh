@@ -1556,7 +1556,7 @@ cleanup_logs() {
         [ "$silent" = true ] || log_msg "Compressing old session: $(basename "$d")"
         (
             cd "$d" || exit 0
-            # Everything EXCEPT the quick-read reports and the archive itself.
+            # Everything EXCEPT the quick-read reports and the session archive itself.
             #
             # Globs, not `for f in $(ls -A)`: that split on IFS & re-expanded every
             # name as a pattern. The names are script-generated so none carries a
@@ -1574,9 +1574,9 @@ cleanup_logs() {
             done
             shopt -u nullglob dotglob
             if [ "${#files[@]}" -gt 0 ]; then
-                # No `|| true` here. `tar --remove-files` deletes what it archived,
+                # No `|| true` here. `tar --remove-files` deletes what it packed,
                 # so swallowing its status is how a session's logs disappear without
-                # the archive that was supposed to replace them. Report & keep going:
+                # the session archive meant to replace them. Report & keep going:
                 # one unarchived session must not abort the rest of the sweep.
                 if ! tar -czf logs.tar.gz --remove-files "${files[@]}" 2>"${d}/.tar-error"; then
                     log_warn "Could not compress $(basename "$d"); logs left in place."

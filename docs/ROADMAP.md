@@ -2,11 +2,11 @@
 
 ## Ordering principle
 
-A tool that lies about its own state corrupts everything built on top of it. The
-archive this roadmap ends at exists so that months later you can say which binary
-ran on which day. If the layer that reports the run lies, the archive inherits the
-lie. So the order is fixed: first the report stops lying, then the agent sees what
-runs, then the binaries get archived. Phases don't get reordered for convenience.
+A tool that lies about its own state corrupts everything built on top of it. The binary
+archive this roadmap ends at exists so that months later you can say which binary ran on
+which day. If the layer that reports the run lies, the binary archive inherits the lie.
+So the order is fixed: first the report stops lying, then the agent sees what runs, then
+the binaries get archived. Phases don't get reordered for convenience.
 
 Work now moves by numbered phases, not loose rounds. Each phase carries a one-line
 objective, the scope it touches, a verifiable acceptance criterion, its blockers,
@@ -147,7 +147,7 @@ Scope:
   before promoting. Never promote without asking.
 - At the prompt, warn that promoting can change startup behavior: one version
   hardens the connection checks relative to the one before it.
-- Launch a prior version from the archive. `-f` already selects a jar; evaluate
+- Launch a prior version from the binary archive. `-f` already selects a jar; evaluate
   extending it before adding a new option.
 - Cut the per-session re-update. `run.sh` copies the home jar into the sandbox
   every run, so `UpdateCore` re-applies the cached `starter-core` on every start.
@@ -219,6 +219,7 @@ which had to run in sequence, & says nothing that forces 5 behind 3.
 
 ## Backlog
 
-Archive rotation, hash comparison against public sources, & whatever else surfaces.
+Binary-archive rotation, hash comparison against public sources, & whatever else
+surfaces.
 No date commitment.
 **Entered:** 2026-07-22, #10.
