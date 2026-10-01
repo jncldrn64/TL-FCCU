@@ -160,20 +160,20 @@ Status: `in progress`
 Objective: cleanup runs on every death the kernel lets the script observe, not only
 on the ones it happens to trap today.
 
-Scope:
-- `run.sh:1596` reads `trap cleanup EXIT INT TERM`. Bash runs the EXIT trap on a
+Scope, as the code stood when this phase was written:
+- The `cleanup` trap reads `trap cleanup EXIT INT TERM`. Bash runs the EXIT trap on a
   normal exit or a trapped signal only, so an untrapped fatal signal (HUP, QUIT)
   kills the shell without running `cleanup()` & orphans every monitor, including the
   `inotifywait -m -r` that then writes `files.log` forever: the 51 MB case this
   repo's own CHANGELOG records. Fix: `trap cleanup EXIT INT TERM HUP QUIT`. SIGKILL
   & the OOM killer can never be trapped; for those, `warn_orphans` & `-K` stay the
   answer, & that is the boundary of what this phase can promise.
-- `run.sh:810` does `exec 200>"$LOCKFILE"` before the monitors & firejail start, &
+- `run_sandboxed` does `exec 200>"$LOCKFILE"` before the monitors & firejail start, &
   nothing closes fd 200 in the children. A `flock(2)` lock lives on the open file
   description & is inherited across fork/exec, so any surviving child co-holds it &
   the next run dies at `flock -n` with a false "TLauncher already running". Fix: add
   `200>&-` to the `spawn_monitor` invocation & to the firejail command lines.
-- `first_seen_loop` (`run.sh:547`) creates a `mktemp` file each cycle & removes it at
+- `first_seen_loop` creates a `mktemp` file each cycle & removes it at
   cycle end, so a TERM or KILL landing mid-cycle leaks one small file in `/tmp` per
   monitor per session. Cosmetic, cleared on reboot. Fix: a per-loop temp path reaped
   by the cleanup path instead of a fresh `mktemp` per cycle.

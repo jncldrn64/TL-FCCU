@@ -7,12 +7,11 @@ It exists as raw material for fixing the man page standard later, so it records 
 surface as it *is*, not as it was meant to be. Where the code and the help text
 disagree, both are written down & the disagreement is named.
 
-Every claim carries a `file:line`, re-verified against `run.sh` as of v2.25.
-
-Line numbers are a snapshot & they rot: the v2.24 work shifted roughly forty of them
-in one PR, and refreshing them by hand is not a habit that survives. Read the symbol
-(the function, the variable, the `printf` whose text is quoted) as the real anchor,
-& the number as a hint for finding it quickly.
+Every claim anchors on something `grep` finds in `run.sh`, such as a function, a
+variable, a `case` arm or a quoted string. Until v2.43 each also carried a line number,
+& the v2.24 work alone shifted about forty of them. By v2.42 the anchors near the top of
+the file still held, & the ones past `log_warn` pointed at the wrong line. The numbers
+are gone, & the symbols were always the anchor.
 
 ## 0. Two premises that did not survive contact with the repo
 
@@ -38,29 +37,29 @@ redundant yet. When one gets written, this inventory is the input.
 
 ## 1. Flag inventory
 
-All parsing happens in one `case` inside `main()`, `run.sh:2390-2455`. There is no
+All parsing happens in one `case` inside `main()`, one arm per flag. There is no
 getopt, no flag bundling (`-vM` is rejected as an unknown option), and no `--`
 end-of-options marker.
 
-| Short | Long | Arg | Default | Parsed at | Global set |
-|---|---|---|---|---|---|
-| `-v` | `--verbose` | no | `false` | `run.sh:2391` | `VERBOSE` (`run.sh:87`) |
-| `-n` | `--offline` | no | `false` | `run.sh:2392` | `OFFLINE_MODE` (`run.sh:88`) |
-| `-M` | `--monitor` | no | `false` | `run.sh:2393` | `MONITOR_ENABLED` (`run.sh:89`) |
-| `-a` | `--analyze` | no | `false` | `run.sh:2394` | `AUTO_ANALYZE` (`run.sh:90`) |
-| `-A` | `--analyze-only` | no | `false` | `run.sh:2395` | `analyze_only` (local, `run.sh:2386`) |
-| `-m` | `--mozilla` | no | `false` | `run.sh:2396` | `MOZILLA_CHECK` (`run.sh:91`) |
-| `-K` | `--kill-orphans` | no | `false` | `run.sh:2397` | `KILL_ORPHANS` (`run.sh:96`) |
-| `-R` | `--report` | **required** DIR | `""` | `run.sh:2398-2404` | `REPORT_SESSION` (`run.sh:97`) |
-| `-c` | `--cleanup-logs` | **optional** DAYS | `7` | `run.sh:2405-2414` | `CLEANUP_LOGS_FLAG`, `CLEANUP_DAYS` (`run.sh:98-99`) |
-| `-P` | `--proxy` | no | `false` | `run.sh:2415-2418` | `PROXY_ENABLED` (`run.sh:101`) |
-| `-B` | `--save-baseline` | **required** DIR | `""` | `run.sh:2419-2425` | `SAVE_BASELINE_SESSION` (`run.sh:102`) |
-| (none) | `--check-deps` | no | `false` | `run.sh:2426` | `CHECK_DEPS` (`run.sh:103`) |
-| `-ml` | `--mozilla-path` | **required** PATH | `${REAL_HOME}/.mozilla` | `run.sh:2429-2435` | `MOZILLA_SEARCH_PATH` (`run.sh:93`) |
-| `-f` | `--file` | **required** PATH | `""` | `run.sh:2436-2442` | `TLAUNCHER_PATH` (`run.sh:92`) |
-| (none) | `--print-man` | no | `false` | `run.sh:2427` | `PRINT_MAN` (`run.sh:104`) |
-| (none) | `--install-man` | no | `false` | `run.sh:2428` | `INSTALL_MAN` (`run.sh:105`) |
-| `-h` | `--help` | no | n/a | `run.sh:2443` | calls `usage()`, exits 0 |
+| Short | Long | Arg | Default | Global set |
+|---|---|---|---|---|
+| `-v` | `--verbose` | no | `false` | `VERBOSE` |
+| `-n` | `--offline` | no | `false` | `OFFLINE_MODE` |
+| `-M` | `--monitor` | no | `false` | `MONITOR_ENABLED` |
+| `-a` | `--analyze` | no | `false` | `AUTO_ANALYZE` |
+| `-A` | `--analyze-only` | no | `false` | `analyze_only` (local) |
+| `-m` | `--mozilla` | no | `false` | `MOZILLA_CHECK` |
+| `-K` | `--kill-orphans` | no | `false` | `KILL_ORPHANS` |
+| `-R` | `--report` | **required** DIR | `""` | `REPORT_SESSION` |
+| `-c` | `--cleanup-logs` | **optional** DAYS | `7` | `CLEANUP_LOGS_FLAG`, `CLEANUP_DAYS` |
+| `-P` | `--proxy` | no | `false` | `PROXY_ENABLED` |
+| `-B` | `--save-baseline` | **required** DIR | `""` | `SAVE_BASELINE_SESSION` |
+| (none) | `--check-deps` | no | `false` | `CHECK_DEPS` |
+| `-ml` | `--mozilla-path` | **required** PATH | `${REAL_HOME}/.mozilla` | `MOZILLA_SEARCH_PATH` |
+| `-f` | `--file` | **required** PATH | `""` | `TLAUNCHER_PATH` |
+| (none) | `--print-man` | no | `false` | `PRINT_MAN` |
+| (none) | `--install-man` | no | `false` | `INSTALL_MAN` |
+| `-h` | `--help` | no | n/a | calls `usage()`, exits 0 |
 
 Notes the table cannot hold:
 
@@ -72,13 +71,14 @@ Notes the table cannot hold:
 - **`-ml` is a two-letter short option.** `-ml` is not standard short-option
   grammar; a POSIX-ish parser would read it as `-m -l`. Here the `case` matches the
   literal string `-ml`, so it works, but it means `-m` and `-ml` are different
-  options distinguished only by the trailing letter (`run.sh:2396` vs `run.sh:1917`).
-- **`-c`'s argument is optional & numeric-only.** `[[ "${2:-}" =~ ^[0-9]+$ ]]`
-  (`run.sh:2408`). `-c foo` silently ignores `foo` & uses the default 7 rather than
-  erroring, then `foo` is re-parsed as the next argument & dies as an unexpected
-  argument (`run.sh:2450-2454`).
-- **`-A` writes a function-local, not a global.** `analyze_only` is `local`
-  (`run.sh:2386`), unlike every other flag target.
+  options distinguished only by the trailing letter: the `-m|--mozilla)` arm & the
+  `-ml|--mozilla-path)` arm.
+- **`-c`'s argument is optional & numeric-only.** The `-c|--cleanup-logs)` arm tests
+  `[[ "${2:-}" =~ ^[0-9]+$ ]]`. `-c foo` silently ignores `foo` & uses the default 7
+  rather than erroring, then `foo` is re-parsed as the next argument & dies in the `*)`
+  arm as an unexpected argument.
+- **`-A` writes a function-local, not a global.** `analyze_only` is declared
+  `local analyze_only=false` at the top of `main()`, unlike every other flag target.
 
 ### Options in the code but not in `--help`
 
@@ -95,14 +95,14 @@ against the parser: every documented flag still reaches a live code path.
 
 | Variable | Default when unset | Effect |
 |---|---|---|
-| `XDG_DATA_HOME` | `${REAL_HOME}/.local/share` (`run.sh:61`) | Parent of `SANDBOX_DIR` (`run.sh:71`) & both baseline files (`run.sh:109-110`) |
-| `XDG_STATE_HOME` | `${REAL_HOME}/.local/state` (`run.sh:62`) | Parent of `LOG_ROOT`, every session dir (`run.sh:72`) |
-| `XDG_RUNTIME_DIR` | `/run/user/${REAL_UID}`, then `/tmp` if that is not a directory (`run.sh:63-69`) | Holds `LOCKFILE` (`run.sh:73`) |
-| `SUDO_USER` | `${USER:-$(id -un)}` (`run.sh:55`) | Identity used for `REAL_HOME` & the lockfile name |
-| `SUDO_UID` | `$(id -u)` (`run.sh:56`) | Default `XDG_RUNTIME_DIR` path |
-| `SUDO_GID` | `$(id -g)` (`run.sh:57`) | Read into `REAL_GID`; no consumer in the current code |
-| `USER` | `$(id -un)` (`run.sh:55`) | Fallback identity when `SUDO_USER` is unset |
-| `HOME` | `getent passwd` result wins; `$HOME` is the fallback (`run.sh:58`) | Base for `REAL_HOME` |
+| `XDG_DATA_HOME` | `${REAL_HOME}/.local/share` | Parent of `SANDBOX_DIR` & both baseline files |
+| `XDG_STATE_HOME` | `${REAL_HOME}/.local/state` | Parent of `LOG_ROOT`, every session dir |
+| `XDG_RUNTIME_DIR` | `/run/user/${REAL_UID}`, then `/tmp` if that is not a directory (`if [ ! -d "$XDG_RUNTIME_DIR" ]`) | Holds `LOCKFILE` |
+| `SUDO_USER` | `${USER:-$(id -un)}` | Identity used for `REAL_HOME` & the lockfile name |
+| `SUDO_UID` | `$(id -u)` | Default `XDG_RUNTIME_DIR` path |
+| `SUDO_GID` | `$(id -g)` | Read into `REAL_GID`; no consumer in the current code |
+| `USER` | `$(id -un)` | Fallback identity when `SUDO_USER` is unset |
+| `HOME` | `getent passwd` result wins; `$HOME` is the fallback | Base for `REAL_HOME` |
 
 The `SUDO_*` reads are defensive, not an invitation: the hard constraint is zero
 `sudo` (`AGENTS.md`, "Hard constraints"). They exist so that a user who ignores that
@@ -112,14 +112,14 @@ The `SUDO_*` reads are defensive, not an invitation: the hard constraint is zero
 
 ## 3. Exit codes
 
-| Code | Meaning | Emitted at |
+| Code | Meaning | Constant |
 |---|---|---|
-| `0` | Success, including every standalone mode, `--help` & `--print-man` | `EX_OK`, `run.sh:342` |
-| `1` | Usage error: unknown option, missing or invalid argument | `EX_USAGE`, `run.sh:343` |
-| `2` | Refusal: a live session holds the lock | `EX_LOCK_HELD`, `run.sh:344` |
-| `3` | A required dependency is missing | `EX_MISSING_DEP`, `run.sh:345` |
-| `4` | Environment: lockfile unwritable, jar not found, sandbox unusable | `EX_ENV`, `run.sh:346` |
-| `5` | The lock state could not be determined | `EX_LOCK_UNKNOWN`, `run.sh:347` |
+| `0` | Success, including every standalone mode, `--help` & `--print-man` | `EX_OK` |
+| `1` | Usage error: unknown option, missing or invalid argument | `EX_USAGE` |
+| `2` | Refusal: a live session holds the lock | `EX_LOCK_HELD` |
+| `3` | A required dependency is missing | `EX_MISSING_DEP` |
+| `4` | Environment: lockfile unwritable, jar not found, sandbox unusable | `EX_ENV` |
+| `5` | The lock state could not be determined | `EX_LOCK_UNKNOWN` |
 | TLauncher's own | The sandboxed run's exit status is propagated, not swallowed | end of `run_sandboxed` |
 
 One code per condition, as of v2.25. Before that, `1` covered five distinct failures
@@ -132,24 +132,25 @@ missing from the manual's `EXIT STATUS`.
 
 ### Logging functions
 
-| Function | Stream | Prefix | Also written to | Defined at |
-|---|---|---|---|---|
-| `log_msg` | stderr | `[YYYY-MM-DD HH:MM:SS.mmm]` | `${SESSION_DIR}/master.log` when a session dir exists | `run.sh:272-274` |
-| `log_verbose` | stderr | same as `log_msg` | same as `log_msg` | `run.sh:276-283` |
-| `log_error` | stderr | `[ERROR]` in red | `${SESSION_DIR}/master.log` | `run.sh:330-332` |
-| `log_warn` | stderr | `[WARN]` in yellow | `${SESSION_DIR}/master.log` | `run.sh:334-336` |
+| Function | Stream | Prefix | Also written to |
+|---|---|---|---|
+| `log_msg` | stderr | `[YYYY-MM-DD HH:MM:SS.mmm]` | `${SESSION_DIR}/master.log` when a session dir exists |
+| `log_verbose` | stderr | same as `log_msg` | same as `log_msg` |
+| `log_error` | stderr | `[ERROR]` in red | `${SESSION_DIR}/master.log` |
+| `log_warn` | stderr | `[WARN]` in yellow | `${SESSION_DIR}/master.log` |
 
 All four go to stderr, all four are timestamped, and all four reach `master.log`
 through one shared writer, `_log_emit`. Until v2.25 `log_error` & `log_warn` did
 neither: they printed straight to stderr, so a past session's `master.log` showed the
 run but none of the errors in it.
 
-`log_verbose` ends with an explicit `return 0` (`run.sh:281`), load-bearing under
+`log_verbose` ends with an explicit `return 0`, load-bearing under
 `set -e`; the comment there records the bug it fixes.
 
 ### Colour
 
-Decided once, at `run.sh:233-238`, by `[ -t 1 ]`: colour when **stdout** is a TTY,
+Decided once, in the `if [ -t 1 ]` block near the top of the file: colour when
+**stdout** is a TTY,
 empty strings otherwise.
 
 Two incoherencies, both real:
@@ -160,8 +161,8 @@ Two incoherencies, both real:
    `./run.sh -M 2> file` writes escape codes into the file.
 2. **`NO_COLOR` is not honoured.** There is no `NO_COLOR` read anywhere in the file.
 
-Colour never reaches a log file: `log_msg` writes the raw `$*` to `master.log`
-(`run.sh:268`) with no escape codes, & the colour lives in the `printf` format
+Colour never reaches a log file: `_log_emit`, the writer behind all four, appends the
+raw `$*` to `master.log` with no escape codes, & the colour lives in the `printf` format
 strings, not in the messages.
 
 ### Silent mode & log levels
@@ -170,43 +171,44 @@ There is no `--quiet`, no `-q`, & no numeric log level. The levels are effective
 
 - default: start/end lines & warnings/errors, all on stderr;
 - `-v`: adds everything `log_verbose` carries, plus the configuration summary & a
-  2-second countdown (`run.sh:2065`).
+  2-second countdown, the `Starting in 2 seconds...` line & its `sleep 2`.
 
 `DESIGN.md` principle 5 ("Silent by default, verbose by request, never mute") is the
 written rule; the code matches it.
 
 ### Stream split, audited
 
-`usage()` writes to **stdout** & exits 0 (`run.sh:2275`), which is right for `--help`.
+`usage()` writes to **stdout** & ends in `exit 0`, which is right for `--help`.
 Report generators write Markdown to stdout, which is how `-R` redirects into a file.
 
-One inconsistency worth naming: the `-R` **success** line goes to stderr
-(`run.sh:2481`), while the report body it announces goes to stdout. Defensible (it
+One inconsistency worth naming: the `-R` **success** line, `✓ Report: …`, goes to
+stderr, while the report body it announces goes to stdout. Defensible (it
 keeps the success notice out of a redirected report) but it means a success message
 is on the error stream.
 
 ## 5. `--help` against the rest of the documentation
 
-`usage()` spans `run.sh:2254-2384`, 119 lines. Sections, in order:
+`usage()` is 126 lines, counted from `usage() {` to its closing brace on 2026-10-01.
+Sections, in order, each a `printf "${YELLOW}NAME${NC}"` line:
 
-1. `PURPOSE` (`run.sh:2261`)
-2. `USAGE` (`run.sh:2265`)
-3. `BASIC OPTIONS` (`run.sh:2271`)
-4. `MONITORING OPTIONS` (`run.sh:2277`)
-5. `MAINTENANCE / REPORTING` (`run.sh:2289`)
-6. `NETWORK CAPTURE (opt-in, no sudo)` (`run.sh:2314`)
-7. `SECURITY CHECKS` (`run.sh:2332`)
-8. `BASELINES & REGRESSION (text-only, no extra network)` (`run.sh:2343`)
-9. `COMMON USAGE PATTERNS` (`run.sh:2352`)
-10. `WHAT'S NEW` (`run.sh:2372`)
-11. `OUTPUT LOCATION` (`run.sh:2376`)
+1. `PURPOSE`
+2. `USAGE`
+3. `BASIC OPTIONS`
+4. `MONITORING OPTIONS`
+5. `MAINTENANCE / REPORTING`
+6. `NETWORK CAPTURE (opt-in, no sudo)`
+7. `SECURITY CHECKS`
+8. `BASELINES & REGRESSION (text-only, no extra network)`
+9. `COMMON USAGE PATTERNS`
+10. `WHAT'S NEW`
+11. `OUTPUT LOCATION`
 
 ### What is duplicated, and between which documents
 
 There is no man page & no README, so the duplication that exists is between
 `--help` and the four root docs. It is small & mostly deliberate:
 
-- **`WHAT'S NEW` deliberately refuses to duplicate.** `run.sh:2372-2374` reads:
+- **`WHAT'S NEW` deliberately refuses to duplicate.** Its body reads:
 
   > `See CHANGELOG.md for what changed and when. The CHANGELOG is the single`
   > `source, so this heading no longer pins a version that goes stale on each bump.`
@@ -215,23 +217,26 @@ There is no man page & no README, so the duplication that exists is between
   heading had gone stale at "WHAT'S NEW IN v2.5" while `VERSION` was 2.9). A future
   man page should inherit it rather than re-open it.
 
-- **The `-P` help restates the agent architecture.** `run.sh:2314-2336` describes
-  `JAVA_TOOL_OPTIONS`, the per-JVM logs, the self-disable on the Minecraft JVM, & the
-  build command. `AGENTS.md` Known gaps carries the same architecture at far greater
-  length across the Phase 1 entries. The overlap is the mechanism; the help text is a
+- **The `-P` help restates the agent architecture.** The `-P, --proxy` entry under
+  `NETWORK CAPTURE` describes `JAVA_TOOL_OPTIONS`, the per-JVM logs, the self-disable
+  on the Minecraft JVM, & the build command. The Known gaps history carries the same
+  architecture at far greater length across the Phase 1 entries; since 2026-10-01 it
+  sits in `docs/DECISIONS.md`, entry "Known gaps up to this date, moved here
+  unedited". The overlap is the mechanism; the help text is a
   summary, not a copy, & no sentence appears verbatim in both.
 
 - **The no-sudo claim appears three times.** `--help` says it twice, once in a
-  section heading, `NETWORK CAPTURE (opt-in, no sudo)` (`run.sh:2314`), & once in the
+  section heading, `NETWORK CAPTURE (opt-in, no sudo)`, & once in the
   closing banner:
 
-  > `Uses only standard Linux tools - no special permissions needed!` (`run.sh:2375`)
+  > `Uses only standard Linux tools - no special permissions needed!`
 
   `AGENTS.md` states it as a hard constraint, & `DESIGN.md` principle 2 is titled
   "Zero `sudo`, ever". Three statements of one rule, in three registers.
 
-- **`OUTPUT LOCATION` restates paths the code already derives.** `run.sh:2376-2380`
-  names the session-dir layout that `run.sh:71-73` & `89-90` compute. A path printed
+- **`OUTPUT LOCATION` restates paths the code already derives.** It prints
+  `$LOG_ROOT/session_YYYYMMDD_HHMMSS/`, the layout the code builds from `LOG_ROOT` &
+  `SESSION_ID`. A path printed
   in help can drift from the path in code; today they agree.
 
 Nothing else is duplicated. The docs are unusually clean on this: `AGENTS.md`
@@ -241,16 +246,16 @@ restate theirs beyond the four items above.
 
 ## 6. Examples in `--help`
 
-`COMMON USAGE PATTERNS` (`run.sh:2352-2370`) carries **five** examples. Each is a
+`COMMON USAGE PATTERNS` carries **five** examples. Each is a
 command line plus a `→` line saying what it produces:
 
-| # | Command | Stated outcome | Line |
-|---|---|---|---|
-| 1 | `run.sh` | Start/end lines on stderr, no session dir | `run.sh:2353-2356` |
-| 2 | `run.sh -v -M -a -m` | Full monitoring with immediate analysis | `run.sh:2357-2360` |
-| 3 | `run.sh -M -a -P` | Adds payload summary + regression check | `run.sh:2361-2364` |
-| 4 | `run.sh -B logs/session_XXXX`, `run.sh -K`, `run.sh -c 7` | (three maintenance commands on one line) | `run.sh:2365-2367` |
-| 5 | `run.sh -A` | Analyze logs without running TLauncher | `run.sh:2368-2370` |
+| # | Command | Stated outcome |
+|---|---|---|
+| 1 | `run.sh` | Start/end lines on stderr, no session dir |
+| 2 | `run.sh -v -M -a -m` | Full monitoring with immediate analysis |
+| 3 | `run.sh -M -a -P` | Adds payload summary + regression check |
+| 4 | `run.sh -B logs/session_XXXX`, `run.sh -K`, `run.sh -c 7` | (three maintenance commands on one line) |
+| 5 | `run.sh -A` | Analyze logs without running TLauncher |
 
 The shape is what makes this help good: every example states its *effect*, not just
 its syntax. Example 1 is the strongest, because it documents that the no-argument
@@ -263,7 +268,7 @@ run is a real mode rather than a missing-argument error.
   a session after the tool has moved on.
 - **`-n/--offline`.** No example anywhere, despite being the flag that answers "does
   TLauncher do anything without a network".
-- **`-f/--file`.** Appears only in the unexpected-argument error (`run.sh:2452`), so
+- **`-f/--file`.** Appears only in the unexpected-argument error, the `*)` arm, so
   a user learns it exists by making a mistake.
 - **`--check-deps`.** Documented as an option, never shown, although it is the
   natural first command on a new machine.
@@ -287,7 +292,7 @@ plus one contamination guard.
 | `legacy-mitm` | `tests/fixtures/legacy-mitm/` | `no longer supported`, on-disk facts only, promises nothing |
 | cross-contamination | built in-test, no fixture | Not a report state: drives `reset_agent_tmp` + `aggregate_agent_logs` & fails if a previous session's line survives |
 
-The report's own `case` has four arms (`run.sh:1330`, `1229`, `1235`, `1240`): `agent`
+The report's own `case "$mode"`, in `report_network_capture`, has three arms: `agent`
 (splitting into with-data & empty), `off`, & `*`.
 
 ### Reachable states the test does not cover
