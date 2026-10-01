@@ -798,3 +798,55 @@ goes in `REPEATED` & stays there after its fix. Suites that drive real processes
 minutes. The other repo has no such rule; it's one of the two this repo proposes to it.
 
 **Status:** in force.
+
+## 2026-10-01: A number about the code carries its recount command
+
+**Context.** Prose rule 6 came over with only its first half, the ban on line anchors,
+& without the other half: a number that describes the code goes with the command that
+recounts it. The cost showed the same day, when v2.43 wrote that `usage()` is 126 lines
+with no command & the figure it replaced, 119, had none either & was already wrong.
+
+The other repo learned a second lesson as well. A number with its command still went
+stale, because nobody reran the command.
+
+**Decision.** `CLAUDE.md`, prose rule 6: such a number goes with its command or doesn't
+go, & a PR that changes what it counts reruns the command. The 126 in
+`docs/cli/cli-surface.md` gets its command, rerun on 2026-10-01. Numbers already in the
+corpus weren't swept, so the rule covers what gets written or touched from now on.
+
+**Status:** in force.
+
+## 2026-10-01: A new Known gap carries the run that shows it
+
+**Context.** The other repo found that all three gaps listed in its architecture
+document were false, & the oldest had been dead for weeks. None carried a command, so
+nobody could recheck them. Here, Known gaps is append-only & closes an entry with a new
+dated line, so the other repo's rule to delete a gap in the PR that closes it doesn't
+apply. Its other half does: the entry of 2026-10-01 on the unexpected-argument hint
+already carried its run, & the one that closed it in v2.44 could point to the same run.
+
+**Decision.** `CLAUDE.md`, under "Decisions": a new Known gaps entry carries the command
+or run that shows the gap. Entries already written stay as they are.
+
+**Status:** in force.
+
+## 2026-10-01: What may enter a phase already in progress
+
+**Context.** `docs/ROADMAP.md` has a phase in progress, Phase 5, & a Backlog, but
+nothing said when a Backlog item may join a phase that already started. Without that
+line a phase grows each time something interesting turns up, & it never closes. The
+other repo wrote the criterion on 2026-08-10.
+
+**Decision.** `CLAUDE.md`, bullet "Phases": an item enters a phase in progress only if
+leaving it out makes a pending increment impossible, or forces redoing delivered work.
+
+**Status:** in force.
+
+## 2026-10-01: A subfolder README isn't a canonical doc
+
+**Decision.** A `README.md` that only explains its own subfolder, such as how to run
+the suites in `tests/`, may be added without asking first. It doesn't join the
+documentation list in `CLAUDE.md`. The other repo keeps the same exception for its
+`tests/README.md`. None exists here yet.
+
+**Status:** in force.

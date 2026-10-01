@@ -4,6 +4,25 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.46 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.44 until the next code PR.
+
+### Added
+- Prose rule 6: a number that describes the code goes with the command that recounts
+  it, & a PR that changes what it counts reruns the command.
+- `CLAUDE.md`: a new Known gaps entry carries the run that shows the gap.
+- `CLAUDE.md`, bullet "Phases": an item joins a phase in progress only if leaving it out
+  blocks a pending increment or forces redoing delivered work.
+- `CLAUDE.md`: a subfolder `README.md` that only explains its folder needs no permission.
+- `docs/DECISIONS.md` has an entry for each of the four.
+- `docs/TEMPORARY-CONTEXT.md` notes the three structural pieces still open.
+
+### Fixed
+- `docs/cli/cli-surface.md`: the `usage()` line count from v2.43 had no command. It
+  now carries one, rerun on 2026-10-01: 126.
+
 ## v2.45 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

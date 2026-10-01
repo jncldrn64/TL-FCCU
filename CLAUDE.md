@@ -8,12 +8,15 @@
   ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md in docs/; the CLI module
   (cli-standard.md, cli-surface.md) in docs/cli/.
   Do NOT create a new doc file without asking me first (this already lives in AGENTS.md).
+  One exception by kind: a `README.md` inside a subfolder that only explains that folder,
+  such as how to run `tests/`, isn't a canonical doc & needs no separate permission.
 - This repo does not describe other repos. Another repo's name may appear as historical
   provenance, where a convention came from, never as operational information. No document
   here depends on another repo to be understood or worked on.
 - Decisions go in docs/DECISIONS.md, append-only, one entry each, opening with
   `## YYYY-MM-DD: <title>`. Open items go in the "Known gaps" section of AGENTS.md,
-  append-only, dated. Never scatter them.
+  append-only, dated. Never scatter them. A new Known gaps entry carries the command or
+  the run that shows the gap, so the next reader can check it's still open.
   A pointer to a DECISIONS entry cites its date & title, never a line number or a place
   in the file ("the last entry"). One is added where a line would otherwise read as
   arbitrary or as contradicting the rest of its document.
@@ -34,6 +37,9 @@
 - Dates: ISO 8601 (YYYY-MM-DD) everywhere I author them by hand.
   A Backlog item in docs/ROADMAP.md is born with a line opening `**Entered:**`: the date
   it entered & the PR that brought it, taken from `git log -S` on the file, not memory.
+- Phases: a parked item enters a phase already in progress only if leaving it out makes
+  a pending increment impossible to deliver, or forces redoing work already delivered.
+  Anything else waits for the next phase.
 - Commits: "<type>: <short imperative summary>", type in {add, chg, fix, rmv, doc}.
   add=new capability, chg=behavior change, fix=bugfix, rmv=feature removed, doc=docs only.
   The commit BODY does NOT re-narrate the change: 1-2 lines max plus a reference to the
@@ -111,7 +117,10 @@ its 24 rules in full & 5 in part; `docs/DECISIONS.md` has the count & what it fo
 6. A claim about the code anchors on something that survives a refactor, a function name
    or a greppable quote, never a line number. Baseline: 6 anchors, all in history that
    isn't edited, 3 in `CHANGELOG.md` & 3 in `docs/DECISIONS.md`. The 96 in live text
-   were replaced on 2026-10-01.
+   were replaced on 2026-10-01. A number that describes the code, such as a count of
+   lines, arms or functions, goes with the command that recounts it, or it doesn't go.
+   Writing the command isn't running it: a PR that changes what a number counts reruns
+   its command before it closes.
 7. A paragraph of running prose has at most five sentences; if it doesn't fit, it's two
    paragraphs. Lists, tables & glossary lines are out of scope. Baseline: 27 paragraphs
    over the ceiling: `docs/DECISIONS.md` 19, all in append-only entries, `docs/DESIGN.md`
