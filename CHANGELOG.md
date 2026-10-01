@@ -4,6 +4,25 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.51 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.49 until the next code PR.
+
+### Added
+- `docs/REQUIREMENTS.md`, a seed: who the launcher is for, what has to be true, what it
+  isn't, & pointers to the non-functional rules in `docs/DESIGN.md`. What nobody has
+  written yet is listed as such.
+- `docs/TEMPORARY-CONTEXT.md` notes that the launcher's own vocabulary has no glossary
+  lines before Phase 3 brings new terms.
+
+### Changed
+- The purpose paragraph moves word for word from `AGENTS.md` to `docs/REQUIREMENTS.md`;
+  `AGENTS.md` keeps a two-line summary & lists the file in its map.
+- `CLAUDE.md` reads `docs/REQUIREMENTS.md` first & lists it with the documents.
+- `docs/TEMPORARY-CONTEXT.md` drops three lines now placed: the requirements doc, the
+  reference check & the structural cost analysis.
+
 ## v2.50 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
