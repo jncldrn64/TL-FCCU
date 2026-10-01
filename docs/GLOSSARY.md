@@ -34,8 +34,10 @@
   count & command & never fixed in place, because fixing it would rewrite history. Source:
   `docs/DECISIONS.md`, 2026-10-01 "Past violations are registered & frozen".
 - **Known gap**: a dated, append-only entry in `AGENTS.md`, section "Known gaps", for
-  something not verified against real data. Before 2026-10-01 that section held decisions
-  too. Source: `docs/DECISIONS.md`, 2026-10-01 "Decisions leave Known gaps for this file".
+  something not verified against real data or known to be open. Until 2026-10-01 that
+  section held decisions & history too; that text now sits unedited in
+  `docs/DECISIONS.md`. Source: `docs/DECISIONS.md`, 2026-10-01 "Known gaps up to this
+  date, moved here unedited".
 - **line anchor**: a reference by line number, written as a file name, a colon & the
   number. Not allowed in new text, because the next edit moves it. Source:
   `docs/DECISIONS.md`, 2026-10-01 "A reference in a document or a comment has to

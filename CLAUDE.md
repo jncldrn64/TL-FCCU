@@ -7,7 +7,11 @@ wrote it.
 
 ## Reading order
 
-1. `AGENTS.md`: purpose, hard constraints, the repo map & Known gaps.
+This file is a door: Claude Code reads it first. `AGENTS.md` is the same door for tools
+that look for that name instead, & it sends them here. Whichever one you opened first,
+the rest is read in this order:
+
+1. `AGENTS.md`: purpose, hard constraints, the repo map & the Known gaps still open.
 2. `DESIGN.md`, before writing any code.
 3. `ROADMAP.md`, when the work belongs to a phase.
 4. `docs/DECISIONS.md`: why things are the way they are. A restriction that lives only
@@ -41,8 +45,9 @@ or edited, even once it's obsolete: a new entry replaces it & names it. Each ent
 with `## YYYY-MM-DD — <title>`. A pointer to a decision cites its date & title, never a
 line number.
 
-`AGENTS.md`, section "Known gaps", holds what isn't verified against real data, dated &
-append-only. The decisions written there before 2026-10-01 stay where they are.
+`AGENTS.md`, section "Known gaps", holds what isn't verified against real data & what is
+known to be open, dated & append-only. Everything it recorded until 2026-10-01, decisions
+included, was moved unedited to the end of `docs/DECISIONS.md`.
 
 ## CHANGELOG
 
@@ -126,15 +131,17 @@ violation.
 6. A claim about the code anchors on something that survives a refactor, a function name
    or a greppable quote, never a line number (see "References"). Baseline: 102 anchors.
    The 93 in `docs/cli-surface.md` & the 3 in `ROADMAP.md` are due to be replaced; the 6
-   in history that isn't edited stay, 3 in `CHANGELOG.md` & 3 in Known gaps.
+   in history that isn't edited stay, 3 in `CHANGELOG.md` & 3 in the Known gaps history
+   at the end of `docs/DECISIONS.md`.
 7. A paragraph of running prose has at most five sentences; if it doesn't fit, it's two
    paragraphs. Lists, tables & glossary lines are out of scope. Baseline: 26 paragraphs
-   over the ceiling, `AGENTS.md` 19, `DESIGN.md` 5 & `ROADMAP.md` 2. Most of the 19 sit
-   in append-only Known gaps.
+   over the ceiling, `docs/DECISIONS.md` 18, `DESIGN.md` 5, `ROADMAP.md` 2 & one in
+   `AGENTS.md`. The 18 sit in the Known gaps history, which isn't edited.
 8. Three consecutive sentences of similar length are the sign that the text is going
    flat, & rule 7 doesn't catch it. The measure is the share of consecutive sentence
-   triples whose lengths sit within 3 words of each other. Baseline: **4.9%**, 16 flat
-   triples of 329.
+   triples whose lengths sit within 3 words of each other. Baseline: **4.3%**, 16 flat
+   triples of 368. It read 4.9%, 16 of 329, before the Known gaps rework; the 39 triples
+   added since come from new text & none is flat, so the old text didn't improve.
 
 The corpus is every tracked `.md` file except two. `CLAUDE.md` is the standard itself, &
 editing it would move the numbers it declares. `docs/TEMPORARY-CONTEXT.md` is exempt by
