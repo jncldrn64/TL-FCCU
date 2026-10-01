@@ -74,6 +74,9 @@
   An idea is dropped when its complexity outweighs a benefit someone can measure, never
   because it sounds risky. Before dropping it, check what its proposer meant: dropping
   the wrong reading of a word rejects some other idea.
+- Workflow: work goes through a pull request. If `push`, creating a branch or opening
+  the PR returns `403`, stop & say that write permission is missing. Never work around
+  it by uploading loose files by hand.
 
 ## Prose floor
 
