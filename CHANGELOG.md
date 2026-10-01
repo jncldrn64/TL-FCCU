@@ -4,6 +4,28 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.47 — 2026-10-01
+
+ROADMAP Phase 5 closes: its last scope item is fixed & its acceptance runs as a suite.
+`VERSION` goes from 2.44 to 2.47, closing the desfase of the two doc-only sections.
+
+### Fixed
+- `first_seen_loop` made a fresh `mktemp` file each cycle & removed it at the end, so a
+  monitor killed mid-cycle left one file in `/tmp`. It now keeps one scratch file per
+  loop beside its SEENFILE in the session dir, & `cleanup()` removes it.
+
+### Added
+- `tests/cleanup-signals.sh`, in `tests/run-all.sh`: Phase 5's acceptance against the
+  functions & trap line loaded from `run.sh`. A SIGHUP leaves no monitor, an orphaned
+  monitor doesn't hold the lock, a killed monitor leaves nothing in `TMPDIR`, &
+  `cleanup()` removes the scratch file.
+- Each check was run with its fix taken out. Three went red; the SIGHUP check stays
+  green on bash 5.2.21, which runs the EXIT trap on an untrapped HUP, & says so.
+
+### Changed
+- `docs/ROADMAP.md`: Phase 5 is `closed (2026-10-01)`. `AGENTS.md` closes its Known
+  gap. `docs/cli/cli-surface.md` gives both lock-related suites their count & command.
+
 ## v2.46 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
