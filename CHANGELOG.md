@@ -4,6 +4,19 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.35 — 2026-10-01
+
+The CLI module moves into its own folder. The only change a user can see is two lines of
+the man page; `VERSION` goes from 2.30 to 2.35, closing the desfase the five doc-only
+sections left open.
+
+### Changed
+- `docs/cli-standard.md` & `docs/cli-surface.md` live in `docs/cli/` now, names
+  unchanged. Git tracks both as renames; the only edit inside is the paths they cite.
+- Every live reference names the new place: `CLAUDE.md`, nine lines of `run.sh` (seven
+  comments & the man page's SEE ALSO), & the header of `tests/doc-sync.sh`.
+- `AGENTS.md`'s map lists `docs/cli/`. It never listed the CLI module before.
+
 ## v2.34 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

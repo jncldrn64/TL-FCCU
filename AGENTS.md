@@ -30,6 +30,8 @@ using it. Visibility & isolation come first, usability second.
   entry of 2026-10-01 "Known gaps up to this date, moved here unedited" holds the
   Known gaps section as it stood until then.
 - `docs/TEMPORARY-CONTEXT.md`: what was observed & isn't placed yet, normally empty.
+- `docs/cli/`: the CLI module. `cli-standard.md` says what the command line must do,
+  `cli-surface.md` records what it does today.
 
 ## Where it continues
 

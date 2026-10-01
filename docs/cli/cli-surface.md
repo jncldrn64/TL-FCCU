@@ -21,7 +21,7 @@ page, and asked which parts of the man page are redundant.
 
 **Neither existed when this inventory was written.** A manual page does now: v2.25
 embedded one in `run.sh`, reachable with `--print-man` & installable with
-`--install-man`, per `docs/cli-standard.md`. There is still no `README.md`, and still
+`--install-man`, per `docs/cli/cli-standard.md`. There is still no `README.md`, and still
 no `.1` file in the tree, by design. What follows in section 5 was written against
 the state before that, & is kept because it is the reasoning the standard was built
 on; where it says "there is no man page", read "there was none, and here is what

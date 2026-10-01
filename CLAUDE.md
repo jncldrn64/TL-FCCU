@@ -5,8 +5,8 @@
   Last, docs/TEMPORARY-CONTEXT.md: normally empty, read anyway because one line there can
   contradict what you were about to propose. This file just pins the doc/format standard.
 - Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; DESIGN.md,
-  ROADMAP.md, DECISIONS.md, TEMPORARY-CONTEXT.md & the CLI module (cli-standard.md,
-  cli-surface.md) in docs/.
+  ROADMAP.md, DECISIONS.md & TEMPORARY-CONTEXT.md in docs/; the CLI module
+  (cli-standard.md, cli-surface.md) in docs/cli/.
   Do NOT create a new doc file without asking me first (this already lives in AGENTS.md).
 - This repo does not describe other repos. Another repo's name may appear as historical
   provenance, where a convention came from, never as operational information. No document

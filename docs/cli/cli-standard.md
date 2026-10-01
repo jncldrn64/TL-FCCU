@@ -1,7 +1,7 @@
 # Command-line documentation standard
 
 Normative. This says what `run.sh` **must** satisfy, not what it happens to do
-today. `docs/cli-surface.md` is the descriptive counterpart: it records the surface
+today. `docs/cli/cli-surface.md` is the descriptive counterpart: it records the surface
 as it is, and it is the input this standard was written from.
 
 Where the two disagree, this document wins and the code is wrong.
@@ -90,7 +90,7 @@ Rules:
   the formatting differs.
 - `EXIT STATUS`, `ENVIRONMENT`, `FILES` and `DIAGNOSTICS` are **manual-page only**.
   None of them is visible to a user today: the environment variables and the exit
-  codes exist only in `docs/cli-surface.md`, which a user never reads.
+  codes exist only in `docs/cli/cli-surface.md`, which a user never reads.
 - `SECURITY` carries what `--help` shows under `SECURITY CHECKS`, expanded. `--help`
   keeps the short version.
 - `BUGS` points at AGENTS.md Known gaps. It does not copy them.
@@ -140,6 +140,6 @@ split, not a redesign.
 ## 6. What this standard does not cover yet
 
 The colour gate tests stdout while nearly all coloured output goes to stderr, and
-`NO_COLOR` is unread. Both are recorded in `docs/cli-surface.md` and deferred on
+`NO_COLOR` is unread. Both are recorded in `docs/cli/cli-surface.md` and deferred on
 purpose to a later PR, not overlooked. Until then rule 3 above is the binding part:
 whatever the gate decides, the log files stay clean.
