@@ -155,7 +155,7 @@ Blocked by: Phase 3.
 
 ## Phase 5: cleanup survives every death it can see
 
-Status: `in progress`
+Status: `closed (2026-10-01)`
 
 Objective: cleanup runs on every death the kernel lets the script observe, not only
 on the ones it happens to trap today.
@@ -198,8 +198,15 @@ side effect of an external review landing on the same code:
   the same release: an orphan holding fd 200 would have made `-K` refuse to reap the
   orphan holding it.
 
-Still open: the `first_seen_loop` temp-file leak, the third bullet above. Cosmetic,
-cleared on reboot, & untouched.
+Closed, v2.47 (2026-10-01). `first_seen_loop` keeps one scratch file per loop, next to
+its SEENFILE in the session dir, & `cleanup()` removes it, so a monitor killed mid-cycle
+leaves nothing in `/tmp`. The acceptance above runs as `tests/cleanup-signals.sh`: 4/4 on
+2026-10-01, with the functions & trap line loaded from `run.sh` itself.
+
+Each fix was taken out once to see its check go red. The fd-200 & temp-file checks did.
+The SIGHUP check didn't, for the reason the v2.24 note gives: bash 5.2.21 runs the EXIT
+trap on an untrapped HUP, so the check proves no monitor survives but can't see whether
+the trap line names HUP.
 
 Blocked by: nothing. This phase is independent of Phases 3 & 4 & touches no code
 they touch, so it can land before or after them. The number records when the work

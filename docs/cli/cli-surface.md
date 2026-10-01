@@ -311,5 +311,7 @@ The report's own `case "$mode"`, in `report_network_capture`, has three arms: `a
 - **The new `-K` refusal path (exit 2)** is covered by neither suite; it was verified
   by hand in the v2.24 work, not by a test.
 
-`tests/lock-exclusion.sh` is a separate suite, **5/5**, covering the lockfile
-protocol rather than report states.
+`tests/lock-exclusion.sh` is a separate suite covering the lockfile protocol rather
+than report states, **10/10** on 2026-10-01 with `bash tests/lock-exclusion.sh`.
+`tests/cleanup-signals.sh` covers what survives a killed session, **4/4** the same day
+with `bash tests/cleanup-signals.sh`.
