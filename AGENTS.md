@@ -1,11 +1,7 @@
 # AGENTS.md: start here
 
-This repo is a personal security-audit sandbox for TLauncher. It runs the launcher
-under `firejail` & records what it touches: filesystem events, child processes, &
-network connections. It isn't a production launcher & never tries to be. The
-author doesn't trust TLauncher; one of its update endpoints, `advancedrepository.net`,
-probes over plain HTTP, & the author wants to watch what it does before deciding to
-keep using it. Visibility & isolation come first, usability second.
+A personal security-audit sandbox for TLauncher: it runs the launcher under `firejail`
+& records what it touches. `docs/REQUIREMENTS.md` says who it's for & what it isn't.
 
 ## Hard constraints (don't break these)
 
@@ -20,6 +16,7 @@ keep using it. Visibility & isolation come first, usability second.
 
 ## Map of the repo
 
+- `docs/REQUIREMENTS.md`: what has to be true for the launcher to be right, & for whom.
 - `docs/ARCHITECTURE.md`: what the code is today, checked against it, & the open gaps.
 - `run.sh`: the whole launcher, one bash script.
 - `scripts/TLHttpAgent.java` & its helpers, `scripts/build-agent.sh`: the `-P` Java
