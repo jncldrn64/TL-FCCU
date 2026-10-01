@@ -602,3 +602,13 @@ from the reverted rewrite with the paths updated. No baseline may rise. Nothing 
 written is rewritten to lower one; that happens when someone fixes live text.
 
 **Status:** in force.
+
+## 2026-10-01: A PR opens as a draft
+
+**Context.** Every PR since #28 opened as a draft & the author merged it, & the audit of
+2026-10-01 chose that on purpose. The choice was written only in the v2.27 rewrite, which
+v2.28 reverted, so nothing live said it.
+
+**Decision.** A PR opens as a draft. The author marks it ready & merges it.
+
+**Status:** in force.
