@@ -828,3 +828,15 @@ already carried its run, & the one that closed it in v2.44 could point to the sa
 or run that shows the gap. Entries already written stay as they are.
 
 **Status:** in force.
+
+## 2026-10-01: What may enter a phase already in progress
+
+**Context.** `docs/ROADMAP.md` has a phase in progress, Phase 5, & a Backlog, but
+nothing said when a Backlog item may join a phase that already started. Without that
+line a phase grows each time something interesting turns up, & it never closes. The
+other repo wrote the criterion on 2026-08-10.
+
+**Decision.** `CLAUDE.md`, bullet "Phases": an item enters a phase in progress only if
+leaving it out makes a pending increment impossible, or forces redoing delivered work.
+
+**Status:** in force.

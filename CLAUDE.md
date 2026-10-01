@@ -35,6 +35,9 @@
 - Dates: ISO 8601 (YYYY-MM-DD) everywhere I author them by hand.
   A Backlog item in docs/ROADMAP.md is born with a line opening `**Entered:**`: the date
   it entered & the PR that brought it, taken from `git log -S` on the file, not memory.
+- Phases: a parked item enters a phase already in progress only if leaving it out makes
+  a pending increment impossible to deliver, or forces redoing work already delivered.
+  Anything else waits for the next phase.
 - Commits: "<type>: <short imperative summary>", type in {add, chg, fix, rmv, doc}.
   add=new capability, chg=behavior change, fix=bugfix, rmv=feature removed, doc=docs only.
   The commit BODY does NOT re-narrate the change: 1-2 lines max plus a reference to the
