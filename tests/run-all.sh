@@ -10,7 +10,7 @@
 #
 # N is REPEATS, default 3, low enough to run on every commit. Raise it for proof:
 #   REPEATS=200 tests/run-all.sh
-# Only the suites named in REPEATED below are repeated. The other two drive real
+# Only the suites named in REPEATED below are repeated. The other three drive real
 # processes & locks, take seconds each, & have never been observed intermittent, so
 # repeating them would cost minutes to re-prove something already stable.
 set -uo pipefail
@@ -18,7 +18,7 @@ set -uo pipefail
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPEATS="${REPEATS:-3}"
 
-SUITES=(doc-sync.sh lock-exclusion.sh report-states.sh)
+SUITES=(doc-sync.sh lock-exclusion.sh report-states.sh cleanup-signals.sh)
 REPEATED=(doc-sync.sh)
 
 rc=0
