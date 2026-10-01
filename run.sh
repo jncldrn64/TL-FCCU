@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.44"
+VERSION="2.47"
 
 # Directory holding this script, used to find helpers like scripts/build-agent.sh.
 # Resolved once, & it really does survive being called through a symlink now.
