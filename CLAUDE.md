@@ -8,6 +8,8 @@
   ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md in docs/; the CLI module
   (cli-standard.md, cli-surface.md) in docs/cli/.
   Do NOT create a new doc file without asking me first (this already lives in AGENTS.md).
+  One exception by kind: a `README.md` inside a subfolder that only explains that folder,
+  such as how to run `tests/`, isn't a canonical doc & needs no separate permission.
 - This repo does not describe other repos. Another repo's name may appear as historical
   provenance, where a convention came from, never as operational information. No document
   here depends on another repo to be understood or worked on.

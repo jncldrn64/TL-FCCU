@@ -840,3 +840,12 @@ other repo wrote the criterion on 2026-08-10.
 leaving it out makes a pending increment impossible, or forces redoing delivered work.
 
 **Status:** in force.
+
+## 2026-10-01: A subfolder README isn't a canonical doc
+
+**Decision.** A `README.md` that only explains its own subfolder, such as how to run
+the suites in `tests/`, may be added without asking first. It doesn't join the
+documentation list in `CLAUDE.md`. The other repo keeps the same exception for its
+`tests/README.md`. None exists here yet.
+
+**Status:** in force.
