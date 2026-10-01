@@ -4,6 +4,21 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.55 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.53 until the next code PR.
+
+### Changed
+- `CLAUDE.md`'s reading order brings `docs/DECISIONS.md` back by its headings, & names
+  "Ideas the audit dropped, & why" as required before proposing a change of structure or
+  method. Since the decisions left `AGENTS.md`, no session read them.
+- `AGENTS.md` points to `CLAUDE.md` for the reading order instead of restating it, & its
+  glossary line includes the launcher's words.
+
+### Added
+- `docs/DECISIONS.md` says why the file is listed by headings & not read whole.
+
 ## v2.54 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
