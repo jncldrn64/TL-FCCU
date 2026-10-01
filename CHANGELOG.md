@@ -4,6 +4,24 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.31 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.30 until the next code PR.
+
+### Added
+- `docs/DECISIONS.md` records four decisions the session took & applied without writing
+  down: the v2.27 revert, `DESIGN.md` staying with no document hierarchy, the move to
+  `docs/`, & the temporary context.
+- `docs/TEMPORARY-CONTEXT.md` gets the session's dump: the PR timeline from #28 to #32,
+  the tag audit, the MIDI porting backlog, open inconsistencies, discarded ideas & why,
+  process lessons, & the prose baselines. It's there so the analysis outlives the
+  conversation that produced it.
+
+### Changed
+- `docs/ROADMAP.md` no longer says the repo skips the borrowed folder layout; since
+  2026-10-01 it uses `docs/` too.
+
 ## v2.30 — 2026-10-01
 
 The documents move into `docs/`, & the temporary context arrives. The only change a user

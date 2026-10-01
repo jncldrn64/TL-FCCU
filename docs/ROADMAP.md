@@ -12,7 +12,7 @@ Work now moves by numbered phases, not loose rounds. Each phase carries a one-li
 objective, the scope it touches, a verifiable acceptance criterion, its blockers,
 & a status. The blueprint for this discipline is the MIDI-Scale-Trainer repo, the
 author's other project & a separate repository whose documentation standard this one
-shares; this copies its phase habit, not its folder layout.
+shares; this copies its phase habit, & since 2026-10-01 its `docs/` layout too.
 
 Status values: `pending`, `in progress`, `closed (YYYY-MM-DD)`.
 
