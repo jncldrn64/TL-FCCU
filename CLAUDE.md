@@ -102,9 +102,9 @@ its 24 rules in full & 5 in part; `docs/DECISIONS.md` has the count & what it fo
 5. Saying "not verified" about the code is required (see "State honesty"). Narrating
    what was searched for & not found while writing is not.
 6. A claim about the code anchors on something that survives a refactor, a function name
-   or a greppable quote, never a line number. Baseline: 102 anchors, 93 of them in
-   `docs/cli/cli-surface.md` & 3 in `docs/ROADMAP.md`, all due to be replaced. The other 6
-   are history that isn't edited: 3 in `CHANGELOG.md`, 3 in `docs/DECISIONS.md`.
+   or a greppable quote, never a line number. Baseline: 6 anchors, all in history that
+   isn't edited, 3 in `CHANGELOG.md` & 3 in `docs/DECISIONS.md`. The 96 in live text
+   were replaced on 2026-10-01.
 7. A paragraph of running prose has at most five sentences; if it doesn't fit, it's two
    paragraphs. Lists, tables & glossary lines are out of scope. Baseline: 27 paragraphs
    over the ceiling: `docs/DECISIONS.md` 19, all in append-only entries, `docs/DESIGN.md`

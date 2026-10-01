@@ -98,6 +98,12 @@ nor `groff` is installed & `tests/doc-sync.sh` reports SKIP. It was validated by
 another machine with both, clean except one style note that v2.26 fixed. Re-validate if
 the roff's shape changes. First recorded 2026-09-17.
 
+2026-10-01: an unexpected argument prints the wrong program name in its hint. The `*)`
+arm of `main()`'s `case` prints `Run '%s --help'` with `"$1"` where its neighbour, the
+`-*)` arm, passes `"$0"`. Run here on 2026-10-01, `bash run.sh foo` printed `Run 'foo
+--help' for usage` & exited 1. It was found while replacing the line anchors in
+`docs/cli/cli-surface.md`, & the fix belongs in a code PR.
+
 Find another open item while reading `docs/DESIGN.md` or `CHANGELOG.md` that isn't closed with
 verified evidence? Add it here instead of quietly fixing it or re-scoping it. A decision
 goes in `docs/DECISIONS.md`. A documentation idea that nobody knows is wanted yet goes in
