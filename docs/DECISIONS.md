@@ -1,5 +1,9 @@
 # DECISIONS.md: why this repo is the way it is
 
+> **Role:** history: why the repo is the way it is. An entry in force wins over a normative
+> document that contradicts it. **Regime:** append-only. **Origin:** 2026-10-01, "Decisions
+> get a file of their own".
+>
 > Append-only. An entry is never edited or deleted, even once it's obsolete: a newer
 > entry replaces it & names it by date & title. Each entry opens with
 > `## YYYY-MM-DD: <title>`.
@@ -1029,3 +1033,29 @@ or the method. `AGENTS.md` stops restating the reading order, which had already 
 from `CLAUDE.md`'s, & points to `CLAUDE.md` for it.
 
 **Status:** in force.
+
+## 2026-10-01: Documents get a type, a common format & a hierarchy
+
+**Context:** "DESIGN.md stays, & no document hierarchy for now" left one conflict open: one
+rule said the code outranks the documents, & `docs/cli/cli-standard.md` said that where it
+disagrees with the code, the code is wrong. Both are true for different documents. The
+same day the author had a generic template written for a third repo, with the documents
+sorted by type, & chose to bring this repo in line with it first.
+
+**Decision:** each canonical document names its type after **Role:** in an opening quote
+block, with **Regime:** & **Origin:** beside it. `CLAUDE.md` gains two sections. "Document
+types & which one wins" settles the conflict: a descriptive document loses to the code, &
+code that contradicts a normative one is at fault. "Common document format" fixes line 1,
+the quote block, numbered sections, bold fields & the entry header.
+
+The hierarchy part of the earlier entry is superseded; `docs/DESIGN.md` stays, now with a
+place in the hierarchy, normative over the code & below `docs/REQUIREMENTS.md`.
+
+- Entries before this one keep `**Context.**` with a period. Append-only means they aren't
+  edited, so the file mixes the two styles from here on.
+- `CLAUDE.md` keeps its unnumbered sections, because its rules are cited by name across
+  the repo.
+- A third inference marker joins the two: `**Why it was noted:**`, for what carries a
+  quote.
+
+**Status:** `in force`

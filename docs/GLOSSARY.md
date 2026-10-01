@@ -1,5 +1,8 @@
 # GLOSSARY.md: what the words mean today
 
+> **Role:** descriptive: what each word means today. **Regime:** corrected. **Origin:**
+> 2026-10-01, "The standard's words get a glossary".
+>
 > This file says what a term means now & is corrected when it ages. Why a term changed
 > lives in `docs/DECISIONS.md`, which is append-only. Each line cites its source by date &
 > title, or the CHANGELOG section that brought the term when no entry did.
@@ -34,6 +37,11 @@
   CHANGELOG v2.18, & `CLAUDE.md`, "Displayed version".
 - **doc-only PR**: a PR that changes no `run.sh`, `scripts/` or `tests/` file. It opens
   its own dated CHANGELOG section & never bumps `VERSION`. Source: CHANGELOG v2.18.
+- **document type**: what a canonical document is, named after **Role:** in its opening
+  quote block: normative (says what must be; code that contradicts it is at fault),
+  descriptive (says what is; the code wins), history, plan, transit or door. The type
+  decides which document wins a disagreement. Source: 2026-10-01 "Documents get a type, a
+  common format & a hierarchy".
 - **draft**: the state a PR opens in. The author marks it ready & merges it. Source:
   2026-10-01 "A PR opens as a draft".
 - **Entered**: the line a Backlog item opens with, holding the date it entered & the PR
@@ -45,10 +53,10 @@
   finds. Its counterpart is the **sandbox jar**, the copy `setup_sandbox` puts in `bin/`
   on every run. Sources: CHANGELOG v2.10, & 2026-10-01 "The launcher's words enter the
   glossary, & archive always takes a qualifier".
-- **Hypothesis**: the marker for an inference made while rebuilding lost context, written
-  with its basis in view. Its counterpart is **No recoverable origin**, for what can't be
-  rebuilt. Source: 2026-10-01 "An inference is marked as one, & in doubt the gap is
-  stated".
+- **Hypothesis**: the marker for an inference made while rebuilding lost context,
+  written with its basis in view. Its counterpart is **No recoverable origin**, for what
+  can't be rebuilt, & **Why it was noted** marks what carries a quote. Source:
+  2026-10-01 "An inference is marked as one, & in doubt the gap is stated".
 - **Known gap**: a dated entry in `docs/ARCHITECTURE.md`, section "Known gaps", for
   something open or not verified against real data, with the run that shows it. It's
   removed in the PR that closes it. Until 2026-10-01 the section lived in `AGENTS.md`,

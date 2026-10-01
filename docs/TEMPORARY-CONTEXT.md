@@ -1,5 +1,8 @@
 # TEMPORARY-CONTEXT.md: what is lost if nobody writes it down
 
+> **Role:** transit: what was observed & isn't known yet to be wanted. It never wins.
+> **Regime:** tends to zero. **Origin:** 2026-10-01, "The temporary context is adopted".
+>
 > What was observed & would be lost if nobody wrote it goes here. One line is enough.
 > **The entry test is not whether it's ripe: it's whether it gets lost.**
 >
@@ -97,7 +100,9 @@ whether it's normative or descriptive & which one wins over the code; the meanin
 the name, not a comment (`*_PATTERNS` & `*_LITERALS`); whatever the program exposes is
 documented & tested, & logs carry no colour. Asked on 2026-10-01, the author wasn't sure,
 & thinks the CLI docs may also say something about how comments are treated. The middle
-of the quote is left out because it names another repo.
+of the quote is left out because it names another repo. Placed 2026-10-01, the second
+rule only: each document's type & which one wins is `CLAUDE.md`, "Document types & which
+one wins". The other three are still open.
 > "la verdad no estoy seguro"
 > "hasta donde se esos CLI docs eras para el --help y el manpage de el proyecto ejecutable cli, por lo que en cierta forma entiendo que tambien habla de reglamentos en comentarios, y como tratar a los comentarios.... debemos expandir esto o buscar alternativa..."
 

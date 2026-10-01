@@ -1,4 +1,9 @@
-# TLauncher Sandbox: Design Conventions
+# DESIGN.md: how the code is written
+
+> **Role:** normative over the code: how it's written & why. `docs/REQUIREMENTS.md` outranks
+> it. What exists today, paths & resources, is `docs/ARCHITECTURE.md`. **Regime:** corrected,
+> a new or changed principle with its decision. **Origin:** 2026-06-30, moved into `docs/` on
+> 2026-10-01, "Documents live in docs/".
 
 This file is the style guide. `run.sh` reads like a standard Unix program, &
 every change keeps it that way. A new feature that breaks these conventions gets

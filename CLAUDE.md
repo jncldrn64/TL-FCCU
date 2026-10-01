@@ -1,5 +1,9 @@
 # CLAUDE.md: project standard
 
+> **Role:** normative over the method: how the repo is read, written, measured & delivered.
+> **Regime:** corrected; a rule that changes carries its `docs/DECISIONS.md` entry in the
+> same PR. **Origin:** 2026-07-04, rewritten as the author's standard on 2026-10-01.
+
 - Read docs/REQUIREMENTS.md first (what has to be true, & for whom), then
   docs/ARCHITECTURE.md (the repo, what the code is today, known gaps), docs/DESIGN.md
   before writing code, & docs/ROADMAP.md when the work belongs to a phase.
@@ -74,7 +78,8 @@
   to be true for the steps to work goes in writing next to them.
   When lost context is rebuilt, an inference is written as one, opening `**Hypothesis:**`
   with its basis in view, never as fact. In doubt between inferring & stating the gap,
-  state the gap: `**No recoverable origin.**`
+  state the gap: `**No recoverable origin.**` What carries a quote opens `**Why it was
+  noted:**`, with the quote.
 - Promises: no rule here prescribes a future mechanism. A threshold, an acceptance
   criterion or a method rule may force a decision; it can't make that decision in advance.
   Any sentence that names a concrete syntax, protocol or API goes with its run, the command
@@ -88,6 +93,58 @@
 - Workflow: work goes through a pull request. If `push`, creating a branch or opening
   the PR returns `403`, stop & say that write permission is missing. Never work around
   it by uploading loose files by hand.
+
+## Document types & which one wins
+
+Each canonical document has a type, named after **Role:** in its opening quote block. The
+type decides what happens when it disagrees with the code or with another document.
+
+| Type | Files | Against the code |
+|---|---|---|
+| Normative | `docs/REQUIREMENTS.md`, `docs/DESIGN.md`, `CLAUDE.md`, `docs/cli/cli-standard.md` | The code is at fault |
+| Descriptive | `docs/ARCHITECTURE.md`, `docs/GLOSSARY.md`, `docs/cli/cli-surface.md` | The code wins |
+| History | `docs/DECISIONS.md`, `CHANGELOG.md` | Records; an entry in force wins over a stale normative doc |
+| Plan | `docs/ROADMAP.md` | Orders the work, changes no rule |
+| Transit | `docs/TEMPORARY-CONTEXT.md` | Never wins |
+| Door | `AGENTS.md` | Never wins, it points |
+
+1. A descriptive document that contradicts the code is wrong, & is fixed in the PR that
+   finds it.
+2. Code that contradicts a normative document is at fault. Either the code is fixed, or a
+   decision changes the rule & the rule is edited in the same PR. The contradiction never
+   stays written.
+3. Between normative documents the end outranks the means: `docs/REQUIREMENTS.md` over
+   `docs/DESIGN.md`, & both over `docs/cli/cli-standard.md`. `CLAUDE.md` governs the
+   method, not the product, so it doesn't compete with them.
+4. A decision in force wins over a normative document that contradicts it: the document
+   went stale & is corrected. A superseded entry wins nothing; between two, the newer.
+5. `docs/ROADMAP.md` changes no rule. A phase that needs another rule changes it by rule 2.
+6. `docs/TEMPORARY-CONTEXT.md` & `AGENTS.md` never win.
+
+The product's code conventions live in `docs/DESIGN.md` & nowhere else, this file included.
+Why: `docs/DECISIONS.md`, entry of 2026-10-01 "Documents get a type, a common format & a
+hierarchy".
+
+## Common document format
+
+Every canonical `.md` has the same shape, so a reader knows where to look without reading
+it whole.
+
+1. Line 1 is `# NAME.md: what it holds`. It names the role, not the project.
+2. A quote block follows, opening with **Role:** (type & what it holds), **Regime:**
+   (corrected, append-only, grows by section, or tends to zero) & **Origin:** (when it was
+   born & the entry that explains it). Saying what it doesn't hold means saying where that
+   goes.
+3. Normative & descriptive documents number their `##` sections (`## 1. Title`) so they can
+   be cited as "section 3". This file is the exception: its rules are cited by name. History,
+   plan & transit use dated entries or phases & aren't numbered.
+4. Fields are bold with a colon: `**Status:**`. A status value goes in backticks.
+5. A dated entry opens with `## YYYY-MM-DD: title`. `docs/DECISIONS.md` entries written
+   before this rule keep `**Context.**` with a period; append-only means they aren't edited.
+6. A `###` only inside a long descriptive document.
+7. Lines up to 100 columns.
+8. A reference to another document cites its path & section title, or date & title for a
+   decision. Never a line number.
 
 ## Prose floor
 
