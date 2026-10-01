@@ -850,3 +850,34 @@ documentation list in `CLAUDE.md`. The other repo keeps the same exception for i
 `tests/README.md`. None exists here yet.
 
 **Status:** in force.
+
+## 2026-10-01: No mechanical dead-reference check, on measured cost
+
+**Context.** The audit of 2026-10-01 proposed a check that every file, function or
+variable a document or comment names still exists, the way the other repo sweeps its
+comments. Before building it, both places were measured on 2026-10-01.
+
+The comments in `run.sh`, `scripts/` & `tests/` name 37 identifiers, & 36 occur in
+code. The 37th, `resXtlauncherYru`, is on purpose: a comment uses it as a string the
+regex must not match. In the live documents the command below prints 8 identifiers, &
+none is dead. Four are naming prefixes such as `log_`, one is `NO_COLOR`, named because
+it isn't read, & three are mitmproxy pieces, two where Phase 2 says they were removed &
+one in Phase 0's scope, which describes the code as it stood then.
+
+Two bare file names in `docs/cli/cli-surface.md` lacked their `docs/` folder & are fixed
+in the same PR.
+
+**Decision.** No check is built. It would find nothing today & would need an exception
+list for eight legitimate hits, so its cost outweighs a benefit that measures zero. The
+idea comes back if a dead reference is found by hand, with the commands below rerun
+first.
+
+```sh
+LIVE="AGENTS.md CLAUDE.md docs/DESIGN.md docs/ROADMAP.md docs/GLOSSARY.md docs/cli/*.md"
+SRC="run.sh $(git ls-files scripts tests | grep -v fixtures)"
+# Backticked identifiers with an underscore in the live docs that no source file names.
+grep -ohE '`[A-Za-z_][A-Za-z0-9_]*`' $LIVE | tr -d '`' | grep _ | sort -u \
+  | while read t; do grep -qw -- "$t" $SRC || echo "$t"; done
+```
+
+**Status:** in force.

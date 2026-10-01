@@ -241,7 +241,7 @@ There is no man page & no README, so the duplication that exists is between
   in help can drift from the path in code; today they agree.
 
 Nothing else is duplicated. The docs are unusually clean on this: `AGENTS.md`
-(purpose, constraints, gaps), `DESIGN.md` (conventions), `ROADMAP.md` (phases) &
+(purpose, constraints, gaps), `docs/DESIGN.md` (conventions), `docs/ROADMAP.md` (phases) &
 `CHANGELOG.md` (history) do not restate each other's content, & `--help` does not
 restate theirs beyond the four items above.
 

@@ -4,6 +4,23 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.48 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.47 until the next code PR.
+
+### Added
+- `docs/DECISIONS.md`: the mechanical dead-reference check is measured & not built. Of
+  37 identifiers named in code comments, 36 exist & one is a deliberate example; the
+  live docs' 8 unplaced identifiers are all legitimate. The entry keeps the command.
+
+### Fixed
+- `docs/cli/cli-surface.md` named `DESIGN.md` & `ROADMAP.md` without their `docs/`
+  folder.
+
+### Changed
+- `docs/TEMPORARY-CONTEXT.md` marks the reference check as dropped & points to the entry.
+
 ## v2.47 — 2026-10-01
 
 ROADMAP Phase 5 closes: its last scope item is fixed & its acceptance runs as a suite.
