@@ -798,3 +798,19 @@ goes in `REPEATED` & stays there after its fix. Suites that drive real processes
 minutes. The other repo has no such rule; it's one of the two this repo proposes to it.
 
 **Status:** in force.
+
+## 2026-10-01: A number about the code carries its recount command
+
+**Context.** Prose rule 6 came over with only its first half, the ban on line anchors.
+The other half, a number that describes the code goes with the command that recounts it,
+didn't. The cost showed the same day: v2.43 wrote that `usage()` is 126 lines with no
+command, & the figure it replaced, 119, had no command either & was already wrong. The
+other repo learned the second lesson too: a number with its command still went stale,
+because nobody reran the command.
+
+**Decision.** `CLAUDE.md`, prose rule 6: such a number goes with its command or doesn't
+go, & a PR that changes what it counts reruns the command. The 126 in
+`docs/cli/cli-surface.md` gets its command, rerun on 2026-10-01. Other numbers already in
+the corpus weren't swept; the rule applies to what gets written or touched from here.
+
+**Status:** in force.

@@ -188,7 +188,8 @@ is on the error stream.
 
 ## 5. `--help` against the rest of the documentation
 
-`usage()` is 126 lines, counted from `usage() {` to its closing brace on 2026-10-01.
+`usage()` is 126 lines on 2026-10-01, from `usage() {` to its closing brace, counted with
+`awk '/^usage\(\) \{/{s=NR} s && /^}/{print NR-s+1; exit}' run.sh`.
 Sections, in order, each a `printf "${YELLOW}NAME${NC}"` line:
 
 1. `PURPOSE`
