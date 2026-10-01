@@ -434,3 +434,55 @@ Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or
 re-scoping it. A new documentation idea goes here too, as a note for the author.
 Don't add a fourth doc file on your own.
+
+## 2026-10-01: The v2.27 standard rewrite was reverted in v2.28
+
+**Context.** An audit on 2026-10-01 compared this repo with the author's MIDI-Scale-Trainer
+repo. PR #28 then rewrote `CLAUDE.md` (240 lines in, 46 out) into a full method & created
+three files in `docs/`, all judged against the other repo's layout before anyone read what
+this repo's own files were born to hold. Read from their first commits, they were
+different on purpose: `CLAUDE.md` "just pins the doc/format standard", `AGENTS.md` is read
+first, & decisions & open items shared one place.
+
+**Decision.** PR #29, built on #28, was closed, & PR #30 restored the v2.26 documents. Method
+rules from the other repo come back one at a time & as small as possible, with that repo
+taking priority where the two conflict. PR #31 (this file, a short `AGENTS.md`) & PR #32
+(`docs/`, the temporary context) were the first two steps.
+
+**Status:** in force.
+
+## 2026-10-01: DESIGN.md stays, & no document hierarchy for now
+
+**Context.** The other repo has no `DESIGN.md`; it keeps its product rules inside its
+`CLAUDE.md`. Its `AGENTS.md` also says the code outranks the documents, while
+`docs/cli-standard.md` says the opposite for its own rules: where the two disagree, the
+code is wrong.
+
+**Decision.** `DESIGN.md` stays as it is, because it holds product rules & the other
+repo's priority covers method. No hierarchy between documents is written for now; the
+conflict above stays open.
+
+**Status:** in force.
+
+## 2026-10-01: Documents live in docs/
+
+**Context.** The line "this copies its phase habit, not its folder layout" entered with
+`ROADMAP.md` on 2026-07-22 & carried no reason anywhere. Measured on 2026-10-01, a move
+broke nothing at runtime: no code reads a document, about 25 lines named the files, & one
+of them was user-visible, in the man page.
+
+**Decision.** `DESIGN.md` & `ROADMAP.md` moved into `docs/` as pure renames in v2.30, next
+to the CLI module. `CLAUDE.md`, `AGENTS.md` & `CHANGELOG.md` stay at the root.
+
+**Status:** in force.
+
+## 2026-10-01: The temporary context is adopted
+
+**Decision.** `docs/TEMPORARY-CONTEXT.md` holds what was observed & would be lost if nobody
+wrote it, before anyone knows whether it's wanted. It follows the other repo's format with
+two changes: the author's words are quoted whenever they're at hand, since this repo has no
+glossary to trigger on, & its Backlog is the one in `docs/ROADMAP.md`. Its prose is exempt
+from the prose & em dash rules.
+
+**Status:** in force.
+
