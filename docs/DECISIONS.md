@@ -541,3 +541,16 @@ lines now cite "Known gaps up to this date, moved here unedited" by date & title
 header changed too: it isn't an entry, it's the file's rules.
 
 **Status:** in force.
+
+## 2026-10-01: A verification instruction carries its conditions
+
+**Context.** Steps that only work under a condition nobody wrote down can't be followed:
+whoever runs them hunts for a fault that isn't there. The other repo paid for it with a
+sound check that asked for notes the program never plays. This repo already does it in
+places without a rule, like `tests/doc-sync.sh` saying its roff check needs `mandoc` or
+`groff` & reporting SKIP without them, but nothing asks for it.
+
+**Decision.** Before writing a check, ask what has to be true for its steps to work, &
+write that with the steps, as `CLAUDE.md` says under "State honesty".
+
+**Status:** in force.

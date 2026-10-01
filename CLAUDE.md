@@ -55,6 +55,8 @@
   docs/TEMPORARY-CONTEXT.md is exempt.
 - State honesty: never mark something "working/tested" without a real run in a real
   environment. If it wasn't verified, say so (this is already the AGENTS.md rule).
+  An instruction to verify something carries its conditions, not only its steps: what has
+  to be true for the steps to work goes in writing next to them.
 
 ## Third-party vendoring
 
