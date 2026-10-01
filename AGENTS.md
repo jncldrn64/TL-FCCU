@@ -7,7 +7,7 @@ author doesn't trust TLauncher; one of its update endpoints, `advancedrepository
 probes over plain HTTP, & he wants to watch what it does before deciding to keep
 using it. Visibility & isolation come first, usability second.
 
-## Hard constraints
+## Hard constraints (don't break these)
 
 - Zero `sudo`, in any file, any flag, present or future. An optional dependency
   gets a `command -v` probe & a manual install hint, never an auto-install.
@@ -23,17 +23,9 @@ using it. Visibility & isolation come first, usability second.
 - `run.sh`: the whole launcher, one bash script.
 - `scripts/TLHttpAgent.java` & its helpers, `scripts/build-agent.sh`: the `-P` Java
   agent (built into two gitignored jars, never committed).
-- `tests/`: the suites, run together by `tests/run-all.sh`, with no network, sudo or
-  TLauncher.
-- `CLAUDE.md`: the author's standard, how work is written, measured & delivered.
 - `DESIGN.md`: the conventions, read before coding.
 - `CHANGELOG.md`: what changed & when.
 - `ROADMAP.md`: the phased plan, read when the work belongs to a phase.
-- `docs/DECISIONS.md`: why things are the way they are, append-only, from 2026-10-01.
-- `docs/GLOSSARY.md`: what the standard's words mean today.
-- `docs/TEMPORARY-CONTEXT.md`: what was observed & isn't placed yet, normally empty.
-- `docs/cli-standard.md` & `docs/cli-surface.md`: the CLI module, normative &
-  descriptive.
 
 ## Known gaps / not verified against real data
 
@@ -435,13 +427,6 @@ about a quarter of the time. Both measurements are real; they are different mach
 The consequence is that the threshold cannot be used as a bound on which sites
 matter, so v2.26 fixed every site of that shape rather than only the large ones. If
 anyone finds what makes the two machines differ, write it here.
-
-2026-10-01: the reference check that `CLAUDE.md`, section "References", calls for does not
-exist yet. Nothing fails today when a document or a comment names a file, a function or
-a section that is gone, so the rule is applied by hand before a PR closes. Not verified
-beyond one sweep on this date: no name written as `name()` in the docs or in a `run.sh`
-comment that `run.sh` doesn't define, & one path that doesn't exist,
-`scripts/mitm_report.py`, which `ROADMAP.md` names only to say it was removed.
 
 Find another open item while reading `DESIGN.md` or `CHANGELOG.md` that isn't
 closed with verified evidence? Add it here instead of quietly fixing it or

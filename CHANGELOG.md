@@ -4,6 +4,20 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.28 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.26 until the next code PR.
+
+### Removed
+- The v2.27 rewrite, whole. `AGENTS.md`, `CLAUDE.md` & `ROADMAP.md` are back to how they
+  stood in v2.26, & `docs/DECISIONS.md`, `docs/GLOSSARY.md` & `docs/TEMPORARY-CONTEXT.md`
+  are gone. v2.27 had measured this repo's documents against another repo's layout,
+  before reading what each of this repo's own files was born to hold.
+- The section above stays as published, because history isn't rewritten. Any standard
+  taken from elsewhere will come back in later PRs, one rule at a time & as little as
+  possible.
+
 ## v2.27 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

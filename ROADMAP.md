@@ -10,7 +10,9 @@ runs, then the binaries get archived. Phases don't get reordered for convenience
 
 Work now moves by numbered phases, not loose rounds. Each phase carries a one-line
 objective, the scope it touches, a verifiable acceptance criterion, its blockers,
-& a status.
+& a status. The blueprint for this discipline is the MIDI-Scale-Trainer repo, the
+author's other project & a separate repository whose documentation standard this one
+shares; this copies its phase habit, not its folder layout.
 
 Status values: `pending`, `in progress`, `closed (YYYY-MM-DD)`.
 
@@ -31,7 +33,8 @@ Scope:
   Re-audit every `usage()` line against the real parser, the same pass done in
   Round 2.
 - Regression net: synthetic session directories that cover the four states, plus a
-  check that the report prints the right state for each.
+  check that the report prints the right state for each. This is the equivalent of
+  the MIDI repo's fixtures.
 
 Acceptance: `bash -n run.sh` clean, the four states each verified against a
 synthetic session, zero change to sandbox behavior. All of it checkable without
