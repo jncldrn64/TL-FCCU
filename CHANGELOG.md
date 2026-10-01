@@ -4,6 +4,18 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.34 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.30 until the next code PR.
+
+### Added
+- `CLAUDE.md`, under "State honesty": an instruction to verify something carries the
+  conditions its steps need, written next to them.
+- `CLAUDE.md`, under "State honesty": rebuilt context marks an inference with
+  `**Hypothesis:**` & its basis, & what can't be rebuilt says `**No recoverable
+  origin.**` `docs/DECISIONS.md` holds the case behind each rule.
+
 ## v2.33 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
