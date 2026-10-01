@@ -959,3 +959,24 @@ Unlike the other repo, `CLAUDE.md` puts it first in the reading order, so a
 session reads the purpose before anything else.
 
 **Status:** in force.
+
+## 2026-10-01: The launcher's words enter the glossary, & archive always takes a qualifier
+
+**Context.** The glossary held only the standard's words. Phases 3 & 4 bring new ones,
+& a word used before anyone pins it is how two people end up meaning two things. That
+had already happened with "archive". In `run.sh` it named the `logs.tar.gz` that
+`cleanup_logs` packs since v2.4, while `docs/ROADMAP.md` used it from v2.10 for the
+store of binaries Phase 3 plans, so the Backlog's "Archive rotation" could be read
+either way.
+
+**Decision.** The author chose to keep both meanings, each with its qualifier: **session
+archive** & **binary archive**, never "archive" alone. The live text follows, three
+comments in `run.sh` included. The glossary gains eight launcher terms, those two plus
+home jar, sandbox jar, promotion, manifest, sighting & starter-core, & the ones not
+built yet say so. A phase's new words enter before the code that uses them.
+
+**Hypothesis:** the Backlog's "Archive rotation" meant the binary archive. It entered
+with Phases 0 to 4 in #10, & log retention already rotated session archives then. It
+now reads "Binary-archive rotation"; the author can correct it.
+
+**Status:** in force.
