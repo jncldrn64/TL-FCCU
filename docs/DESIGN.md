@@ -16,15 +16,8 @@ XDG_STATE_HOME="${XDG_STATE_HOME:-${REAL_HOME}/.local/state}"
 XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/${REAL_UID}}"   # falls back to /tmp
 ```
 
-Everything derives from those three:
-
-- Sandbox HOME: `$XDG_DATA_HOME/tlauncher-sandbox`
-- Session logs: `$XDG_STATE_HOME/tlauncher-logs/session_<ts>/`
-- Lockfile: `$XDG_RUNTIME_DIR/tlauncher-<user>.lock`
-- Baselines: `$XDG_DATA_HOME/tlauncher-sandbox-baseline-{ips,domains}.txt`
-
-The two baseline files added in Round 2 already follow this. Keep it that way for
-any new file the script reads or writes.
+Everything the script reads or writes derives from those three, & so does any new file.
+`docs/ARCHITECTURE.md` lists the paths as they stand.
 
 ## 2. Zero `sudo`, ever
 
@@ -139,15 +132,8 @@ only.
 ## 7. Idempotence & cleanup
 
 Every resource the script creates has a written teardown or regeneration path, &
-`usage()` tells the user about it:
-
-| Resource          | Created by           | Reset / regenerate                          |
-|-------------------|----------------------|---------------------------------------------|
-| Lockfile          | `run_sandboxed`      | Removed by `cleanup` (EXIT/INT/TERM trap)   |
-| Sandbox dir       | `setup_sandbox`      | Safe to `rm -rf`; rebuilt next run          |
-| Session dirs      | `-M` / `-P` runs     | `-c/--cleanup-logs` compresses & prunes them|
-| Baseline files    | `-B/--save-baseline` | Delete to reset; re-run `-B` to recreate    |
-| Orphaned monitors | (shouldn't happen)   | `-K/--kill-orphans` reaps strays            |
+`usage()` tells the user about it. `docs/ARCHITECTURE.md` lists each resource with its
+path. A new resource doesn't land without one.
 
 ## 8. Report size discipline
 
@@ -162,8 +148,8 @@ one no longer supported.
 
 ## 9. One program, one file
 
-`run.sh` is one file (near 2,000 lines, 47 prefixed functions today) & it stays that
-way on purpose. The reasons, not a line count:
+`run.sh` is one file & it stays that way on purpose; `docs/ARCHITECTURE.md` gives its
+size with the command that counts it. The reasons:
 
 - A security audit tool gets read end to end by whoever audits it. That is the point
   of it. Chasing a `source` across `lib/*.sh` costs the reader more than the
