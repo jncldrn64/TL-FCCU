@@ -8,7 +8,8 @@
 - This repo does not describe other repos. Another repo's name may appear as historical
   provenance, where a convention came from, never as operational information. No document
   here depends on another repo to be understood or worked on.
-- Decisions and open items go in the "Known gaps" section of AGENTS.md, one place,
+- Decisions go in docs/DECISIONS.md, append-only, one entry each, opening with
+  `## YYYY-MM-DD: <title>`. Open items go in the "Known gaps" section of AGENTS.md,
   append-only, dated. Never scatter them.
 - CHANGELOG.md: Keep a Changelog. ONE file that grows by section, never one per round.
   Newest section on TOP (descending). Every section header is
@@ -48,7 +49,7 @@ before committing.
 
 This repo (TLauncher_FCCU) is the only write target. Any other repository cloned into
 the session is read-only context: copy FROM it, never write INTO it. Do not carry
-another repo's conventions into this one (language, DECISIONS vs Known gaps, format).
+another repo's conventions into this one (language, format).
 If unsure which repo you're writing to, stop and ask.
 
 ## Displayed version

@@ -4,6 +4,26 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.29 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.26 until the next code PR.
+
+### Added
+- `docs/DECISIONS.md`, append-only, for decisions from 2026-10-01 on. Its headers are
+  `## YYYY-MM-DD: <title>`, with a colon, because this repo allows the em dash only in
+  CHANGELOG headers.
+
+### Changed
+- The Known gaps section of `AGENTS.md`, 367 non-blank lines in 35 entries, moved
+  unedited to the end of `docs/DECISIONS.md`. A diff against `main` confirms it matches
+  byte for byte.
+- `AGENTS.md` is a short entry again: purpose, hard constraints, the map, where to read
+  next, & only the nine Known gaps still open, each checked against the current code.
+- `CLAUDE.md`: decisions go in `docs/DECISIONS.md` & open items stay in Known gaps, & the
+  "DECISIONS vs Known gaps" example leaves the Write scope sentence. Nothing else in it
+  changed.
+
 ## v2.28 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
