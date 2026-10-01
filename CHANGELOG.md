@@ -4,6 +4,27 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.43 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.35 until the next code PR.
+
+### Changed
+- `docs/cli/cli-surface.md` drops its 93 line anchors for the symbols they pointed at:
+  `case` arms, variables, functions & quoted strings. Three table columns that held
+  only line numbers go too.
+- `docs/ROADMAP.md`, Phase 5, drops its 3 line anchors & says its scope describes the
+  code as it stood when the phase was written.
+- Prose rule 6's baseline goes from 102 anchors to 6, all in history that isn't edited.
+
+### Fixed
+- `docs/cli/cli-surface.md` counted four arms in the report's `case "$mode"`; there are
+  three. `usage()` is 126 lines, not 119.
+
+### Added
+- `AGENTS.md` Known gaps: the unexpected-argument hint prints the argument where the
+  program name belongs. Reproduced here; the fix waits for a code PR.
+
 ## v2.42 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
