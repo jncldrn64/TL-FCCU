@@ -127,7 +127,7 @@ parsing stderr.
 | 1 | Usage error: unknown option, missing or invalid argument |
 | 2 | Refusal: a live session holds the lock |
 | 3 | A required dependency is missing |
-| 4 | Environment error: lockfile unwritable, jar not found, sandbox unusable |
+| 4 | Environment error: lockfile unwritable, jar not found, sandbox unusable, binary archive unwritable under `-J` |
 | 5 | Lock state indeterminable |
 
 `die()` takes an optional code, defaulting to 1. TLauncher's own exit status is

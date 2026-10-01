@@ -16,10 +16,12 @@
   against (`save_baseline`). In the standard, a prose count measured on a stated date with
   a written command, which may not rise. Source for the second: 2026-10-01 "Prose gets a
   measured floor".
-- **binary archive**: the store Phase 3 plans, outside the sandbox, keeping each
-  `starter-core` & `TLauncher.jar` seen, with its SHA256, date, size & source URL. Not
-  built yet. Never called just "archive". Sources: CHANGELOG v2.10, & 2026-10-01 "The
-  launcher's words enter the glossary, & archive always takes a qualifier".
+- **binary archive**: the store under `$XDG_DATA_HOME/tlauncher-binary-archive`, outside
+  the sandbox, keeping one copy of each `TLauncher.jar` that ran, named by its SHA256, &
+  its manifest. `starter-core` isn't in it yet. Never called just "archive". Sources:
+  CHANGELOG v2.10 & v2.53, 2026-10-01 "The launcher's words enter the glossary, & archive
+  always takes a qualifier", & 2026-10-01 "The binary archive starts with TLauncher.jar,
+  automatic, capped by count".
 - **CLI module**: `docs/cli/cli-standard.md`, what the command line must do, & its
   counterpart `docs/cli/cli-surface.md`, what it does today. Source: 2026-10-01 "The CLI
   module lives in docs/cli/".
@@ -55,9 +57,10 @@
 - **line anchor**: a reference by line number, a file name, a colon & the number. Not
   allowed in new text, because the next edit moves it. Source: 2026-10-01 "Prose gets a
   measured floor".
-- **manifest**: the append-only list Phase 3 plans for the binary archive, one line per
-  artifact, deduplicated by hash. Not built yet. Sources: CHANGELOG v2.10, & 2026-10-01
-  "The launcher's words enter the glossary, & archive always takes a qualifier".
+- **manifest**: the binary archive's `manifest.tsv`, append-only, one line each time a
+  binary is seen or pruned: `new` when its copy is made, `sighting` when the copy already
+  existed, `pruned` when the count cap deletes it. Sources: CHANGELOG v2.10 & v2.53, &
+  2026-10-01 "The binary archive starts with TLauncher.jar, automatic, capped by count".
 - **promotion**: replacing the home jar with the sandbox jar, after showing both hashes
   & asking. Never done without asking. Planned in Phase 4, not built yet. Sources:
   CHANGELOG v2.10, & 2026-10-01 "The launcher's words enter the glossary, & archive
@@ -68,9 +71,9 @@
   & 2026-10-01 "The launcher's words enter the glossary, & archive always takes a
   qualifier".
 - **sighting**: a manifest line recording that a binary already in the binary archive
-  was seen again, in place of a second copy. Not built yet. Sources: CHANGELOG v2.10, &
-  2026-10-01 "The launcher's words enter the glossary, & archive always takes a
-  qualifier".
+  was seen again, in place of a second copy; its event column reads `sighting`. Sources:
+  CHANGELOG v2.10 & v2.53, & 2026-10-01 "The binary archive starts with TLauncher.jar,
+  automatic, capped by count".
 - **starter-core**: a TLauncher component. ROADMAP Phase 4 says TLauncher's `UpdateCore`
   re-applies it on every start, because `run.sh` copies the home jar into the sandbox
   each run, & plans to stop that. TLauncher's side isn't verified here. Sources:

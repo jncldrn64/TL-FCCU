@@ -980,3 +980,35 @@ with Phases 0 to 4 in #10, & log retention already rotated session archives then
 now reads "Binary-archive rotation"; the author can correct it.
 
 **Status:** in force.
+
+## 2026-10-01: The binary archive starts with TLauncher.jar, automatic, capped by count
+
+**Context.** ROADMAP Phase 3 left open what to archive, which mode runs by default, &
+how much to keep. The author couldn't run TLauncher for real that day, so nothing new
+about `starter-core` could be learned, & the code has no path to it.
+
+**Decision.** The author chose three things. Only `TLauncher.jar` is archived for now,
+& `starter-core` stays a Known gap until a real session shows where it lands. The
+archive runs automatically at the end of every launch, whatever TLauncher's exit code.
+Retention is a count of copies.
+
+The rest was left to the implementation & is written here so it reads as chosen:
+
+- The manual mode is read as archiving on demand without a launch, `-J/--archive-jar`.
+  The automatic one has no off switch; one waits until someone names what the automatic
+  copy costs them.
+- The cap is 10 copies, `BINARY_ARCHIVE_KEEP`. Nobody measured a size that asks for 10;
+  it's a starting value, & the man page & `--help` print the constant.
+- The copy pruned is the one seen longest ago, through the mtime a sighting refreshes.
+  The jar that just ran is then never the one deleted.
+- The acceptance's "two sighting entries" is read as two manifest lines for the hash,
+  `new` then `sighting`. The glossary keeps "sighting" for the second kind only.
+- The source column holds the home jar's path, because the script never sees the
+  download URL the scope asks for. That gap is recorded too.
+- The functions share the prefix `binary_archive_`, a sixth area prefix.
+
+The Backlog's "Binary-archive rotation" is dropped from the Backlog: the count cap is a
+rotation. That rests on the hypothesis in 2026-10-01 "The launcher's words enter the
+glossary, & archive always takes a qualifier", & the author can correct both.
+
+**Status:** in force.

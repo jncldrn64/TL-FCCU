@@ -118,7 +118,7 @@ session, unlike Phase 1: `bash -n` clean, `-h` carries no mitmproxy or `[PORT]` 
 
 ## Phase 3: binary archive
 
-Status: `pending`
+Status: `in progress`
 
 Objective: assert, months later, which binary ran & when.
 
@@ -133,6 +133,16 @@ Scope:
 
 Acceptance: two sessions in a row produce one copy of the same binary & two
 sighting entries in the manifest.
+
+Progress, v2.53 (2026-10-01). By the author's choice `TLauncher.jar` is archived &
+`starter-core` waits for a real session that shows where it lands, both open items in
+`docs/ARCHITECTURE.md`, Known gaps. The automatic mode is the default, at the end of
+every launch, & `-J/--archive-jar` is the manual one. Retention is a count, 10 copies.
+
+The acceptance runs as `tests/binary-archive.sh`, 12/12 on 2026-10-01, against a
+stub `firejail`: one copy & two lines, `new` then `sighting`. Why each choice:
+`docs/DECISIONS.md`, entry of 2026-10-01 "The binary archive starts with TLauncher.jar,
+automatic, capped by count".
 
 Blocks: Phase 4.
 
@@ -219,7 +229,6 @@ which had to run in sequence, & says nothing that forces 5 behind 3.
 
 ## Backlog
 
-Binary-archive rotation, hash comparison against public sources, & whatever else
-surfaces.
+Hash comparison against public sources, & whatever else surfaces.
 No date commitment.
 **Entered:** 2026-07-22, #10.

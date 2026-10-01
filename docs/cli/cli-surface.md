@@ -54,6 +54,7 @@ end-of-options marker.
 | `-c` | `--cleanup-logs` | **optional** DAYS | `7` | `CLEANUP_LOGS_FLAG`, `CLEANUP_DAYS` |
 | `-P` | `--proxy` | no | `false` | `PROXY_ENABLED` |
 | `-B` | `--save-baseline` | **required** DIR | `""` | `SAVE_BASELINE_SESSION` |
+| `-J` | `--archive-jar` | no | `false` | `ARCHIVE_JAR` |
 | (none) | `--check-deps` | no | `false` | `CHECK_DEPS` |
 | `-ml` | `--mozilla-path` | **required** PATH | `${REAL_HOME}/.mozilla` | `MOZILLA_SEARCH_PATH` |
 | `-f` | `--file` | **required** PATH | `""` | `TLAUNCHER_PATH` |
@@ -82,7 +83,7 @@ Notes the table cannot hold:
 
 ### Options in the code but not in `--help`
 
-None. Every one of the 17 parser arms above appears in `usage()`, & since v2.25
+None. Every one of the 18 parser arms above appears in `usage()`, & since v2.25
 `tests/doc-sync.sh` fails the build if that stops being true, in either direction.
 
 ### Options in `--help` that no longer do anything
@@ -95,7 +96,7 @@ against the parser: every documented flag still reaches a live code path.
 
 | Variable | Default when unset | Effect |
 |---|---|---|
-| `XDG_DATA_HOME` | `${REAL_HOME}/.local/share` | Parent of `SANDBOX_DIR` & both baseline files |
+| `XDG_DATA_HOME` | `${REAL_HOME}/.local/share` | Parent of `SANDBOX_DIR`, `BINARY_ARCHIVE_DIR` & both baseline files |
 | `XDG_STATE_HOME` | `${REAL_HOME}/.local/state` | Parent of `LOG_ROOT`, every session dir |
 | `XDG_RUNTIME_DIR` | `/run/user/${REAL_UID}`, then `/tmp` if that is not a directory (`if [ ! -d "$XDG_RUNTIME_DIR" ]`) | Holds `LOCKFILE` |
 | `SUDO_USER` | `${USER:-$(id -un)}` | Identity used for `REAL_HOME` & the lockfile name |
@@ -118,7 +119,7 @@ The `SUDO_*` reads are defensive, not an invitation: the hard constraint is zero
 | `1` | Usage error: unknown option, missing or invalid argument | `EX_USAGE` |
 | `2` | Refusal: a live session holds the lock | `EX_LOCK_HELD` |
 | `3` | A required dependency is missing | `EX_MISSING_DEP` |
-| `4` | Environment: lockfile unwritable, jar not found, sandbox unusable | `EX_ENV` |
+| `4` | Environment: lockfile unwritable, jar not found, sandbox unusable, binary archive unwritable under `-J` | `EX_ENV` |
 | `5` | The lock state could not be determined | `EX_LOCK_UNKNOWN` |
 | TLauncher's own | The sandboxed run's exit status is propagated, not swallowed | end of `run_sandboxed` |
 

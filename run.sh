@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.49"
+VERSION="2.53"
 
 # Directory holding this script, used to find helpers like scripts/build-agent.sh.
 # Resolved once, & it really does survive being called through a symlink now.
@@ -103,11 +103,21 @@ SAVE_BASELINE_SESSION="" # -B DIR: derive baseline files from a clean session, t
 CHECK_DEPS=false         # --check-deps: report dependency state, then exit
 PRINT_MAN=false          # --print-man: write the roff manual to stdout, then exit
 INSTALL_MAN=false        # --install-man: install the manual under XDG_DATA_HOME, then exit
+ARCHIVE_JAR=false        # -J: put the jar in the binary archive, don't launch
 
 # Baseline files (XDG_DATA_HOME, same pattern as everything else). The IP one is
 # pre-existing; the domains one drives the regression check (Round 2 / Task 3).
 BASELINE_IPS="${XDG_DATA_HOME}/tlauncher-sandbox-baseline-ips.txt"
 BASELINE_DOMAINS="${XDG_DATA_HOME}/tlauncher-sandbox-baseline-domains.txt"
+
+# Binary archive (ROADMAP Phase 3): one copy of each TLauncher.jar that ran, named by
+# its SHA256, plus an append-only manifest that records every time one was seen. It
+# lives outside the sandbox because the sandbox jar is overwritten on every run.
+# BINARY_ARCHIVE_KEEP caps the copies; manifest lines are never removed.
+BINARY_ARCHIVE_DIR="${XDG_DATA_HOME}/tlauncher-binary-archive"
+BINARY_ARCHIVE_MANIFEST="${BINARY_ARCHIVE_DIR}/manifest.tsv"
+BINARY_ARCHIVE_KEEP=10
+HOME_JAR=""              # the jar setup_sandbox copied, the source column of a manifest line
 
 # Dependency state file (same XDG_DATA_HOME convention as the baselines). It
 # records, once, whether each dependency was already on the system or would be
@@ -722,6 +732,91 @@ build_firejail_params() {
 }
 
 # True when this run produces a session directory (full monitoring OR proxy capture).
+# ==========================================
+# BINARY ARCHIVE
+# ==========================================
+
+# Put a jar in the binary archive, or record that it is already there. Usage:
+#   binary_archive_add JAR SOURCE [manual]
+# Writes one manifest line per call, tab-separated: ISO date, event, kind, sha256,
+# bytes, session id (or -), source. The event is `new` when the copy was made &
+# `sighting` when a copy with that hash already existed. A sighting touches the copy,
+# so its mtime is the last time it was seen & binary_archive_prune drops the copy
+# seen longest ago. Fails with a warning & status 1; it never stops a run.
+binary_archive_add() {
+    local jar="$1" source="$2" mode="${3:-auto}"
+    local say=log_verbose
+    [ "$mode" = manual ] && say=log_msg
+    if [ ! -f "$jar" ]; then
+        log_warn "Binary archive: $(disp_path "$jar") is not a file; nothing archived."
+        return 1
+    fi
+    if ! mkdir -p "$BINARY_ARCHIVE_DIR" 2>/dev/null; then
+        log_warn "Binary archive: cannot create $(disp_path "$BINARY_ARCHIVE_DIR")."
+        return 1
+    fi
+
+    local sum bytes
+    sum="$(sha256sum "$jar")" || { log_warn "Binary archive: sha256sum failed on $(disp_path "$jar")."; return 1; }
+    sum="${sum%% *}"
+    bytes="$(stat -c %s "$jar")"
+    local copy="${BINARY_ARCHIVE_DIR}/TLauncher-${sum}.jar"
+    local event=sighting
+    source="${source//$'\t'/ }"
+
+    # fd 201 on the manifest serialises two writers, a -J & a run ending together.
+    # Same shape as the session lock, in this function's scope only.
+    {
+        flock -x 201
+        [ -s "$BINARY_ARCHIVE_MANIFEST" ] \
+            || printf '# date\tevent\tkind\tsha256\tbytes\tsession\tsource\n' >&201
+        if [ -f "$copy" ]; then
+            touch "$copy"
+        else
+            # Copy under a temporary name & rename, so a copy cut short never sits
+            # under a name that claims a hash.
+            if cp "$jar" "${copy}.part" 2>/dev/null && mv "${copy}.part" "$copy"; then
+                event=new
+            else
+                rm -f "${copy}.part"
+                log_warn "Binary archive: cannot copy $(disp_path "$jar")."
+                return 1
+            fi
+        fi
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date +%Y-%m-%dT%H:%M:%S%z)" "$event" \
+            TLauncher.jar "$sum" "$bytes" "${SESSION_ID:--}" "$source" >&201
+        binary_archive_prune
+    } 201>>"$BINARY_ARCHIVE_MANIFEST"
+
+    if [ "$event" = new ]; then
+        log_msg "Binary archive: new TLauncher.jar ${sum:0:12}, copied to $(disp_path "$BINARY_ARCHIVE_DIR")"
+    else
+        "$say" "Binary archive: TLauncher.jar ${sum:0:12} seen again, no new copy"
+    fi
+    return 0
+}
+
+# Drop the copies seen longest ago until BINARY_ARCHIVE_KEEP remain, & write a
+# `pruned` line for each. Runs inside binary_archive_add's lock, on its fd 201. The
+# copy just added or touched is the newest, so it's never the one dropped.
+binary_archive_prune() {
+    local copies=() line
+    mapfile -t copies < <(find "$BINARY_ARCHIVE_DIR" -maxdepth 1 -name 'TLauncher-*.jar' \
+        -printf '%T@ %p\n' | sort -n)
+    local excess=$(( ${#copies[@]} - BINARY_ARCHIVE_KEEP ))
+    local i path sum bytes
+    for ((i = 0; i < excess; i++)); do
+        line="${copies[$i]}"
+        path="${line#* }"
+        sum="${path##*/TLauncher-}"; sum="${sum%.jar}"
+        bytes="$(stat -c %s "$path")"
+        rm -f "$path" || continue
+        printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' "$(date +%Y-%m-%dT%H:%M:%S%z)" pruned \
+            TLauncher.jar "$sum" "$bytes" "${SESSION_ID:--}" "keep=${BINARY_ARCHIVE_KEEP}" >&201
+        log_verbose "Binary archive: pruned TLauncher.jar ${sum:0:12}, over the cap of ${BINARY_ARCHIVE_KEEP}"
+    done
+}
+
 session_logging_active() {
     [ "$MONITOR_ENABLED" = true ] || [ "$PROXY_ENABLED" = true ]
 }
@@ -1139,6 +1234,11 @@ run_sandboxed() {
             printf "${CYAN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}\n"
         fi
     fi
+
+    # The jar that ran goes to the binary archive at the end of every run, whatever
+    # TLauncher's exit code. firejail mounts bin/ read-only, so the sandbox jar is
+    # still the one that started.
+    binary_archive_add "${SANDBOX_DIR}/bin/TLauncher.jar" "$(disp_path "${HOME_JAR:-unknown}")" || true
 
     return $exit_code
 }
@@ -1885,8 +1985,8 @@ trap cleanup EXIT INT TERM HUP QUIT
 MAN_NAME="tlauncher-fccu"
 
 print_man() {
-    # The heredoc is quoted so roff keeps its own backslashes; the one value that
-    # must interpolate is substituted after.
+    # The heredoc is quoted so roff keeps its own backslashes; the two values that
+    # must interpolate are substituted after.
     local roff
     roff="$(cat <<'ROFF'
 .TH TLAUNCHER-FCCU 1 "2026-09-17" "tlauncher-fccu VERSION_PLACEHOLDER" "User Commands"
@@ -1975,6 +2075,13 @@ and
 .BR \-B ", " \-\-save\-baseline " " \fISESSION_DIR\fR
 Derive the domain and IP baselines from a session you trust, then exit.
 .TP
+.BR \-J ", " \-\-archive\-jar
+Put the TLauncher jar, found or given with
+.BR \-f ,
+in the binary archive, then exit. Every launch does the same when TLauncher
+exits. One copy is kept per SHA256, at most KEEP_PLACEHOLDER, and the manifest records each
+time a jar was seen.
+.TP
 .B \-\-check\-deps
 Report each dependency (present or missing, required or optional, and what it is
 for), refresh the state file, then exit.
@@ -2024,7 +2131,9 @@ A required dependency is missing.
 .TP
 .B 4
 Environment error: the lockfile is not writable, the TLauncher jar was not
-found, or the sandbox is unusable.
+found, the sandbox is unusable, or
+.B \-J
+could not write the binary archive.
 .TP
 .B 5
 The lock state could not be determined.
@@ -2036,8 +2145,8 @@ than replaced by one of the above.
 .B XDG_DATA_HOME
 Defaults to
 .IR $HOME/.local/share .
-Parent of the sandbox directory, the baseline files, and the installed manual
-page.
+Parent of the sandbox directory, the binary archive, the baseline files, and the
+installed manual page.
 .TP
 .B XDG_STATE_HOME
 Defaults to
@@ -2090,6 +2199,15 @@ The aggregated per\-session report.
 .I $XDG_RUNTIME_DIR/tlauncher-<USER>.lock
 The session lock. Zero bytes, never deleted by the tool.
 The system clears it at logout.
+.TP
+.I $XDG_DATA_HOME/tlauncher-binary-archive
+The binary archive: one copy of each TLauncher jar that ran, named
+.IR TLauncher\-<SHA256>.jar .
+.TP
+.I $XDG_DATA_HOME/tlauncher-binary-archive/manifest.tsv
+Append\-only, tab\-separated: date, event
+.RI ( new ", " sighting " or " pruned ),
+kind, SHA256, size in bytes, session, source.
 .TP
 .I $XDG_DATA_HOME/tlauncher-sandbox-baseline-domains.txt
 The domain regression baseline, written by
@@ -2205,6 +2323,7 @@ under "Known gaps", dated, each removed when it closes. That section is authorit
 page does not duplicate it.
 ROFF
 )"
+    roff="${roff//KEEP_PLACEHOLDER/$BINARY_ARCHIVE_KEEP}"
     printf '%s\n' "${roff//VERSION_PLACEHOLDER/$VERSION}"
 }
 
@@ -2306,6 +2425,11 @@ usage() {
     printf "                           prune compressed ones over the %dMB cap, then exit.\n" "$LOG_SIZE_CAP_MB"
     printf "                           ${CYAN}This also runs automatically (silently) at the${NC}\n"
     printf "                           ${CYAN}start of every -M run so logs never balloon.${NC}\n"
+    printf "  ${BLUE}-J, --archive-jar${NC}      Put TLauncher.jar (found, or given with -f) in the\n"
+    printf "                           binary archive & exit. Every launch does the same at\n"
+    printf "                           its end. Keeps up to %d copies, one per SHA256, in\n" "$BINARY_ARCHIVE_KEEP"
+    printf "                           %s\n" "$(disp_path "$BINARY_ARCHIVE_DIR")"
+    printf "                           ${CYAN}with manifest.tsv logging every time each was seen.${NC}\n"
     printf "  ${BLUE}--check-deps${NC}           Report each dependency (present/missing, required\n"
     printf "                           vs optional, what it's for) & refresh the state file,\n"
     printf "                           then exit 0 if all required are present, 1 if not.\n"
@@ -2315,7 +2439,7 @@ usage() {
     printf "                           ${CYAN}without root, & link the command into ~/.local/bin${NC}\n"
     printf "                           ${CYAN}when that dir exists & is on PATH. Prints the${NC}\n"
     printf "                           ${CYAN}MANPATH hint if it is needed.${NC}\n"
-    printf "  ${CYAN}-K/-R/-c/-B/--check-deps/--print-man/--install-man/-A are standalone:${NC}\n"
+    printf "  ${CYAN}-K/-R/-c/-B/-J/--check-deps/--print-man/--install-man/-A are standalone:${NC}\n"
     printf "  ${CYAN}they do their job and exit without launching TLauncher. If several${NC}\n"
     printf "  ${CYAN}are given, the first wins.${NC}\n\n"
 
@@ -2434,6 +2558,7 @@ main() {
             --check-deps) CHECK_DEPS=true; shift ;;
             --print-man) PRINT_MAN=true; shift ;;
             --install-man) INSTALL_MAN=true; shift ;;
+            -J|--archive-jar) ARCHIVE_JAR=true; shift ;;
             -ml|--mozilla-path)
                 if [ -z "${2:-}" ]; then
                     die "$EX_USAGE" "--mozilla-path requires a path argument"
@@ -2504,6 +2629,13 @@ main() {
         exit $?
     fi
 
+    if [ "$ARCHIVE_JAR" = true ]; then
+        local jar
+        jar=$(find_tlauncher)
+        binary_archive_add "$jar" "$(disp_path "$jar")" manual || exit "$EX_ENV"
+        exit "$EX_OK"
+    fi
+
     # Proxy preflight: -P needs the Java agent, its only backend. Both jars must be
     # built (the -javaagent jar & the bootstrap jar premain appends). Missing either,
     # disable -P rather than launch a session that captures nothing.
@@ -2541,6 +2673,7 @@ main() {
 
     local tlauncher
     tlauncher=$(find_tlauncher)
+    HOME_JAR="$tlauncher"
 
     # Setup sandbox first (always needed)
     setup_sandbox "$tlauncher"
