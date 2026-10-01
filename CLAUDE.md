@@ -1,13 +1,14 @@
 # CLAUDE.md: project standard
 
-- Read docs/ARCHITECTURE.md first (the repo, what the code is today, known gaps), then
-  docs/DESIGN.md before writing code, & docs/ROADMAP.md when the work belongs to a phase.
+- Read docs/REQUIREMENTS.md first (what has to be true, & for whom), then
+  docs/ARCHITECTURE.md (the repo, what the code is today, known gaps), docs/DESIGN.md
+  before writing code, & docs/ROADMAP.md when the work belongs to a phase.
   Last, docs/TEMPORARY-CONTEXT.md: normally empty, read anyway because one line there can
   contradict what you were about to propose. This file is the working method: how docs,
   commits & PRs are written & how a claim gets checked. Code conventions, tests included,
   live in docs/DESIGN.md; phase rules in docs/ROADMAP.md.
-- Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; ARCHITECTURE.md,
-  DESIGN.md, ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md in docs/; the
+- Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; REQUIREMENTS.md,
+  ARCHITECTURE.md, DESIGN.md, ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md in docs/; the
   CLI module (cli-standard.md, cli-surface.md) in docs/cli/. AGENTS.md is the entry for
   tools that look for that name: it points here & nothing depends on it.
   Do NOT create a new doc file without asking me first.
@@ -121,7 +122,8 @@ its 24 rules in full & 5 in part; `docs/DECISIONS.md` has the count & what it fo
 7. A paragraph of running prose has at most five sentences; if it doesn't fit, it's two
    paragraphs. Lists, tables & glossary lines are out of scope. Baseline: 27 paragraphs
    over the ceiling: `docs/DECISIONS.md` 19, all in append-only entries, `docs/DESIGN.md`
-   5, `docs/ROADMAP.md` 2 & `AGENTS.md` 1.
+   5, `docs/ROADMAP.md` 2 & `docs/REQUIREMENTS.md` 1, the purpose paragraph moved there
+   from `AGENTS.md` word for word.
 8. Three consecutive sentences of similar length are the sign that the text is going
    flat, & rule 7 doesn't catch it. The measure is the share of consecutive sentence
    triples whose lengths sit within 3 words of each other. Baseline: **4.6%**, 18 flat

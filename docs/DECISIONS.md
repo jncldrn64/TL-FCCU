@@ -940,3 +940,22 @@ calling itself the doc & format standard only & names what it holds: the working
 method. The two earlier entries keep their wording; this one records the move.
 
 **Status:** in force.
+
+## 2026-10-01: The project's purpose gets a file of its own
+
+**Context.** Once `AGENTS.md` became an entry point nothing depends on, the purpose it
+opened with had no other home, & `CLAUDE.md` no longer sent anyone to read it. Laid
+side by side, each document here has a counterpart with the same job in the other repo,
+except one: the file that says what has to be true & for whom, which there holds the
+purpose. The author chose to close that gap with the same file rather than a local fix.
+
+**Decision.** `docs/REQUIREMENTS.md` starts as a seed. Its first section is the purpose,
+moved word for word from `AGENTS.md`, which keeps a two-line summary. The rest cites what
+other files already say: the two things the ROADMAP's ordering principle protects, &
+the non-functional rules in `docs/DESIGN.md`. What nobody has written yet is listed as
+such.
+
+Unlike the other repo, `CLAUDE.md` puts it first in the reading order, so a
+session reads the purpose before anything else.
+
+**Status:** in force.
