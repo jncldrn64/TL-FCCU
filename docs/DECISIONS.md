@@ -716,3 +716,58 @@ plugin, read from it when it's in reach. The coverage count goes in `CLAUDE.md` 
 the rule that makes the original outrank the floor.
 
 **Status:** in force.
+
+## 2026-10-01: Past violations of the standard, registered & frozen
+
+**Context.** The audit of 2026-10-01 found published work that broke rules already in
+force when it was written. The author chose to register it & leave it as it is, since
+fixing it in place would rewrite history. The register lived only in the v2.27 rewrite,
+which v2.28 reverted. The untagged PR titles got their own entry, "A PR title carries the
+commit type".
+
+**Register.** Known gaps was edited after it became append-only, three times: #9 deleted
+the 2026-07-04 entry, #11 deleted a 2026-07-22 entry & #18 rewrote a line.
+
+The CHANGELOG section for v2.8.1, dated 2026-07-04 & published by #8, was folded into
+v2.9 by #9, & #12 lost the v2.11 header that #13 restored. Five PR titles carry an em
+dash, #12, #14, #15, #16 & #22. Commit `a0f37ca`, a web edit of `CLAUDE.md` on
+2026-07-04, has no type.
+
+**Decision.** Each of these stays as published. None of the counts may grow.
+
+**Status:** in force.
+
+## 2026-10-01: The author's web edits carry a type too
+
+**Context.** The commit rule names no author, but the only commit since 2026-07-04 without
+a type is the author's own web edit `a0f37ca`, titled by GitHub's default. The audit of
+2026-10-01 asked whether the rule covers those edits, & the author said yes. Like the
+other audit choices, it was written only in the reverted v2.27 rewrite.
+
+**Decision.** A commit made from GitHub's web editor carries a type like any other. The
+default title it offers is replaced before saving.
+
+**Status:** in force.
+
+## 2026-10-01: Ideas the audit dropped, & why
+
+**Context.** The temporary context kept these so a later session doesn't propose them
+again. Each was weighed & dropped on 2026-10-01.
+
+**Decision.** None of them is taken up again without a new reason.
+
+- A master repo of rules shared by the author's projects. The author said it doesn't &
+  won't exist; the author moves from repo to repo.
+- Renaming `docs/DESIGN.md` to an architecture document. DESIGN prescribes how code is
+  written, & an architecture document describes what the code is.
+- Dissolving DESIGN into `CLAUDE.md`. The author kept DESIGN; see "DESIGN.md stays, & no
+  document hierarchy for now".
+- A "working with me" section of the author's preferences in `CLAUDE.md`. Rejected by the
+  author; observations about how the author works go through the temporary context first.
+- Relying on a model's memory between sessions. A cloud session starts with nothing
+  carried over, so what has to survive lives in the repo.
+- Measuring Known gaps against the other repo's layout. An early count said only a sixth
+  of its entries belonged there; read against this repo's own rule, all 35 did. The
+  problem was size, & "Decisions get a file of their own" answered it.
+
+**Status:** in force.
