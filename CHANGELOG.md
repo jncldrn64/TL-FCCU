@@ -4,6 +4,18 @@ Every notable change to the launcher (`run.sh` & its helpers). The format follow
 [Keep a Changelog](https://keepachangelog.com/): one file that grows by section,
 newest on top, headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.45 — 2026-10-01
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.44 until the next code PR.
+
+### Added
+- `CLAUDE.md`, bullet "Workflow": work goes through a PR, & a `403` on push, branch or
+  PR stops the work & gets reported, never worked around by hand.
+- `CLAUDE.md`, bullet "Tests": a suite that ever failed intermittently runs N times in
+  `tests/run-all.sh` & stays there after its fix. Until now only that script's header
+  said so. `docs/DECISIONS.md` has an entry for each rule.
+
 ## v2.44 — 2026-10-01
 
 One fix a user can see, in the hint printed for an unexpected argument. `VERSION` goes
