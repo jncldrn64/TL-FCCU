@@ -6,6 +6,19 @@
 Every notable change to the launcher (`run.sh` & its helpers). The format follows
 [Keep a Changelog](https://keepachangelog.com/), with headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.58 — 2026-10-20
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.57 until the next code PR.
+
+### Changed
+- `CLAUDE.md`, "Prose floor": every baseline recounted on 2026-10-20. `docs/DESIGN.md` is now
+  under rule 2's ceiling, & rule 8 falls from 4.6% to 3.3%.
+- "Prose floor" says the floor measures Markdown only, & comments in the code are read by hand.
+
+### Added
+- `docs/DECISIONS.md` says why the baselines were recounted.
+
 ## v2.57 — 2026-10-20
 
 ROADMAP Phase 6: the command line keeps its word. `VERSION` goes from 2.53 to 2.57,

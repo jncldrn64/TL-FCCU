@@ -148,7 +148,7 @@ it whole.
 
 ## Prose floor
 
-Eight rules, each with this repo's baseline, measured on 2026-10-01, & the command that
+Eight rules, each with this repo's baseline, measured on 2026-10-20, & the command that
 recounts it. **No baseline may rise.** A PR that raises one added a violation. History
 that isn't rewritten keeps its count, so a baseline only falls when live text is fixed.
 
@@ -164,8 +164,8 @@ its 24 rules in full & 5 in part; `docs/DECISIONS.md` has the count & what it fo
    isn't edited (5 in `CHANGELOG.md`, 3 in `docs/DECISIONS.md`) & 3 live, one each in
    `docs/DESIGN.md`, `docs/ROADMAP.md` & `docs/cli/cli-surface.md`.
 2. Contrastive parallelism ("not X, but Y", "X, not Y") at most once every 500 words per
-   file. Baseline: `docs/DESIGN.md` at one every 392 words, over the ceiling; every other
-   file under it, the closest `docs/cli/cli-surface.md` at one every 533.
+   file. Baseline: every file under the ceiling, the closest `docs/DESIGN.md` at one every
+   521 words & `docs/cli/cli-surface.md` at one every 563.
 3. A CHANGELOG bullet stays at 60 words or fewer; if the change doesn't fit, it's two
    bullets. Baseline: **43 bullets over the ceiling**, all in published sections.
 4. A heading carries a parenthesis only when it holds data, such as a verification state
@@ -186,12 +186,14 @@ its 24 rules in full & 5 in part; `docs/DECISIONS.md` has the count & what it fo
    from `AGENTS.md` word for word.
 8. Three consecutive sentences of similar length are the sign that the text is going
    flat, & rule 7 doesn't catch it. The measure is the share of consecutive sentence
-   triples whose lengths sit within 3 words of each other. Baseline: **4.6%**, 18 flat
-   triples of 389.
+   triples whose lengths sit within 3 words of each other. Baseline: **3.3%**, 18 flat
+   triples of 548.
 
 The corpus is every tracked `.md` file except two. `CLAUDE.md` is the standard itself, &
 editing it would move the numbers it declares. `docs/TEMPORARY-CONTEXT.md` is exempt by
-design. The commands, from the repo root:
+design. Comments in the code aren't in the corpus either: they follow the same prose rules &
+are read by hand, per `docs/DECISIONS.md`, entry of 2026-10-20 "Comments get two rules, in
+DESIGN.md". The commands, from the repo root:
 
 ```sh
 C=$(git ls-files '*.md' ':!:CLAUDE.md' ':!:*TEMPORARY-CONTEXT.md')
