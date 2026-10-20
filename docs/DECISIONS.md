@@ -1157,3 +1157,18 @@ command for comments would be one more baseline to keep for 2 lines, so it's dro
 that cost.
 
 **Status:** `in force`
+
+## 2026-10-20: The prose floor's baselines are recounted
+
+**Context:** `CLAUDE.md`, "Prose floor", declared counts measured on 2026-10-01. By the merge
+of v2.57 two of them had improved: rule 2 in `docs/DESIGN.md` went from one contrastive phrase
+every 392 words to one every 521, & rule 8 from 4.6% flat triples to 3.3%. "No baseline may rise"
+compares a PR with the declared number, so the next PR could have undone both without breaking
+the rule.
+
+**Decision:** every baseline is recounted with the commands in "Prose floor" & written with the
+date 2026-10-20. The section also says what the floor leaves out: comments in the code, which
+follow the same prose rules & are read by hand, as "Comments get two rules, in DESIGN.md"
+decided.
+
+**Status:** `in force`
