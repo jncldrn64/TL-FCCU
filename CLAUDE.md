@@ -1,4 +1,4 @@
-# CLAUDE.md: project standard
+# CLAUDE.md: the working method
 
 > **Role:** normative over the method: how the repo is read, written, measured & delivered.
 > **Regime:** corrected; a rule that changes carries its `docs/DECISIONS.md` entry in the
@@ -10,14 +10,14 @@
   docs/DECISIONS.md isn't read whole: list its entries with `grep '^## ' docs/DECISIONS.md`
   & read the ones the work touches. Before proposing a change to the docs' structure or
   the method, read its entry "Ideas the audit dropped, & why", which exists so nobody
-  proposes them again. Last, docs/TEMPORARY-CONTEXT.md: normally empty, read anyway because one line there can
-  contradict what you were about to propose. This file is the working method: how docs,
-  commits & PRs are written & how a claim gets checked. Code conventions, tests included,
-  live in docs/DESIGN.md; phase rules in docs/ROADMAP.md.
+  proposes them again. Last, docs/TEMPORARY-CONTEXT.md: normally empty, read anyway
+  because one line there can contradict what you were about to propose. This file is the
+  working method: how docs, commits & PRs are written & how a claim gets checked. Code
+  conventions, tests included, live in docs/DESIGN.md; phase rules in docs/ROADMAP.md.
 - Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; REQUIREMENTS.md,
-  ARCHITECTURE.md, DESIGN.md, ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md in docs/; the
-  CLI module (cli-standard.md, cli-surface.md) in docs/cli/. AGENTS.md is the entry for
-  tools that look for that name: it points here & nothing depends on it.
+  ARCHITECTURE.md, DESIGN.md, ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md
+  in docs/; the CLI module (cli-standard.md, cli-surface.md) in docs/cli/. AGENTS.md is the
+  entry for tools that look for that name: it points here & nothing depends on it.
   Do NOT create a new doc file without asking me first.
   One exception by kind: a `README.md` inside a subfolder that only explains that folder,
   such as how to run `tests/`, isn't a canonical doc & needs no separate permission.
@@ -26,9 +26,10 @@
   here depends on another repo to be understood or worked on.
 - Decisions go in docs/DECISIONS.md, append-only, one entry each, opening with
   `## YYYY-MM-DD: <title>`. Open items go in the "Known gaps" section of
-  docs/ARCHITECTURE.md, dated, & never anywhere else. A new gap carries the command or
-  the run that shows it, so the next reader can check it's still open, & a gap is
-  removed in the PR that closes it; CHANGELOG keeps the trail.
+  docs/ARCHITECTURE.md & never anywhere else, each gap opening with its date & a colon,
+  `YYYY-MM-DD:`. A new gap carries the command or the run that shows it, so the next
+  reader can check it's still open, & a gap is removed in the PR that closes it;
+  CHANGELOG keeps the trail.
   A pointer to a DECISIONS entry cites its date & title, never a line number or a place
   in the file ("the last entry"). One is added where a line would otherwise read as
   arbitrary or as contradicting the rest of its document.
@@ -45,7 +46,9 @@
   an already-published version: that section is history & isn't rewritten. The new section
   carries the change's real date in ISO 8601, not an earlier version's date. A doc-only PR
   may leave the latest CHANGELOG version ahead of the version the program prints; that
-  desfase is intentional & closes in the next code PR (see "Displayed version").
+  desfase is intentional & closes in the next code PR (see "Displayed version"). Its
+  section opens with `Documentation only.`, names the code it leaves alone & the version
+  `run.sh -h` keeps printing.
 - Dates: ISO 8601 (YYYY-MM-DD) everywhere I author them by hand.
   A Backlog item in docs/ROADMAP.md is born with a line opening `**Entered:**`: the date
   it entered & the PR that brought it, taken from `git log -S` on the file, not memory.
@@ -54,6 +57,8 @@
   The commit BODY does NOT re-narrate the change: 1-2 lines max plus a reference to the
   CHANGELOG section. Detail lives in CHANGELOG (what) and docs/DECISIONS.md (why), not in the
   commit message. (Keep the automatic Co-Authored-By / Claude-Session trailer.)
+  A commit made from GitHub's web editor carries a type too: the default title it offers
+  is replaced before saving.
 - PR title: the same format as the commit, with the same type. The PR list then reads
   like `git log` & filters by type from either side.
 - PR body: the per-file table is copied from `git diff --numstat origin/main...HEAD`, run
@@ -92,7 +97,8 @@
   the wrong reading of a word rejects some other idea.
 - Workflow: work goes through a pull request. If `push`, creating a branch or opening
   the PR returns `403`, stop & say that write permission is missing. Never work around
-  it by uploading loose files by hand.
+  it by uploading loose files by hand. A PR opens as a draft; the author marks it ready &
+  merges it.
 
 ## Document types & which one wins
 
@@ -139,8 +145,12 @@ it whole.
    be cited as "section 3". This file is the exception: its rules are cited by name. History,
    plan & transit use dated entries or phases & aren't numbered.
 4. Fields are bold with a colon: `**Status:**`. A status value goes in backticks.
-5. A dated entry opens with `## YYYY-MM-DD: title`. `docs/DECISIONS.md` entries written
-   before this rule keep `**Context.**` with a period; append-only means they aren't edited.
+5. A dated entry opens with `## YYYY-MM-DD: title`. A decision then carries **Context:**,
+   **Decision:** & **Status:**. One that replaces another names it by date & title in its
+   **Context:**, because the old entry isn't edited & keeps reading `in force`.
+   `docs/DECISIONS.md` entries written before this rule keep `**Context.**` &
+   `**Decision.**` with a period, & a status without backticks; append-only means they
+   aren't edited.
 6. A `###` only inside a long descriptive document.
 7. Lines up to 100 columns.
 8. A reference to another document cites its path & section title, or date & title for a

@@ -1172,3 +1172,28 @@ follow the same prose rules & are read by hand, as "Comments get two rules, in D
 decided.
 
 **Status:** `in force`
+
+## 2026-10-20: The shape of an entry is written down
+
+**Context:** an audit of the documents on 2026-10-20 found four shapes that every entry here
+follows & no rule names. All 44 decisions carry Context, Decision & Status. Thirty doc-only
+CHANGELOG sections open with `Documentation only.`, then name the code they leave alone & the
+version `run.sh -h` keeps printing. Every Known gap opens with its date & a colon.
+
+A newer decision that replaces an older one names it in its Context, since the older one can't be
+edited & keeps reading `in force`. The written exception for entries older than the format rule
+named only `**Context.**` with a period, though the 37 entries it covers also write
+`**Decision.**` with a period & their status without backticks. A shape that lives only by
+imitation breaks the first time someone writes from another file. The same audit saw it happen
+elsewhere, in a decision missing a field its 48 neighbours carry.
+
+**Decision:** `CLAUDE.md` writes the four shapes down where each one already has its rule: the
+fields & the naming of a replaced entry in "Common document format", rule 5, the opening of a
+doc-only section in the doc-only bullet, & the opening of a gap in the line on Known gaps. The
+exception for old entries names all three traits. No entry already written changes.
+
+Two shapes stay unwritten because the record doesn't hold them. 17 of the 55 CHANGELOG sections
+list their sub-sections in another order than Added, Changed, Fixed, Removed. And 159 of 236
+bullets open with a file path; a bullet about behaviour has no single file to name.
+
+**Status:** `in force`

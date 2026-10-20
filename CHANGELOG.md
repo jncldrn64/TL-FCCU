@@ -6,6 +6,25 @@
 Every notable change to the launcher (`run.sh` & its helpers). The format follows
 [Keep a Changelog](https://keepachangelog.com/), with headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.59 — 2026-10-20
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.57 until the next code PR.
+
+### Added
+- `docs/DECISIONS.md`: "The shape of an entry is written down", with the counts that show
+  each shape & the two that stay unwritten.
+
+### Changed
+- `CLAUDE.md`, line 1, names what the file holds, the working method, as the entry of
+  2026-10-01 "Two rules go back to the files that own them" asked.
+- `CLAUDE.md` writes two rules in force since 2026-10-01: a PR opens as a draft, & a commit
+  made from GitHub's web editor carries a type.
+- `CLAUDE.md` names a decision's fields & where a newer one names the entry it replaces, how
+  a doc-only section opens & how a Known gap opens. The exception for old entries covers all
+  they hold.
+- `CLAUDE.md`: two lines over 100 columns are rewrapped.
+
 ## v2.58 — 2026-10-20
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
