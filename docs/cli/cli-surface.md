@@ -65,6 +65,7 @@ end-of-options marker.
 | (none) | `--print-man` | no | `false` | `PRINT_MAN` |
 | (none) | `--install-man` | no | `false` | `INSTALL_MAN` |
 | `-h` | `--help` | no | n/a | calls `usage()`, exits 0 |
+| `-V` | `--version` | no | n/a | prints `MAN_NAME` & `VERSION`, exits 0 |
 
 Notes the table cannot hold:
 
@@ -87,7 +88,7 @@ Notes the table cannot hold:
 
 ### Options in the code but not in `--help`
 
-None. Every one of the 18 parser arms above appears in `usage()`, & since v2.25
+None. Every parser arm above appears in `usage()`, & since v2.25
 `tests/doc-sync.sh` fails the build if that stops being true, in either direction.
 
 ### Options in `--help` that no longer do anything
@@ -105,21 +106,21 @@ against the parser: every documented flag still reaches a live code path.
 | `XDG_RUNTIME_DIR` | `/run/user/${REAL_UID}`, then `/tmp` if that is not a directory (`if [ ! -d "$XDG_RUNTIME_DIR" ]`) | Holds `LOCKFILE` |
 | `SUDO_USER` | `${USER:-$(id -un)}` | Identity used for `REAL_HOME` & the lockfile name |
 | `SUDO_UID` | `$(id -u)` | Default `XDG_RUNTIME_DIR` path |
-| `SUDO_GID` | `$(id -g)` | Read into `REAL_GID`; no consumer in the current code |
 | `USER` | `$(id -un)` | Fallback identity when `SUDO_USER` is unset |
 | `HOME` | `getent passwd` result wins; `$HOME` is the fallback | Base for `REAL_HOME` |
+| `NO_COLOR` | unset | Any non-empty value turns colour off on both streams (`colour_on`) |
 
 The `SUDO_*` reads are defensive, not an invitation: the hard constraint is zero
 `sudo` (`docs/DESIGN.md` principle 2). They exist so that a user who ignores that
 & runs under `sudo` still gets their own paths rather than root's.
 
-`NO_COLOR` is **not** read. See section 4.
+`NO_COLOR` is read once, at start-up. See section 4.
 
 ## 3. Exit codes
 
 | Code | Meaning | Constant |
 |---|---|---|
-| `0` | Success, including every standalone mode, `--help` & `--print-man` | `EX_OK` |
+| `0` | Success, including every standalone mode, `--help`, `--version` & `--print-man` | `EX_OK` |
 | `1` | Usage error: unknown option, missing or invalid argument | `EX_USAGE` |
 | `2` | Refusal: a live session holds the lock | `EX_LOCK_HELD` |
 | `3` | A required dependency is missing | `EX_MISSING_DEP` |
@@ -154,17 +155,20 @@ run but none of the errors in it.
 
 ### Colour
 
-Decided once, in the `if [ -t 1 ]` block near the top of the file: colour when
-**stdout** is a TTY,
-empty strings otherwise.
+Decided once per stream, near the top of the file, by `colour_on`. A set holds escape
+codes only when its own stream is a terminal & `NO_COLOR` is unset or empty, & empty
+strings otherwise.
 
-Two incoherencies, both real:
+- `RED`, `NC` & the rest of that set paint stdout: `usage()`, the `-A` analysis & the
+  configuration summary.
+- `E_RED`, `E_NC` & the rest paint stderr: `_log_emit` behind `log_error` & `log_warn`,
+  the unknown-option lines in `main()`, & the `-R` success line.
 
-1. **The gate tests stdout; almost all coloured output goes to stderr.** `log_error`
-   & `log_warn` write to stderr but take their colour from whether *stdout* is a
-   terminal. `./run.sh -M > file` leaves stderr on the terminal with colour stripped;
-   `./run.sh -M 2> file` writes escape codes into the file.
-2. **`NO_COLOR` is not honoured.** There is no `NO_COLOR` read anywhere in the file.
+Until v2.57 one `if [ -t 1 ]` gate set a single palette for both streams, so
+`./run.sh -M > file` stripped the colour from errors still on the terminal, &
+`./run.sh -M 2> file` wrote escape codes into the file. `NO_COLOR` wasn't read.
+`tests/colour-gate.sh` drives `run.sh` through a pseudo-terminal from `script` &
+fails on either case.
 
 Colour never reaches a log file: `_log_emit`, the writer behind all four, appends the
 raw `$*` to `master.log` with no escape codes, & the colour lives in the `printf` format

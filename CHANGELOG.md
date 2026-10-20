@@ -6,6 +6,50 @@
 Every notable change to the launcher (`run.sh` & its helpers). The format follows
 [Keep a Changelog](https://keepachangelog.com/), with headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.57 — 2026-10-20
+
+ROADMAP Phase 6: the command line keeps its word. `VERSION` goes from 2.53 to 2.57,
+closing the desfase the doc-only sections left.
+
+### Added
+- `-V/--version` prints `tlauncher-fccu 2.57` to stdout & exits 0. It's in `--help`, in
+  the manual's OPTIONS & EXIT STATUS, & in `docs/DESIGN.md` principle 4.
+- `NO_COLOR`: any non-empty value turns colour off on both streams. The manual's
+  ENVIRONMENT lists it.
+- `tests/colour-gate.sh`, 7 checks through a pseudo-terminal from `script`. Against
+  v2.53's `run.sh` it fails 3 of them.
+- `tests/doc-sync.sh` checks that `--version` prints `VERSION` & that the version has its
+  CHANGELOG section, & that `--help` & the manual follow `CLEANUP_DAYS` &
+  `BINARY_ARCHIVE_KEEP` when a scratch copy changes them.
+- `docs/cli/cli-standard.md`, section 4, rule 7: a default shown to the user is printed
+  from its variable.
+- `docs/DESIGN.md` principle 11, on `local` with a command substitution, & principle 12,
+  on comments.
+- ROADMAP Phase 6, five decisions, & the glossary's "colour gate".
+
+### Changed
+- Colour is decided per stream. stdout keeps its palette for `--help`, `-A` & the
+  configuration summary; stderr gets its own, `E_RED` & the rest, for every log line &
+  error. Until now `run.sh -M 2> file` wrote escape codes into the file.
+- The manual prints the `-c` default from `CLEANUP_DAYS`; it was typed as 7 by hand.
+- `CLAUDE.md`, "Displayed version", names `--version` & the doc-sync check.
+- The manual's BUGS text rewraps one line, & `mandoc -Tlint` prints nothing for the page.
+  The Known gap on the roff records that run.
+- Six code comments drop a word from the prose floor's rule 1 list, & four cite
+  `docs/cli/cli-standard.md` by section.
+
+### Fixed
+- A failed `mktemp` in `generate_timeline` made the timeline say "No timeline events
+  recorded." for a session that had events. It now says the timeline is unavailable.
+- The 15 `local x=$(cmd)` sites ShellCheck flags as SC2155 take two lines each, with the
+  fallback written where a failure isn't an error. ShellCheck 0.11.0 warnings on
+  `run.sh`: 16 before, 0 after, counted with the command in `docs/DESIGN.md` principle 11.
+
+### Removed
+- `REAL_GID`, which nothing read, & with it the read of `SUDO_GID` & its manual entry.
+- `docs/cli/cli-standard.md` section 6's deferral of the colour gate, & the matching
+  Known gap in `docs/ARCHITECTURE.md`.
+
 ## v2.56 — 2026-10-01
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

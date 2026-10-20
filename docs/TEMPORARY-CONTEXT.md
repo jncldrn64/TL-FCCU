@@ -102,10 +102,19 @@ documented & tested, & logs carry no colour. Asked on 2026-10-01, the author was
 & thinks the CLI docs may also say something about how comments are treated. The middle
 of the quote is left out because it names another repo. Placed 2026-10-01, the second
 rule only: each document's type & which one wins is `CLAUDE.md`, "Document types & which
-one wins". The other three are still open.
+one wins". The other three are still open. Placed 2026-10-20, the part about how comments
+are treated: `docs/DESIGN.md` principle 12, with the author's answer quoted in its
+decision. The three rules stay open.
 > "la verdad no estoy seguro"
 > "hasta donde se esos CLI docs eras para el --help y el manpage de el proyecto ejecutable cli, por lo que en cierta forma entiendo que tambien habla de reglamentos en comentarios, y como tratar a los comentarios.... debemos expandir esto o buscar alternativa..."
 
 **2026-10-01, Claude.** Sentence-length spread is flatter than the voice profile: sd 10.3 here vs 15.3 in the profile, means close (17.3 vs 18.3), cut at .!? only. Also only ~10.6% of sentences over 30 words vs the profile's p90 at 36. Rule 8 only sees 3-in-a-row. Unknown whether a spread rule is worth it or whether the corpus being technical docs makes the profile the wrong yardstick. Mine from today: sd 10.0, mean 16.7, so I didn't fix it either.
 
 **2026-10-01, Claude.** ROADMAP Phase 4's first scope item ("Detect that the sandbox jar differs from the home jar") may rest on a premise the code rules out: `build_firejail_params` mounts `bin/` with `--read-only` & `setup_sandbox` re-copies the home jar every run, so TLauncher can't change the sandbox jar from inside. Read from the code only, never seen in a run. Either TLauncher's self-update writes somewhere else, & the item should watch that place, or the item never fires. The next real session can answer it: where does TLauncher write when it updates itself (`snapshot-before.txt` vs `snapshot-after.txt` of a `-M` run that updates). The author said the run waits.
+
+**2026-10-20, Claude.** `find_orphan_pids` matches `pgrep -f "tlauncher-mon-"` on the
+whole command line, so any process that only mentions the tag, such as
+`grep tlauncher-mon- notes.txt` in another terminal, is a candidate for `-K`; only our own
+ancestors are excluded. Another of the author's scripts also checks that the process's exe
+or comm is the target before killing. Low harm, never seen happen. Unknown whether it's
+worth code.

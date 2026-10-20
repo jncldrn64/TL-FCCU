@@ -18,7 +18,7 @@ set -uo pipefail
 TESTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPEATS="${REPEATS:-3}"
 
-SUITES=(doc-sync.sh lock-exclusion.sh report-states.sh cleanup-signals.sh binary-archive.sh)
+SUITES=(doc-sync.sh lock-exclusion.sh report-states.sh cleanup-signals.sh binary-archive.sh colour-gate.sh)
 REPEATED=(doc-sync.sh)
 
 rc=0

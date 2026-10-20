@@ -23,10 +23,10 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.53"
+VERSION="2.57"
 
 # Directory holding this script, used to find helpers like scripts/build-agent.sh.
-# Resolved once, & it really does survive being called through a symlink now.
+# Resolved once, & it survives being called through a symlink.
 #
 # WHY the loop: the previous one-liner did `cd "$(dirname "$BASH_SOURCE")"`, which
 # lands in the SYMLINK's directory, not the target's. The comment above it claimed
@@ -54,7 +54,6 @@ SCRIPT_DIR="$(cd -P "$(dirname "$SCRIPT_SOURCE")" >/dev/null 2>&1 && pwd)"
 # User detection ( :-$(id -un) guards against USER being unset under set -u )
 REAL_USER="${SUDO_USER:-${USER:-$(id -un)}}"
 REAL_UID="${SUDO_UID:-$(id -u)}"
-REAL_GID="${SUDO_GID:-$(id -g)}"
 REAL_HOME=$(getent passwd "$REAL_USER" | cut -d: -f6 2>/dev/null || echo "$HOME")
 
 # XDG directories
@@ -167,7 +166,8 @@ NOISE_PATTERNS=(
     '\.lock$'
 )
 # Pre-joined into a single ERE; exported so the (separate-process) monitors see it.
-# _PATTERNS, per docs/cli/cli-standard.md rule 6: regular expressions, joined RAW.
+# _PATTERNS, per docs/cli/cli-standard.md, section 4, rule 6: regular expressions,
+# joined RAW.
 #
 # NOT escaped, deliberately: unlike the domain lists, these entries ARE regexes &
 # are written as such on purpose (`\.sqlite-wal$` anchors an extension, `GPUCache/`
@@ -199,10 +199,10 @@ join_literals_ere() {
     printf '%s' "$out"
 }
 
-# _LITERALS, per docs/cli/cli-standard.md rule 6: this array holds LITERAL substrings &
-# is joined with escaping. A *_PATTERNS array holds regular expressions & is joined
-# raw. The two used to be told apart only by a comment, which is how a literal ends
-# up silently treated as a regex.
+# _LITERALS, per docs/cli/cli-standard.md, section 4, rule 6: this array holds
+# LITERAL substrings & is joined with escaping. A *_PATTERNS array holds regular
+# expressions & is joined raw. The two used to be told apart only by a comment,
+# which is how a literal ends up silently treated as a regex.
 #
 # Known-risky domain substrings for the regression check (Task 3). A domain that
 # matches any of these gets flagged hard in INCIDENT_REPORT.md even when it's
@@ -216,13 +216,14 @@ RISK_DOMAIN_LITERALS=(
 RISK_DOMAIN_REGEX="$(join_literals_ere "${RISK_DOMAIN_LITERALS[@]}")"
 
 
-# _LITERALS: literal hostnames, joined with escaping. See docs/cli/cli-standard.md rule 6.
+# _LITERALS: literal hostnames, joined with escaping. See docs/cli/cli-standard.md,
+# section 4, rule 6.
 #
 # Telemetry & ad hosts seen in TLauncher traffic, kept as a named reference list.
 #
 # NOT blocked. This array was called BLOCKED_DOMAINS & nothing in the script ever
 # read it: no --dns, no netfilter, no filter of any kind, so the name promised a
-# capability the sandbox does not have. Renamed to say what it is, & now actually
+# capability the sandbox does not have. Renamed to say what it is, & now
 # read by report_regression_check, which marks any of these contacted during a
 # session. Blocking would need firejail netfilter rules & is not in scope here;
 # this tool watches, it does not intervene.
@@ -239,12 +240,26 @@ KNOWN_TELEMETRY_LITERALS=(
 # out. These entries DO carry dots, so this one is not hypothetical.
 KNOWN_TELEMETRY_REGEX="$(join_literals_ere "${KNOWN_TELEMETRY_LITERALS[@]}")"
 
-# Colors
-if [ -t 1 ]; then
+# Colours, one set per stream. RED & the rest paint stdout: --help, the -A analysis,
+# the configuration summary. E_RED & the rest paint stderr: every log line & every
+# error. A set is on only when its own stream is a terminal & NO_COLOR is unset or
+# empty, which is what https://no-color.org asks.
+#
+# WHY two sets: until v2.57 one `[ -t 1 ]` gate coloured both streams, so
+# `run.sh -M 2> errors.txt` wrote escape codes into the file while
+# `run.sh -M > out.txt` left the errors on the terminal without colour.
+colour_on() { [ -t "$1" ] && [ -z "${NO_COLOR:-}" ]; }
+if colour_on 1; then
     RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'
     BLUE='\033[0;34m'; CYAN='\033[0;36m'; NC='\033[0m'
 else
     RED=''; GREEN=''; YELLOW=''; BLUE=''; CYAN=''; NC=''
+fi
+if colour_on 2; then
+    E_RED='\033[0;31m'; E_GREEN='\033[0;32m'; E_YELLOW='\033[1;33m'
+    E_BLUE='\033[0;34m'; E_NC='\033[0m'
+else
+    E_RED=''; E_GREEN=''; E_YELLOW=''; E_BLUE=''; E_NC=''
 fi
 
 # ==========================================
@@ -270,7 +285,7 @@ _log_emit() {
     local tag=""
     [ -n "$level" ] && tag="[${level}] "
     if [ -n "$colour" ]; then
-        printf "[%s] ${colour}%s${NC}%s\n" "$ts" "$tag" "$*" >&2
+        printf "[%s] ${colour}%s${E_NC}%s\n" "$ts" "$tag" "$*" >&2
     else
         printf "[%s] %s%s\n" "$ts" "$tag" "$*" >&2
     fi
@@ -338,11 +353,11 @@ reset_agent_tmp() {
 }
 
 log_error() {
-    _log_emit "ERROR" "$RED" "$@"
+    _log_emit "ERROR" "$E_RED" "$@"
 }
 
 log_warn() {
-    _log_emit "WARN" "$YELLOW" "$@"
+    _log_emit "WARN" "$E_YELLOW" "$@"
 }
 
 # Exit codes, one per condition. Before this, `1` covered five distinct failures &
@@ -437,7 +452,7 @@ warn_orphans() {
 #   2  state indeterminable (the lockfile is not writable by us)
 #
 # WHY three: the previous version returned "not free" both when a session held the
-# lock & when the file simply could not be opened, so a lockfile left owned by
+# lock & when the file could not be opened, so a lockfile left owned by
 # another user made -K refuse forever while claiming a session was running. That is
 # a lie of exactly the kind this repo exists to avoid, & the caller could not tell.
 #
@@ -561,7 +576,7 @@ deps_record() {
     local section="$1" pkg="$2" state="$3" source="$4"
     deps_ensure_file
     grep -qE "^${pkg} =" "$DEPS_FILE" 2>/dev/null && return 0
-    local line="${pkg} = ${state} | ${source} | $(date +%Y-%m-%d)"
+    local line; line="${pkg} = ${state} | ${source} | $(date +%Y-%m-%d)"
     local tmp; tmp="$(mktemp)"
     # Insert the line right under its [section] header.
     awk -v sec="[$section]" -v ins="$line" '
@@ -584,7 +599,7 @@ check_requirements() {
         command -v pkill >/dev/null 2>&1 || missing+=("procps")
     fi
 
-    # Record the state of every dependency this run actually probes: present ones
+    # Record the state of every dependency this run probes: present ones
     # as pre-existing, missing ones as absent. First record wins (deps_record).
     local entry cmd pkg section required source feature
     for entry in "${DEPS_CATALOG[@]}"; do
@@ -634,7 +649,7 @@ check_deps() {
     done
     printf "\nState file: %s\n" "$(disp_path "$DEPS_FILE")"
     if [ "$missing_required" -gt 0 ]; then
-        printf "${RED}%d required dependency missing.${NC}\n" "$missing_required" >&2
+        printf "${E_RED}%d required dependency missing.${E_NC}\n" "$missing_required" >&2
         return "$EX_MISSING_DEP"
     fi
     printf "${GREEN}All required dependencies present.${NC}\n"
@@ -706,7 +721,7 @@ build_firejail_params() {
 
     # Blacklist protected directories.
     #
-    # Probably redundant with --private="$SANDBOX_DIR" above, which already replaces
+    # Redundant as long as --private="$SANDBOX_DIR" above takes effect: it replaces
     # the home directory, so ${REAL_HOME}/.ssh should not resolve to the real one
     # inside the sandbox at all. Kept anyway, as deliberate belt-and-braces: the
     # redundancy costs one firejail argument per existing directory & nothing at
@@ -1370,15 +1385,23 @@ generate_summary() {
 
         # Files summary
         if [ -f "${SESSION_DIR}/snapshot-before.txt" ] && [ -f "${SESSION_DIR}/snapshot-after.txt" ]; then
-            local new_count=$(comm -13 \
+            # WHY `|| true` on this count & the IP count below: this block runs under
+            # set -e at the end of every -M session, so a failed count would stop the
+            # run before the timeline & the incident report get written. grep finding no
+            # IP is a count of 0, not an error, & wc has already printed that 0.
+            local new_count
+            new_count=$(comm -13 \
                 <(awk '{print $NF}' "${SESSION_DIR}/snapshot-before.txt" 2>/dev/null | sort) \
-                <(awk '{print $NF}' "${SESSION_DIR}/snapshot-after.txt" 2>/dev/null | sort) | wc -l)
+                <(awk '{print $NF}' "${SESSION_DIR}/snapshot-after.txt" 2>/dev/null | sort) | wc -l) \
+                || true
             printf "Files Created: %d\n" "$new_count"
         fi
 
         # Network summary
         if [ -s "${SESSION_DIR}/network.log" ]; then
-            local unique_ips=$(grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' "${SESSION_DIR}/network.log" 2>/dev/null | sort -u | wc -l)
+            local unique_ips
+            unique_ips=$(grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' "${SESSION_DIR}/network.log" 2>/dev/null \
+                | sort -u | wc -l) || true
             printf "Unique IP Connections: %d\n" "$unique_ips"
         fi
 
@@ -1389,10 +1412,11 @@ generate_summary() {
             # crashed under set -e. signal.log is noise-filtered & often has zero
             # MODIFY events, so this fired on normal runs. `|| true` keeps the one
             # clean 0 & swallows only the exit code.
-            local total_events=$(wc -l < "$fslog" 2>/dev/null || true); total_events=${total_events:-0}
-            local creates=$(grep -c "CREATE" "$fslog" 2>/dev/null || true); creates=${creates:-0}
-            local modifies=$(grep -c "MODIFY" "$fslog" 2>/dev/null || true); modifies=${modifies:-0}
-            local deletes=$(grep -c "DELETE" "$fslog" 2>/dev/null || true); deletes=${deletes:-0}
+            local total_events creates modifies deletes
+            total_events=$(wc -l < "$fslog" 2>/dev/null || true); total_events=${total_events:-0}
+            creates=$(grep -c "CREATE" "$fslog" 2>/dev/null || true); creates=${creates:-0}
+            modifies=$(grep -c "MODIFY" "$fslog" 2>/dev/null || true); modifies=${modifies:-0}
+            deletes=$(grep -c "DELETE" "$fslog" 2>/dev/null || true); deletes=${deletes:-0}
             printf "File System Events [%s]: %d (CREATE: %d, MODIFY: %d, DELETE: %d)\n" \
                 "$(basename "$fslog")" "$total_events" "$creates" "$modifies" "$deletes"
         fi
@@ -1590,7 +1614,14 @@ generate_timeline() {
         printf "═══════════════════════════════════════════════════════════════════════════\n\n"
 
         # Combine all timestamped events
-        local temp_timeline=$(mktemp)
+        # WHY the guard: with `local temp_timeline=$(mktemp)` a failed mktemp left the
+        # name empty, every append below went nowhere, & the timeline claimed "No
+        # timeline events recorded." for a session that had events.
+        local temp_timeline
+        if ! temp_timeline="$(mktemp)"; then
+            printf "Timeline unavailable: mktemp failed, so the events were not merged.\n"
+            return 0
+        fi
 
         # Files (limit to important events, from the noise-filtered log)
         if [ -f "$fslog" ] && [ -s "$fslog" ]; then
@@ -1614,7 +1645,7 @@ generate_timeline() {
 
         if [ -s "$temp_timeline" ]; then
             head -100 <<< "$(sort "$temp_timeline" 2>/dev/null || cat "$temp_timeline")"
-            local total_events=$(wc -l < "$temp_timeline" 2>/dev/null || echo 0)
+            local total_events; total_events=$(wc -l < "$temp_timeline" 2>/dev/null || echo 0)
             if [ "$total_events" -gt 100 ]; then
                 printf "\n(Showing first 100 of %d events - see individual logs for complete data)\n" "$total_events"
             fi
@@ -1715,7 +1746,7 @@ analyze_session() {
         session=$(find "${LOG_ROOT}" -maxdepth 1 -type d -name "session_*" 2>/dev/null | sort -r | head -n1)
         if [ -z "$session" ]; then
             log_error "No session found to analyze"
-            printf "${YELLOW}Tip: Run with -M to enable monitoring${NC}\n" >&2
+            printf "${E_YELLOW}Tip: Run with -M to enable monitoring${E_NC}\n" >&2
             return 1
         fi
     fi
@@ -1745,7 +1776,7 @@ analyze_session() {
             <(awk '{print $NF}' "${session}/snapshot-before.txt" 2>/dev/null | sort) \
             <(awk '{print $NF}' "${session}/snapshot-after.txt" 2>/dev/null | sort) || true)
 
-        local new_count=$(printf "%s" "$new_files" | grep -c . || true); new_count=${new_count:-0}
+        local new_count; new_count=$(printf "%s" "$new_files" | grep -c . || true); new_count=${new_count:-0}
 
         if [ "$new_count" -gt 0 ]; then
             printf "${YELLOW}New files: %d${NC}\n\n" "$new_count"
@@ -1779,7 +1810,7 @@ analyze_session() {
     if [ -s "${session}/network.log" ]; then
         local ips
         ips=$(grep -oE '[0-9]{1,3}(\.[0-9]{1,3}){3}' "${session}/network.log" 2>/dev/null | sort -u || true)
-        local ip_count=$(printf "%s" "$ips" | grep -c . || true); ip_count=${ip_count:-0}
+        local ip_count; ip_count=$(printf "%s" "$ips" | grep -c . || true); ip_count=${ip_count:-0}
 
         if [ "$ip_count" -gt 0 ]; then
             printf "${BLUE}Unique IPs contacted: %d${NC}\n\n" "$ip_count"
@@ -1831,7 +1862,8 @@ analyze_session() {
     # Java subprocess activity
     printf "\n${YELLOW}┌── Java Process Activity ──┐${NC}\n\n"
     if [ -s "${session}/java-processes.log" ]; then
-        local unique_jars=$(grep -oE '/[^ ]+\.jar' "${session}/java-processes.log" 2>/dev/null | sort -u || true)
+        local unique_jars
+        unique_jars=$(grep -oE '/[^ ]+\.jar' "${session}/java-processes.log" 2>/dev/null | sort -u || true)
         if [ -n "$unique_jars" ]; then
             printf "${BLUE}JAR files executed:${NC}\n"
             printf "%s\n" "$unique_jars" | sed 's/^/  /'
@@ -1881,8 +1913,11 @@ check_mozilla_directory() {
     printf "${YELLOW}⚠ .mozilla directory EXISTS in sandbox${NC}\n\n"
 
     # Count files
-    local file_count=$(find "$sandbox_mozilla" -type f 2>/dev/null | wc -l)
-    local dir_count=$(find "$sandbox_mozilla" -type d 2>/dev/null | wc -l)
+    # WHY `|| true`: find exits 1 on a subdirectory it can't read & still prints the
+    # rest, so the count covers what it could see; set -e would end -A here instead.
+    local file_count dir_count
+    file_count=$(find "$sandbox_mozilla" -type f 2>/dev/null | wc -l) || true
+    dir_count=$(find "$sandbox_mozilla" -type d 2>/dev/null | wc -l) || true
 
     printf "Structure: %d directories, %d files\n\n" "$dir_count" "$file_count"
 
@@ -1906,9 +1941,11 @@ check_mozilla_directory() {
             printf "${RED}⚠⚠⚠ CRITICAL: Exact copy of real Mozilla directory!${NC}\n"
             printf "${RED}     This indicates potential data exfiltration attempt!${NC}\n"
         else
-            local common_files=$(comm -12 \
+            local common_files
+            common_files=$(comm -12 \
                 <(find "$MOZILLA_SEARCH_PATH" -type f -printf "%P\n" 2>/dev/null | sort) \
-                <(find "$sandbox_mozilla" -type f -printf "%P\n" 2>/dev/null | sort) | wc -l)
+                <(find "$sandbox_mozilla" -type f -printf "%P\n" 2>/dev/null | sort) | wc -l) \
+                || true
 
             if [ "$common_files" -gt 0 ]; then
                 printf "${YELLOW}Warning: %d files have matching paths${NC}\n" "$common_files"
@@ -1985,8 +2022,8 @@ trap cleanup EXIT INT TERM HUP QUIT
 MAN_NAME="tlauncher-fccu"
 
 print_man() {
-    # The heredoc is quoted so roff keeps its own backslashes; the two values that
-    # must interpolate are substituted after.
+    # The heredoc is quoted so roff keeps its own backslashes; the three values that
+    # must interpolate are substituted after, so no default here is typed by hand.
     local roff
     roff="$(cat <<'ROFF'
 .TH TLAUNCHER-FCCU 1 "2026-09-17" "tlauncher-fccu VERSION_PLACEHOLDER" "User Commands"
@@ -2037,6 +2074,9 @@ Use the TLauncher jar at \fIPATH\fR instead of searching for it.
 .TP
 .BR \-h ", " \-\-help
 Print the long help to standard output and exit 0.
+.TP
+.BR \-V ", " \-\-version
+Print the command name and version to standard output and exit 0.
 .SS Monitoring
 .TP
 .BR \-M ", " \-\-monitor
@@ -2059,7 +2099,7 @@ Regenerate
 for a session directory, then exit.
 .TP
 .BR \-c ", " \-\-cleanup\-logs " " [\fIDAYS\fR]
-Compress sessions older than \fIDAYS\fR (default 7), prune compressed ones over
+Compress sessions older than \fIDAYS\fR (default CLEANUP_DAYS_PLACEHOLDER), prune compressed ones over
 the size cap, then exit. Also runs silently at the start of every
 .B \-M
 run.
@@ -2117,6 +2157,7 @@ Use \fIPATH\fR as the Mozilla directory instead of the default.
 .B 0
 Success, including
 .BR \-\-help ,
+.BR \-\-version ,
 .BR \-\-print\-man ,
 and the standalone modes.
 .TP
@@ -2171,8 +2212,10 @@ When set, used as the real UID for the default
 .B XDG_RUNTIME_DIR
 path.
 .TP
-.B SUDO_GID
-When set, read as the real GID. No current consumer.
+.B NO_COLOR
+When set to anything but the empty string, no colour is printed on either
+stream. Without it, standard output and standard error each get colour only
+when that stream is a terminal.
 .TP
 .B USER
 Fallback identity when
@@ -2319,11 +2362,12 @@ In the repository:
 Known gaps, open items, and everything not verified against real data are
 tracked in
 .I docs/ARCHITECTURE.md
-under "Known gaps", dated, each removed when it closes. That section is authoritative; this
-page does not duplicate it.
+under "Known gaps", dated, each removed when it closes. That section is
+authoritative; this page does not duplicate it.
 ROFF
 )"
     roff="${roff//KEEP_PLACEHOLDER/$BINARY_ARCHIVE_KEEP}"
+    roff="${roff//CLEANUP_DAYS_PLACEHOLDER/$CLEANUP_DAYS}"
     printf '%s\n' "${roff//VERSION_PLACEHOLDER/$VERSION}"
 }
 
@@ -2345,7 +2389,7 @@ install_man() {
     fi
     printf "Installed: %s\n" "$(disp_path "$target")"
 
-    # MANPATH hint, only when it is actually needed.
+    # MANPATH hint, only when the man root isn't already on the effective MANPATH.
     local effective
     effective="$(manpath 2>/dev/null || printf '%s' "${MANPATH:-}")"
     case ":${effective}:" in
@@ -2399,7 +2443,8 @@ usage() {
     printf "  ${BLUE}-v, --verbose${NC}          Show TLauncher output + config summary + 2s countdown\n"
     printf "  ${BLUE}-n, --offline${NC}          Block ALL network (firejail --net=none)\n"
     printf "  ${BLUE}-f, --file PATH${NC}        Specify TLauncher.jar location\n"
-    printf "  ${BLUE}-h, --help${NC}             Show this help and exit 0\n\n"
+    printf "  ${BLUE}-h, --help${NC}             Show this help and exit 0\n"
+    printf "  ${BLUE}-V, --version${NC}          Print the name & version, then exit 0\n\n"
 
     printf "${YELLOW}MONITORING OPTIONS${NC}\n"
     printf "  ${BLUE}-M, --monitor${NC}          Enable monitoring + write a session under logs/:\n"
@@ -2574,15 +2619,16 @@ main() {
                 shift 2
                 ;;
             -h|--help) usage ;;
+            -V|--version) printf '%s %s\n' "$MAN_NAME" "$VERSION"; exit "$EX_OK" ;;
             -*)
-                printf "${RED}Error: Unknown option '%s'${NC}\n\n" "$1" >&2
-                printf "Run '${BLUE}%s --help${NC}' for usage information\n" "$0" >&2
+                printf "${E_RED}Error: Unknown option '%s'${E_NC}\n\n" "$1" >&2
+                printf "Run '${E_BLUE}%s --help${E_NC}' for usage information\n" "$0" >&2
                 exit "$EX_USAGE"
                 ;;
             *)
-                printf "${RED}Error: Unexpected argument '%s'${NC}\n\n" "$1" >&2
-                printf "If specifying TLauncher file, use: ${BLUE}-f %s${NC}\n" "$1" >&2
-                printf "Run '${BLUE}%s --help${NC}' for usage\n" "$0" >&2
+                printf "${E_RED}Error: Unexpected argument '%s'${E_NC}\n\n" "$1" >&2
+                printf "If specifying TLauncher file, use: ${E_BLUE}-f %s${E_NC}\n" "$1" >&2
+                printf "Run '${E_BLUE}%s --help${E_NC}' for usage\n" "$0" >&2
                 exit "$EX_USAGE"
                 ;;
         esac
@@ -2590,7 +2636,7 @@ main() {
 
     # ---- Standalone modes that never launch TLauncher ----
     # --print-man writes DATA to stdout, so it must stay pipeable: nothing else may
-    # print before it. docs/cli/cli-standard.md rule 1.
+    # print before it. docs/cli/cli-standard.md, section 4, rule 1.
     if [ "$PRINT_MAN" = true ]; then
         print_man
         exit "$EX_OK"
@@ -2610,7 +2656,7 @@ main() {
 
     if [ -n "$REPORT_SESSION" ]; then
         generate_incident_report "$REPORT_SESSION"
-        printf "${GREEN}✓${NC} Report: %s/INCIDENT_REPORT.md\n" "$(disp_path "$REPORT_SESSION")" >&2
+        printf "${E_GREEN}✓${E_NC} Report: %s/INCIDENT_REPORT.md\n" "$(disp_path "$REPORT_SESSION")" >&2
         exit 0
     fi
 
@@ -2650,7 +2696,7 @@ main() {
     # Validate flag combinations
     if [ "$AUTO_ANALYZE" = true ] && [ "$MONITOR_ENABLED" = false ] && [ "$analyze_only" = false ]; then
         log_warn "Flag -a (auto-analyze) requires -M (monitor) to generate logs"
-        printf "${YELLOW}Tip: Use '%s -M -a' to enable both${NC}\n" "$0" >&2
+        printf "${E_YELLOW}Tip: Use '%s -M -a' to enable both${E_NC}\n" "$0" >&2
         AUTO_ANALYZE=false
     fi
 

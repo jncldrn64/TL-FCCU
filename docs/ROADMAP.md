@@ -231,6 +231,37 @@ they touch, so it can land before or after them. The number records when the wor
 arrived, not a dependency; the Ordering principle above constrains 0 through 2,
 which had to run in sequence, & says nothing that forces 5 behind 3.
 
+## Phase 6: the command line keeps its word
+
+**Status:** `closed (2026-10-20)`
+
+**Objective:** what the command line prints matches what the program does, on both streams
+& in both documents.
+
+**Scope**, from the comparison of 2026-10-20 between `run.sh` & the author's other bash
+scripts:
+- Colour per stream & `NO_COLOR`, deferred in `docs/cli/cli-standard.md` since v2.25.
+- `-V/--version`, so the version can be read without parsing the `--help` box.
+- A default shown in `--help` or the manual comes from its variable.
+- The 15 `local x=$(cmd)` sites ShellCheck flags as SC2155, counted with the command in
+  `docs/DESIGN.md` principle 11, each with a decided fallback, & the unread `REAL_GID`.
+
+**Acceptance:** `tests/colour-gate.sh` passes & fails on v2.53's `run.sh`; the new
+`tests/doc-sync.sh` checks pass & the defaults check fails on v2.53's manual; ShellCheck
+0.11.0 reports no warning on `run.sh`; `bash tests/run-all.sh` is green.
+
+Closed, v2.57 (2026-10-20). `tests/colour-gate.sh` passed 7 of 7 checks, & 4 of 7 against
+v2.53's `run.sh`. `tests/doc-sync.sh` verifies 11 of 12; the 12th is the roff check, which
+SKIPs without mandoc or groff. ShellCheck warnings went from 16 to 0, from a scratch
+install, since the repo has none.
+
+Reasons: `docs/DECISIONS.md`, entries of 2026-10-20 "Colour is decided per
+stream, & NO_COLOR turns it off", "The version prints with -V/--version, & the CHANGELOG
+has to hold it", "A default shown to the user is printed from its variable" & "local with
+a command substitution takes two lines & a written fallback".
+
+**Blocked by:** nothing. Like Phase 5 it touches no code Phases 3 & 4 touch.
+
 ## Backlog
 
 Hash comparison against public sources, & whatever else surfaces.

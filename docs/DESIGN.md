@@ -96,6 +96,7 @@ without a declared bound as over the line.
 
 - Every flag has a short form & a long alias: `-v/--verbose`, `-M/--monitor`.
 - `-h/--help` prints usage & exits 0.
+- `-V/--version` prints the canonical name & `VERSION` to stdout & exits 0.
 - An unknown option prints to stderr, points at `--help`, & exits 1.
 - Flags stay combinable unless they genuinely conflict, & a no-op combination
   warns instead of failing silently. `-a` without `-M` prints a warning & turns
@@ -186,3 +187,48 @@ once. One green run proves nothing about a failure that shows up one run in five
 which is how `tests/doc-sync.sh` behaved until its `SIGPIPE` race was fixed. Such a
 suite goes in `REPEATED` in `tests/run-all.sh` & stays there after the fix, so the bug
 can't come back unseen. Raise `REPEATS` for proof.
+
+## 11. `local` with a command substitution hides the failure
+
+`local x=$(cmd)` returns the status of `local`, which is 0, so a failed `cmd` vanishes
+under `set -e`. ShellCheck calls it SC2155. On the `run.sh` that printed 2.53, this
+printed 15:
+
+```sh
+shellcheck -f gcc -S warning run.sh | grep -c SC2155
+```
+
+The repo doesn't install ShellCheck. Version 0.11.0 ran from a scratch `pip install
+shellcheck-py` on 2026-10-20 & prints 0 for the code since v2.57.
+
+Declare on one line & assign on the next, then decide at the site what a failure of
+`cmd` means:
+
+- A failure that isn't an error gets its fallback written at the site, with the
+  reason. A `grep | sort -u | wc -l` whose grep finds nothing has already printed its
+  0, so `|| true` keeps it.
+- A failure that makes the value wrong gets handled where it happens. A failed
+  `mktemp` in `generate_timeline` left an empty name, & the timeline told a session
+  that had events "No timeline events recorded."
+
+Splitting alone breaks things. In `generate_summary`, which runs under `set -e` at the
+end of every `-M` session, a bare split of the unique-IP count stops the run on a
+`network.log` with no IP in it, & the timeline & the incident report never get
+written.
+
+## 12. Comments
+
+A comment that guards a line against a past failure names that failure, what broke &
+what it cost, so nobody deletes the line without reproducing the failure first. The one
+above `log_verbose`'s `return 0` says that without it every non-verbose run died under
+`set -e`. The full story lives in `CHANGELOG.md` & `docs/DECISIONS.md`; the comment
+carries enough to stop the deletion.
+
+A comment that states a fact about the code is a claim like any other, & it changes in
+the same commit as the code under it. For months the comment above `SCRIPT_DIR` said it
+survived a symlink while the code landed in the symlink's own directory, & `-P` lost
+its agent jars without a word (`docs/cli/cli-standard.md`, section 1).
+
+No tool checks either rule. `docs/DECISIONS.md`, entry of 2026-10-01 "No mechanical
+dead-reference check, on measured cost", dropped the checker, so whoever edits the code
+reads the comments above it. The language & voice of a comment are `CLAUDE.md`, "Prose".

@@ -28,6 +28,10 @@
 - **CLI module**: `docs/cli/cli-standard.md`, what the command line must do, & its
   counterpart `docs/cli/cli-surface.md`, what it does today. Source: 2026-10-01 "The CLI
   module lives in docs/cli/".
+- **colour gate**: the test that decides whether a stream gets escape codes, `colour_on` in
+  `run.sh`: true when that stream is a terminal & `NO_COLOR` is unset or empty. One per
+  stream since v2.57. Source: 2026-10-20 "Colour is decided per stream, & NO_COLOR turns
+  it off".
 - **decision**: an entry in `docs/DECISIONS.md` saying why something is the way it is.
   Never edited; a newer entry replaces it & names it by date & title. Source: 2026-10-01
   "Decisions get a file of their own".
