@@ -263,6 +263,7 @@ If unsure which repo you're writing to, stop and ask.
 
 ## Displayed version
 
-The version the program prints (`run.sh -h`) is single-source with the CHANGELOG: always
-the latest CHANGELOG version. Bumped in the same PR as the code change that warrants it,
-never in a doc-only PR.
+The version the program prints (`run.sh -h` & `run.sh --version`) is single-source with
+the CHANGELOG: always the latest CHANGELOG version. Bumped in the same PR as the code
+change that warrants it, never in a doc-only PR. `tests/doc-sync.sh` checks that the
+printed version has its CHANGELOG section.

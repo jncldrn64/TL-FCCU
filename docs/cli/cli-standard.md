@@ -103,12 +103,14 @@ Rules:
 
 ## 4. Presentation rules
 
-1. `--help` and `--print-man` write to **stdout** and exit 0. `run.sh --help | less`
-   must work without redirecting stderr.
+1. `--help`, `--version` and `--print-man` write to **stdout** and exit 0.
+   `run.sh --help | less` must work without redirecting stderr.
 2. Diagnostics go to **stderr**, always, including a success notice that accompanies
    data on stdout.
-3. Log files never receive escape sequences. Colour is decided at print time, for
-   the terminal stream only.
+3. Log files never receive escape sequences. Colour is decided at print time & per
+   stream: stdout & stderr each get it only when that stream is a terminal &
+   `NO_COLOR` is unset or empty. `tests/colour-gate.sh` checks both streams through
+   a pseudo-terminal.
 4. Every option the argument parser accepts appears in `--help` **and** in the
    manual's `OPTIONS`. No exceptions.
 5. Every exit code the program can emit appears in `EXIT STATUS`.
@@ -119,6 +121,14 @@ Rules:
    Before this rule, `NOISE_PATTERNS` (genuinely regexes) and the domain lists
    (literals) had opposite semantics and only a comment told them apart. The
    convention puts it in the name, where it cannot be missed by someone skimming.
+7. A default value shown in `--help` or in the manual page is printed from the
+   variable that holds it. The manual's roff sits in a quoted heredoc, so a default
+   there is a placeholder that `print_man` replaces. `tests/doc-sync.sh` changes
+   `CLEANUP_DAYS` & `BINARY_ARCHIVE_KEEP` in a scratch copy & checks that both
+   documents follow.
+
+   Until v2.57 the manual typed the `-c` default, 7, by hand while `--help` printed
+   `CLEANUP_DAYS`. They agreed, & nothing would have caught the day they stopped.
 
 ## 5. Exit codes
 
@@ -127,7 +137,7 @@ parsing stderr.
 
 | Code | Condition |
 |---|---|
-| 0 | Success, including `--help`, `--print-man` and the standalone modes |
+| 0 | Success, including `--help`, `--version`, `--print-man` and the standalone modes |
 | 1 | Usage error: unknown option, missing or invalid argument |
 | 2 | Refusal: a live session holds the lock |
 | 3 | A required dependency is missing |
@@ -143,7 +153,5 @@ split, not a redesign.
 
 ## 6. What this standard does not cover yet
 
-The colour gate tests stdout while nearly all coloured output goes to stderr, and
-`NO_COLOR` is unread. Both are recorded in `docs/cli/cli-surface.md` and deferred on
-purpose to a later PR, not overlooked. Until then rule 3 above is the binding part:
-whatever the gate decides, the log files stay clean.
+Nothing is deferred as of v2.57. The colour gate & `NO_COLOR`, left open here from
+v2.25, became rule 3 of section 4.

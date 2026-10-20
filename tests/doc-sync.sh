@@ -161,6 +161,39 @@ else
         || check "man sections present and ordered" false "$bad"
 fi
 
+printf -- '--- 7. --version prints the name & a released version ---\n'
+# CLAUDE.md, "Displayed version": the printed version is single-source with the
+# CHANGELOG. The check asks for a section, not the top one, because a doc-only PR
+# leaves the CHANGELOG ahead of the program on purpose until the next code PR.
+v_out="$(bash "$RUN" --version 2>/dev/null)"; v_rc=$?
+v_src="$(grep -m1 -oE '^VERSION="[^"]+"' "$RUN" | cut -d'"' -f2)"
+{ [ "$v_rc" -eq 0 ] && [ "$v_out" = "tlauncher-fccu ${v_src}" ]; } \
+    && check "--version prints 'tlauncher-fccu VERSION' & exits 0" true "" \
+    || check "--version prints 'tlauncher-fccu VERSION' & exits 0" false "rc=$v_rc out='${v_out}'"
+grep -qE "^## v${v_src//./\\.} " "$REPO/CHANGELOG.md" \
+    && check "the printed version has its CHANGELOG section" true "" \
+    || check "the printed version has its CHANGELOG section" false "no '## v${v_src}' in CHANGELOG.md"
+
+printf -- '--- 8. a default shown to the user comes from its variable ---\n'
+# cli-standard.md, section 4, rule 7. A scratch copy with both defaults changed has to
+# show the new values in --help & in the manual: a number typed by hand wouldn't move.
+SCRATCH="$(mktemp -d)"
+sed -e 's/^CLEANUP_DAYS=7 /CLEANUP_DAYS=93 /' -e 's/^BINARY_ARCHIVE_KEEP=10$/BINARY_ARCHIVE_KEEP=47/' \
+    "$RUN" > "${SCRATCH}/run.sh"
+edited="$(grep -cE '^(CLEANUP_DAYS=93 |BINARY_ARCHIVE_KEEP=47$)' "${SCRATCH}/run.sh")"
+s_help="$(bash "${SCRATCH}/run.sh" --help 2>/dev/null)"
+s_man="$(bash "${SCRATCH}/run.sh" --print-man 2>/dev/null | sed 's/\\-/-/g')"
+rm -rf "$SCRATCH"
+stuck=""
+grep -qF "(default 93)" <<< "$s_help" || stuck="${stuck} --help:CLEANUP_DAYS"
+grep -qF "(default 93)" <<< "$s_man" || stuck="${stuck} man:CLEANUP_DAYS"
+grep -qF "up to 47 copies" <<< "$s_help" || stuck="${stuck} --help:BINARY_ARCHIVE_KEEP"
+grep -qF "at most 47," <<< "$s_man" || stuck="${stuck} man:BINARY_ARCHIVE_KEEP"
+{ [ "$edited" -eq 2 ] && [ -z "$stuck" ]; } \
+    && check "--help & the manual follow CLEANUP_DAYS & BINARY_ARCHIVE_KEEP" true "" \
+    || check "--help & the manual follow CLEANUP_DAYS & BINARY_ARCHIVE_KEEP" false \
+        "variables edited: ${edited}/2; did not follow:${stuck:- none}"
+
 printf -- '----\n%d/%d doc-sync checks verified' "$pass" "$total"
 [ "$skipped" -gt 0 ] && printf ' (%d skipped, not verified)' "$skipped"
 printf '\n'

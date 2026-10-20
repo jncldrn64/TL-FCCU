@@ -65,9 +65,9 @@ that every resource has one of these paths; this is the list of them.
 
 ## 4. Size
 
-`run.sh` has 2773 lines & 57 functions, 18 of them under the six area prefixes
+`run.sh` has 2819 lines & 58 functions, 18 of them under the six area prefixes
 (`log_`, `deps_`, `kill_`, `monitor_`, `report_`, `binary_archive_`). Counted on
-2026-10-01 with:
+2026-10-20 with:
 
 ```sh
 wc -l < run.sh
@@ -153,11 +153,6 @@ it. A package that was `absent` & got installed later shows `present` live under
 `--check-deps` while its registry line still reads `absent`. Delete
 `tlauncher-sandbox-deps.ini` to re-inventory. First recorded 2026-07-02.
 
-2026-10-01: the colour gate tests stdout (`[ -t 1 ]`) while nearly all coloured output
-goes to stderr, & `NO_COLOR` isn't read at all. Deferred on purpose. The log files stay
-clean whatever the gate decides, because `_log_emit` writes the file from a branch that
-never carries colour. First recorded 2026-09-17.
-
 2026-10-01: the binary archive keeps only `TLauncher.jar`, though Phase 3's scope also
 names `starter-core`. Nothing here says where that file lands, & the nearest record, a
 Known gap moved unedited to `docs/DECISIONS.md`, gives the starter JVMs' working
@@ -176,6 +171,10 @@ from. Shown by `awk -F'\t' '!/^#/ {print $7}'` on any `manifest.tsv`.
 nor `groff` is installed & `tests/doc-sync.sh` reports SKIP. It was validated by hand on
 another machine with both, clean except one style note that v2.26 fixed. Re-validate if
 the roff's shape changes. First recorded 2026-09-17.
+
+A run on 2026-10-20 checked v2.57's page. `mandoc` 1.14.6, put into the session's
+container with `apt-get`, printed nothing for `run.sh --print-man | mandoc -Tlint`, &
+doc-sync's roff check passed.
 
 Find another open item while reading the code or `CHANGELOG.md` that isn't closed with
 verified evidence? Add it here, with its run, instead of quietly fixing it or re-scoping

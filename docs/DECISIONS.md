@@ -1059,3 +1059,101 @@ place in the hierarchy, normative over the code & below `docs/REQUIREMENTS.md`.
   quote.
 
 **Status:** `in force`
+
+## 2026-10-20: Colour is decided per stream, & NO_COLOR turns it off
+
+**Context:** since v2.25 `docs/cli/cli-standard.md` section 6 had deferred two faults. One
+`[ -t 1 ]` gate set a single palette for both streams, so `run.sh -M 2> file` wrote escape
+codes into the file, & `NO_COLOR` wasn't read. On 2026-10-20 the author had a set of their
+own bash scripts compared against this one, & one of them already decided colour on
+`[ -t 2 ]` for stderr & read `NO_COLOR`.
+
+**Decision:** two palettes. `RED` & the rest paint stdout, `E_RED` & the rest paint stderr,
+& `colour_on` turns each on only when its stream is a terminal & `NO_COLOR` is unset or
+empty. Rule 3 of `docs/cli/cli-standard.md` section 4 says it, section 6 drops the
+deferral, & the Known gap goes. `tests/colour-gate.sh` drives `run.sh` through a
+pseudo-terminal from `script` & fails 3 of its 7 checks on v2.53's `run.sh`.
+
+**Status:** `in force`
+
+## 2026-10-20: The version prints with -V/--version, & the CHANGELOG has to hold it
+
+**Context:** the version showed only inside the box at the top of `--help`, so a script
+or a test had to parse the box to read it. Three of the author's other bash scripts answer
+`-V`. "Displayed version" in `CLAUDE.md` had no check behind it.
+
+**Decision:** `-V/--version` prints `tlauncher-fccu` & `VERSION` to stdout & exits 0, in
+`--help`, the manual & `docs/DESIGN.md` principle 4. `tests/doc-sync.sh` checks that the
+printed version has its CHANGELOG section. It doesn't ask for the top section: a doc-only
+PR leaves the CHANGELOG ahead of the program on purpose, & that check would fail after
+every one of them.
+
+**Status:** `in force`
+
+## 2026-10-20: A default shown to the user is printed from its variable
+
+**Context:** the manual typed the `-c` default as "(default 7)" while `--help` printed
+`CLEANUP_DAYS`, & the manual already took `BINARY_ARCHIVE_KEEP` & `VERSION` from
+placeholders. The comparison of 2026-10-20 found the same fault gone wrong in another of
+the author's scripts: its help said 70 regions for a list of 77.
+
+**Decision:** rule 7 of `docs/cli/cli-standard.md` section 4. The manual's `-c` line takes
+`CLEANUP_DAYS_PLACEHOLDER`, which `print_man` replaces. `tests/doc-sync.sh` sets
+`CLEANUP_DAYS` to 93 & `BINARY_ARCHIVE_KEEP` to 47 in a scratch copy & checks both
+documents; on v2.53's `run.sh` it fails on the manual's `-c` line. The 2-second countdown
+stays typed in both, because it's a literal `sleep 2` with no variable behind it.
+
+**Status:** `in force`
+
+## 2026-10-20: local with a command substitution takes two lines & a written fallback
+
+**Context:** ShellCheck 0.11.0, from a scratch `pip install shellcheck-py`, gave 16
+warnings on v2.53's `run.sh`: 15 SC2155 & one SC2034 for `REAL_GID`, which nothing read.
+Splitting every SC2155 site by rote breaks the run. With the unique-IP count in
+`generate_summary` split bare, a session whose `network.log` holds no IP made the function
+return 1 under `set -e`, & the timeline & incident report after it never ran.
+
+**Decision:** `docs/DESIGN.md` principle 11, & each site decided on its own:
+
+- 8 already carried `|| true` or `|| echo 0` inside the substitution & only split.
+- 5 counts that end in `wc -l` take `|| true` with the reason in a comment: a grep with no
+  match or a find over an unreadable directory has already printed its count.
+- `generate_timeline` returns a one-line note when `mktemp` fails, instead of claiming the
+  session had no events.
+- `deps_record` splits its `date` plainly.
+
+`REAL_GID` goes, & with it the read of `SUDO_GID` & its manual entry. Warnings: 16 before,
+0 after. A ShellCheck suite with a baseline was offered the same day, & the author left it
+out: the repo doesn't install ShellCheck, so it would SKIP here.
+
+**Status:** `in force`
+
+## 2026-10-20: Comments get two rules, in DESIGN.md
+
+**Context:** `CLAUDE.md`, "Prose", gave comments their language & voice & said nothing about
+what a comment is for or when it changes. `docs/TEMPORARY-CONTEXT.md` kept the author's
+question from 2026-10-01, that the CLI docs might also have to say how comments are
+treated. The comparison of 2026-10-20 found one habit in every script that had comments of
+that kind: a line guarded against a past failure names the failure, as the `WHY` comments
+in `run.sh` & `tests/` do.
+
+The author asked to see two other repos of theirs before choosing the file, & those put
+code conventions in one file each, with a module's standard below it & limited to its
+module. Comments live in `run.sh`, `scripts/` & `tests/`, past the CLI module. Asked where
+the rules go, the author answered:
+
+> "vale si van a DESIGN.md, entonces hazlo en todos los respo, bajo sus lineamientos"
+
+**Decision:** `docs/DESIGN.md` principle 12 holds two rules. A comment that guards a line
+against a past failure names it. A comment that states a fact about the code changes in the
+same commit as that code. Both are rules for whoever edits the code; "No mechanical
+dead-reference check, on measured cost" still stands, so no tool checks them.
+
+The prose floor keeps measuring Markdown only. On 2026-10-20 the rule 1 grep of
+`CLAUDE.md`, "Prose floor", run over `run.sh tests/*.sh scripts/*` instead of the corpus,
+matched 8 comment lines. 6 were rewritten. The other 2 use the word as an idiom that means
+"that same orphan", once in `run.sh` & once in `tests/lock-exclusion.sh`, & stay. A floor
+command for comments would be one more baseline to keep for 2 lines, so it's dropped on
+that cost.
+
+**Status:** `in force`
