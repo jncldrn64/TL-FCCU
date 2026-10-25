@@ -104,7 +104,9 @@ of the quote is left out because it names another repo. Placed 2026-10-01, the s
 rule only: each document's type & which one wins is `CLAUDE.md`, "Document types & which
 one wins". The other three are still open. Placed 2026-10-20, the part about how comments
 are treated: `docs/DESIGN.md` principle 12, with the author's answer quoted in its
-decision. The three rules stay open.
+decision. The three rules stay open. Asked again on 2026-10-25, the author chose "Ninguna
+por ahora": none of the three goes to `docs/DESIGN.md` yet, because nothing outside the CLI
+had failed in a way one of them would have caught. Ask again only with such a failure in hand.
 > "la verdad no estoy seguro"
 > "hasta donde se esos CLI docs eras para el --help y el manpage de el proyecto ejecutable cli, por lo que en cierta forma entiendo que tambien habla de reglamentos en comentarios, y como tratar a los comentarios.... debemos expandir esto o buscar alternativa..."
 
