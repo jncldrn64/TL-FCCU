@@ -6,6 +6,23 @@
 Every notable change to the launcher (`run.sh` & its helpers). The format follows
 [Keep a Changelog](https://keepachangelog.com/), with headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.60 — 2026-10-25
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.57 until the next code PR.
+
+### Added
+- `docs/DECISIONS.md`: "AGENTS.md is an island CLAUDE.md doesn't name", with the author's
+  words on what the file is for.
+
+### Changed
+- `AGENTS.md` shrinks to two sentences that send a reader to `CLAUDE.md`. Its hard
+  constraints & its map were copies of `docs/DESIGN.md` & `docs/ARCHITECTURE.md`.
+- `CLAUDE.md` stops naming `AGENTS.md`: the list of documents, the table of types & rule 6
+  drop it, & the prose floor's rule 4 baseline falls to 0.
+- `docs/ARCHITECTURE.md`, `docs/GLOSSARY.md` & `docs/cli/cli-surface.md` describe the file as
+  it is now, & the glossary's document types lose "door".
+
 ## v2.59 — 2026-10-20
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

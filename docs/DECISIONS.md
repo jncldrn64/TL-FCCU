@@ -1197,3 +1197,24 @@ list their sub-sections in another order than Added, Changed, Fixed, Removed. An
 bullets open with a file path; a bullet about behaviour has no single file to name.
 
 **Status:** `in force`
+
+## 2026-10-25: AGENTS.md is an island CLAUDE.md doesn't name
+
+**Context:** this replaces the door type of 2026-10-01 "Documents get a type, a common format &
+a hierarchy". `AGENTS.md` had become one more canonical document, with its own quote block, a
+section of hard constraints & a map of the repo, & `CLAUDE.md` named it five times. The author
+said on 2026-10-25 what it's for, in words kept as written:
+
+> "agents.mi deberia ser una entrada barata y bastardizada, una isla para cuando el agente que
+> este leyendo comienze por ese archivo y no sepa por donde ir, pero si el modelo lee claude.md
+> realmente no es necesario que ni sepa ra existencia de agents.md"
+
+Its constraints were copies: zero `sudo`, XDG paths & the subshell rule are `docs/DESIGN.md`
+principles 1 to 3, & the map is `docs/ARCHITECTURE.md`, section 1.
+
+**Decision:** `AGENTS.md` keeps two sentences that send a reader to `CLAUDE.md`, without a quote
+block. It leaves the list of documents & the table of types, & `CLAUDE.md` no longer names it.
+The prose floor still reads it, because its corpus is every tracked `.md`, & rule 4 falls from 1
+to 0 with the heading it held.
+
+**Status:** `in force`

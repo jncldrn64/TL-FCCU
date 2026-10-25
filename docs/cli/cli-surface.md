@@ -30,6 +30,9 @@ the state before that, & is kept because it is the reasoning the standard was bu
 on; where it says "there is no man page", read "there was none, and here is what
 `--help` duplicated on its own".
 
+Section 5 also names what `AGENTS.md` held then, purpose, constraints & gaps. Read it the same
+way: since 2026-10-25 that file holds only a pointer to `CLAUDE.md`.
+
 At the time of writing: `git ls-files` returns no `README.md`, no `*.1`, no `man/`
 directory, and `git log --all --diff-filter=A` shows neither was ever committed. The
 tracked documentation is exactly: `AGENTS.md`, `CLAUDE.md`, `DESIGN.md`,

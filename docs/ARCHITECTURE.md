@@ -17,7 +17,7 @@
 
 ## 1. The repo, file by file
 
-Checked 2026-10-01 against `git ls-files`.
+Checked 2026-10-25 against `git ls-files`.
 
 - `run.sh`: the whole launcher, one bash script.
 - `scripts/TLHttpAgent.java` & its helpers (`AgentLogger`, `DiagListener`,
@@ -25,8 +25,10 @@ Checked 2026-10-01 against `git ls-files`.
   the `-P` Java agent, built into two gitignored jars that are never committed.
 - `tests/`: the regression suites & their fixtures, run together with
   `bash tests/run-all.sh`.
-- The documents: `AGENTS.md`, `CLAUDE.md` & `CHANGELOG.md` at the root, the rest in
-  `docs/` & the CLI module in `docs/cli/`. `CLAUDE.md` says what each one holds.
+- The documents: `CLAUDE.md` & `CHANGELOG.md` at the root, the rest in `docs/` & the CLI
+  module in `docs/cli/`. `CLAUDE.md` says what each one holds.
+- `AGENTS.md`: two sentences that send a tool opening it first to `CLAUDE.md`. It isn't one of
+  the documents, & nothing depends on it.
 
 ## 2. Where things live on disk
 

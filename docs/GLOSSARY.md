@@ -43,9 +43,9 @@
   its own dated CHANGELOG section & never bumps `VERSION`. Source: CHANGELOG v2.18.
 - **document type**: what a canonical document is, named after **Role:** in its opening
   quote block: normative (says what must be; code that contradicts it is at fault),
-  descriptive (says what is; the code wins), history, plan, transit or door. The type
-  decides which document wins a disagreement. Source: 2026-10-01 "Documents get a type, a
-  common format & a hierarchy".
+  descriptive (says what is; the code wins), history, plan or transit. The type decides
+  which document wins a disagreement. Sources: 2026-10-01 "Documents get a type, a common
+  format & a hierarchy", & 2026-10-25 "AGENTS.md is an island CLAUDE.md doesn't name".
 - **draft**: the state a PR opens in. The author marks it ready & merges it. Source:
   2026-10-01 "A PR opens as a draft".
 - **Entered**: the line a Backlog item opens with, holding the date it entered & the PR
