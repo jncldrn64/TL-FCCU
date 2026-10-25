@@ -14,10 +14,9 @@
   because one line there can contradict what you were about to propose. This file is the
   working method: how docs, commits & PRs are written & how a claim gets checked. Code
   conventions, tests included, live in docs/DESIGN.md; phase rules in docs/ROADMAP.md.
-- Documentation: AGENTS.md, CLAUDE.md & CHANGELOG.md at the repo root; REQUIREMENTS.md,
-  ARCHITECTURE.md, DESIGN.md, ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md
-  in docs/; the CLI module (cli-standard.md, cli-surface.md) in docs/cli/. AGENTS.md is the
-  entry for tools that look for that name: it points here & nothing depends on it.
+- Documentation: CLAUDE.md & CHANGELOG.md at the repo root; REQUIREMENTS.md, ARCHITECTURE.md,
+  DESIGN.md, ROADMAP.md, DECISIONS.md, GLOSSARY.md & TEMPORARY-CONTEXT.md in docs/; the CLI
+  module (cli-standard.md, cli-surface.md) in docs/cli/.
   Do NOT create a new doc file without asking me first.
   One exception by kind: a `README.md` inside a subfolder that only explains that folder,
   such as how to run `tests/`, isn't a canonical doc & needs no separate permission.
@@ -112,7 +111,6 @@ type decides what happens when it disagrees with the code or with another docume
 | History | `docs/DECISIONS.md`, `CHANGELOG.md` | Records; an entry in force wins over a stale normative doc |
 | Plan | `docs/ROADMAP.md` | Orders the work, changes no rule |
 | Transit | `docs/TEMPORARY-CONTEXT.md` | Never wins |
-| Door | `AGENTS.md` | Never wins, it points |
 
 1. A descriptive document that contradicts the code is wrong, & is fixed in the PR that
    finds it.
@@ -125,7 +123,7 @@ type decides what happens when it disagrees with the code or with another docume
 4. A decision in force wins over a normative document that contradicts it: the document
    went stale & is corrected. A superseded entry wins nothing; between two, the newer.
 5. `docs/ROADMAP.md` changes no rule. A phase that needs another rule changes it by rule 2.
-6. `docs/TEMPORARY-CONTEXT.md` & `AGENTS.md` never win.
+6. `docs/TEMPORARY-CONTEXT.md` never wins.
 
 The product's code conventions live in `docs/DESIGN.md` & nowhere else, this file included.
 Why: `docs/DECISIONS.md`, entry of 2026-10-01 "Documents get a type, a common format & a
@@ -179,7 +177,7 @@ its 24 rules in full & 5 in part; `docs/DECISIONS.md` has the count & what it fo
 3. A CHANGELOG bullet stays at 60 words or fewer; if the change doesn't fit, it's two
    bullets. Baseline: **43 bullets over the ceiling**, all in published sections.
 4. A heading carries a parenthesis only when it holds data, such as a verification state
-   or a number. Baseline: 1, `AGENTS.md`'s "Hard constraints (don't break these)".
+   or a number. Baseline: 0 on 2026-10-25, when the last heading that had one was removed.
 5. Saying "not verified" about the code is required (see "State honesty"). Narrating
    what was searched for & not found while writing is not.
 6. A claim about the code anchors on something that survives a refactor, a function name
@@ -192,8 +190,8 @@ its 24 rules in full & 5 in part; `docs/DECISIONS.md` has the count & what it fo
 7. A paragraph of running prose has at most five sentences; if it doesn't fit, it's two
    paragraphs. Lists, tables & glossary lines are out of scope. Baseline: 27 paragraphs
    over the ceiling: `docs/DECISIONS.md` 19, all in append-only entries, `docs/DESIGN.md`
-   5, `docs/ROADMAP.md` 2 & `docs/REQUIREMENTS.md` 1, the purpose paragraph moved there
-   from `AGENTS.md` word for word.
+   5, `docs/ROADMAP.md` 2 & `docs/REQUIREMENTS.md` 1, the purpose paragraph, moved there word
+   for word on 2026-10-01.
 8. Three consecutive sentences of similar length are the sign that the text is going
    flat, & rule 7 doesn't catch it. The measure is the share of consecutive sentence
    triples whose lengths sit within 3 words of each other. Baseline: **3.3%**, 18 flat
