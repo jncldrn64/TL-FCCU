@@ -6,6 +6,16 @@
 Every notable change to the launcher (`run.sh` & its helpers). The format follows
 [Keep a Changelog](https://keepachangelog.com/), with headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.61 — 2026-10-25
+
+Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
+keeps printing 2.57 until the next code PR.
+
+### Changed
+- `docs/TEMPORARY-CONTEXT.md`: the entry on the CLI rules that might hold beyond the CLI
+  records the author's second answer, on 2026-10-25: none of the three moves to
+  `docs/DESIGN.md` for now.
+
 ## v2.60 — 2026-10-25
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`
