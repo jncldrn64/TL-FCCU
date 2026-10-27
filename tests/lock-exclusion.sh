@@ -165,6 +165,35 @@ else
 fi
 wait "$ksweep" 2>/dev/null || true
 pkill -f 'tlauncher-mon-locktest' 2>/dev/null || true
+
+# (c) -K kills what is NAMED with the tag & spares what only MENTIONS it. pgrep -f
+# matched the whole command line, so a shell running a command that names the tag,
+# like a `grep tlauncher-mon-` typed in another terminal, was killed as an orphan.
+# The `; :` keeps bash from exec'ing sleep in place, which would drop the name.
+bash -c 'sleep 30; : tlauncher-mon-decoy' >/dev/null 2>&1 &
+kdecoy=$!
+bash -c 'exec -a tlauncher-mon-killtest-a sleep 30' >/dev/null 2>&1 &
+knamed_a=$!
+bash -c 'sleep 30; :' tlauncher-mon-killtest-b >/dev/null 2>&1 &
+knamed_b=$!
+sleep 0.3
+XDG_RUNTIME_DIR="${KW}/run" XDG_DATA_HOME="${KW}/data" XDG_STATE_HOME="${KW}/state" \
+    bash "$RUN" -K >/dev/null 2>&1
+if kill -0 "$kdecoy" 2>/dev/null; then
+    check "-K spares a process that only mentions the tag" true ""
+else
+    check "-K spares a process that only mentions the tag" false "the decoy was killed"
+fi
+for kn in "a:$knamed_a" "b:$knamed_b"; do
+    if kill -0 "${kn#*:}" 2>/dev/null; then
+        check "-K kills a process named with the tag (${kn%%:*})" false "still alive"
+    else
+        check "-K kills a process named with the tag (${kn%%:*})" true ""
+    fi
+done
+pkill -P "$kdecoy" 2>/dev/null || true
+kill "$kdecoy" "$knamed_a" "$knamed_b" 2>/dev/null || true
+wait "$kdecoy" "$knamed_a" "$knamed_b" 2>/dev/null || true
 rm -rf "$KW"
 
 printf -- '--- run.sh source guard ---\n'

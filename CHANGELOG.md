@@ -6,6 +6,35 @@
 Every notable change to the launcher (`run.sh` & its helpers). The format follows
 [Keep a Changelog](https://keepachangelog.com/), with headers `## vX.Y — YYYY-MM-DD`.
 
+## v2.62 — 2026-10-27
+
+A monitor is a process named with its tag, not one that mentions it. `VERSION` goes from
+2.57 to 2.62, closing the desfase the doc-only sections left.
+
+### Added
+- `docs/DESIGN.md` section 13, "A process is named, not mentioned", & the glossary's
+  "monitor". Why: `docs/DECISIONS.md`, 2026-10-27 "A process is recognized by its name".
+- Three `-K` checks in `tests/lock-exclusion.sh`: a decoy that only mentions the tag
+  survives, & a process named with it by `exec -a` or by `bash -c` dies. Against v2.57's
+  `run.sh` the decoy dies. The suite goes from 10 to 13 checks.
+
+### Changed
+- The `-M` dependency check stops probing `pkill`, which `run.sh` no longer calls. `pgrep`
+  still comes from procps, & the two comments that named the pair say so.
+- `docs/ARCHITECTURE.md` section 4, recounted: 2860 lines & 61 functions, 21 of them
+  under the area prefixes.
+- `docs/TEMPORARY-CONTEXT.md` drops its line of 2026-10-20 on `find_orphan_pids`: this
+  release acts on it.
+
+### Fixed
+- `-K` no longer kills a process that only mentions the monitor tag, such as a
+  `grep tlauncher-mon-` in another terminal. `monitor_named` reads the name from
+  `/proc/PID/cmdline`: argv[0], or the `$0` of a `bash -c`. `pgrep -f` only narrows the
+  list, & a leftover `inotifywait` is also checked by its comm.
+- The session's safety nets in `stop_monitors` & `cleanup()` kill through
+  `kill_named_monitors` instead of `pkill -f`. Their prefix ends in a dash, so session 12
+  no longer matches session 123.
+
 ## v2.61 — 2026-10-25
 
 Documentation only. No `run.sh`, `scripts/`, `tests/` or `VERSION` change; `run.sh -h`

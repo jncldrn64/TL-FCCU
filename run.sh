@@ -23,7 +23,7 @@
 # follows those or it doesn't ship.
 set -euo pipefail
 
-VERSION="2.57"
+VERSION="2.62"
 
 # Directory holding this script, used to find helpers like scripts/build-agent.sh.
 # Resolved once, & it survives being called through a symlink.
@@ -125,8 +125,8 @@ HOME_JAR=""              # the jar setup_sandbox copied, the source column of a 
 DEPS_FILE="${XDG_DATA_HOME}/tlauncher-sandbox-deps.ini"
 
 # Dependency catalog: cmd|package|section|required|source|feature. check_requirements
-# probes these & records them; --check-deps prints all of them. procps ships both
-# pgrep & pkill, so pgrep stands in for the pair.
+# probes these & records them; --check-deps prints all of them. Of procps, run.sh uses
+# pgrep, for kill_tree & the monitor sweep.
 DEPS_CATALOG=(
     "java|default-jre|system|yes|apt|run TLauncher at all"
     "firejail|firejail|system|yes|apt|the sandbox itself"
@@ -403,24 +403,64 @@ kill_tree() {
     kill "-${sig}" "$pid" 2>/dev/null || true
 }
 
-# Print PIDs of stray monitor processes left from previous sessions, matched by
-# command-line pattern. Used by -K & by the start-of-run orphan warning. Each
-# monitor launches as `bash -c <body> tlauncher-mon-<sid>-<name>`, so the argv[0]
-# tag is the handle; the known leaf tools are matched too as a deeper backstop.
+# True when PID is NAMED with a monitor tag that starts with PREFIX: the tag is its
+# argv[0], as `exec -a` sets it, or the $0 that `bash -c BODY NAME` gives the monitor
+# shell (see spawn_monitor). A process that only MENTIONS the tag is not a monitor.
+#
+# WHY not the whole command line: `pgrep -f` matches any process whose arguments
+# contain the tag, so a `grep tlauncher-mon- notes.txt` in another terminal, or a shell
+# running a command that names the tag, was a candidate for -K's kill.
+# tests/lock-exclusion.sh check "-K spares a process that only mentions the tag"
+# reproduces it.
+monitor_named() {
+    local pid="$1" prefix="$2" args=()
+    mapfile -d '' -t args 2>/dev/null < "/proc/${pid}/cmdline" || return 1
+    [ "${#args[@]}" -gt 0 ] || return 1
+    case "${args[0]}" in "$prefix"*) return 0 ;; esac
+    if [ "${#args[@]}" -ge 4 ] && [ "${args[1]}" = "-c" ]; then
+        case "${args[0]##*/}:${args[3]}" in "bash:${prefix}"*|"sh:${prefix}"*) return 0 ;; esac
+    fi
+    return 1
+}
+
+# PIDs of the processes named with a monitor tag that starts with PREFIX. pgrep only
+# narrows the list; monitor_named decides.
+monitor_pids() {
+    local p
+    for p in $(pgrep -f -- "$1" 2>/dev/null); do
+        if monitor_named "$p" "$1"; then printf '%s\n' "$p"; fi
+    done
+    return 0
+}
+
+# TERM to every process named with a tag that starts with PREFIX: the safety net for
+# a monitor whose PID slipped MONITOR_PIDS.
+kill_named_monitors() {
+    local p
+    for p in $(monitor_pids "$1"); do kill "$p" 2>/dev/null || true; done
+}
+
+# Print PIDs of stray monitor processes left from previous sessions. Used by -K & by
+# the start-of-run orphan warning. Each monitor launches as `bash -c <body>
+# tlauncher-mon-<sid>-<name>`, so the tag it's named with is the handle; a leftover
+# inotifywait on the sandbox is matched too as a deeper backstop, checked by its comm
+# for the same reason monitor_named checks the name.
 find_orphan_pids() {
-    # Exclude THIS process & its whole ancestor chain, so a fuzzy `pgrep -f` can't
-    # flag & kill the shell that launched us. An interactive shell whose command
-    # line happens to contain the tag string would otherwise match. A genuine stray
-    # from a previous session is never our ancestor.
-    local excl="$$" pid="$$"
+    # Exclude THIS process & its whole ancestor chain, so the sweep can't flag & kill
+    # the shell that launched us, should that shell ever be named like a monitor. A
+    # genuine stray from a previous session is never our ancestor.
+    local excl="$$" pid="$$" p comm
     while :; do
         pid="$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')"
         { [ -z "$pid" ] || [ "$pid" = 0 ] || [ "$pid" = 1 ]; } && break
         excl="${excl}|${pid}"
     done
     {
-        pgrep -f "tlauncher-mon-"                          2>/dev/null || true
-        pgrep -f "inotifywait -m -r.*tlauncher-sandbox"    2>/dev/null || true
+        monitor_pids "tlauncher-mon-"
+        for p in $(pgrep -f "inotifywait -m -r.*tlauncher-sandbox" 2>/dev/null); do
+            read -r comm 2>/dev/null < "/proc/${p}/comm" || continue
+            if [ "$comm" = inotifywait ]; then printf '%s\n' "$p"; fi
+        done
     } | sort -un | grep -vE "^(${excl})\$" || true
 }
 
@@ -540,7 +580,7 @@ kill_orphans() {
 }
 
 # Stop the monitors started in THIS run (TERM, then KILL), then a tag-based
-# pkill safety net for anything that slipped the PID list.
+# safety net for anything that slipped the PID list.
 stop_monitors() {
     if [ "${#MONITOR_PIDS[@]}" -gt 0 ]; then
         local pid
@@ -548,7 +588,7 @@ stop_monitors() {
         sleep 1
         for pid in "${MONITOR_PIDS[@]}"; do kill_tree "$pid" KILL; done
     fi
-    [ -n "${SESSION_ID:-}" ] && pkill -f "tlauncher-mon-${SESSION_ID}" 2>/dev/null || true
+    [ -n "${SESSION_ID:-}" ] && kill_named_monitors "tlauncher-mon-${SESSION_ID}-" || true
     MONITOR_PIDS=()
 }
 
@@ -594,9 +634,8 @@ check_requirements() {
     if [ "$MONITOR_ENABLED" = true ]; then
         command -v ss >/dev/null 2>&1 || missing+=("iproute2")
         command -v inotifywait >/dev/null 2>&1 || missing+=("inotify-tools")
-        # pgrep/pkill power the orphan-proof cleanup.
+        # pgrep powers the orphan-proof cleanup.
         command -v pgrep >/dev/null 2>&1 || missing+=("procps")
-        command -v pkill >/dev/null 2>&1 || missing+=("procps")
     fi
 
     # Record the state of every dependency this run probes: present ones
@@ -923,9 +962,10 @@ PREAMBLE
 
 # Launch a monitor body as a tagged background process & track its PID.
 #
-# WHY the tag: argv[0] = "tlauncher-mon-<session>-<name>" lets cleanup() & -K find
-# strays by pattern if PID tracking ever slips. There's no setsid here on purpose,
-# so $! is the bash PID we can track exactly; kill_tree() reaps the descendants.
+# WHY the tag: the monitor shell's $0, "tlauncher-mon-<session>-<name>", lets cleanup()
+# & -K find strays by name (monitor_named) if PID tracking ever slips. There's no
+# setsid here on purpose, so $! is the bash PID we can track exactly; kill_tree() reaps
+# the descendants.
 spawn_monitor() {
     local name="$1" body="$2"
     # 200>&- closes the lockfile descriptor in the child. flock(2) lives on the open
@@ -1981,8 +2021,9 @@ cleanup() {
         sleep 0.3
         for pid in "${MONITOR_PIDS[@]}"; do kill_tree "$pid" KILL; done
     fi
-    # Safety net: kill anything still tagged with THIS session id.
-    [ -n "${SESSION_ID:-}" ] && pkill -f "tlauncher-mon-${SESSION_ID}" 2>/dev/null || true
+    # Safety net: kill anything still named with THIS session's tag. The trailing dash
+    # keeps session 12 from matching session 123.
+    [ -n "${SESSION_ID:-}" ] && kill_named_monitors "tlauncher-mon-${SESSION_ID}-" || true
     # first_seen_loop's per-loop scratch files, once nothing writes them any more.
     [ -n "${SESSION_DIR:-}" ] && rm -f "${SESSION_DIR}"/.seen_*.cur 2>/dev/null || true
 

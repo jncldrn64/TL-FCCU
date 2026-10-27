@@ -326,6 +326,6 @@ The report's own `case "$mode"`, in `report_network_capture`, has three arms: `a
   by hand in the v2.24 work, not by a test.
 
 `tests/lock-exclusion.sh` is a separate suite covering the lockfile protocol rather
-than report states, **10/10** on 2026-10-01 with `bash tests/lock-exclusion.sh`.
+than report states, **13/13** on 2026-10-27 with `bash tests/lock-exclusion.sh`.
 `tests/cleanup-signals.sh` covers what survives a killed session, **4/4** the same day
 with `bash tests/cleanup-signals.sh`.

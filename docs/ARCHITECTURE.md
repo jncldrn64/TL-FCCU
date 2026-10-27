@@ -67,9 +67,9 @@ that every resource has one of these paths; this is the list of them.
 
 ## 4. Size
 
-`run.sh` has 2819 lines & 58 functions, 18 of them under the six area prefixes
+`run.sh` has 2860 lines & 61 functions, 21 of them under the six area prefixes
 (`log_`, `deps_`, `kill_`, `monitor_`, `report_`, `binary_archive_`). Counted on
-2026-10-20 with:
+2026-10-27 with:
 
 ```sh
 wc -l < run.sh
