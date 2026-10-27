@@ -73,6 +73,10 @@
   binary is seen or pruned: `new` when its copy is made, `sighting` when the copy already
   existed, `pruned` when the count cap deletes it. Sources: CHANGELOG v2.10 & v2.53, &
   2026-10-01 "The binary archive starts with TLauncher.jar, automatic, capped by count".
+- **monitor**: a background process a `-M` session starts with `spawn_monitor`, named
+  with the tag `tlauncher-mon-<session>-<name>`: its argv[0], or the `$0` of its
+  `bash -c`. A process that only mentions the tag isn't one. Source: 2026-10-27 "A process
+  is recognized by its name".
 - **promotion**: replacing the home jar with the sandbox jar, after showing both hashes
   & asking. Never done without asking. Planned in Phase 4, not built yet. Sources:
   CHANGELOG v2.10, & 2026-10-01 "The launcher's words enter the glossary, & archive

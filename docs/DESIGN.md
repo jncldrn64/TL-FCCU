@@ -51,10 +51,9 @@ wrote a single session's `files.log` up to 51 MB. Never wrap shared state in
 `( ... )` when that state has to outlive the subshell.
 
 Track every background job by its real PID, captured from `$!` the line after you
-launch it (see `spawn_monitor`). The `pgrep`/argv-tag matching in
-`find_orphan_pids` (the `tlauncher-mon-<session>` tag) is a backstop, not the
-handle. Cleanup reaps whole process trees with `kill_tree`, TERM then KILL, so no
-reparented leaf keeps writing.
+launch it (see `spawn_monitor`). The tag `find_orphan_pids` looks for is only a
+backstop. Section 13 says how it's matched. Cleanup reaps whole process trees with
+`kill_tree`, TERM then KILL, so no reparented leaf keeps writing.
 
 ### A pipe whose consumer can finish first is a race too
 
@@ -232,3 +231,15 @@ its agent jars without a word (`docs/cli/cli-standard.md`, section 1).
 No tool checks either rule. `docs/DECISIONS.md`, entry of 2026-10-01 "No mechanical
 dead-reference check, on measured cost", dropped the checker, so whoever edits the code
 reads the comments above it. The language & voice of a comment are `CLAUDE.md`, "Prose".
+
+## 13. A process is named, not mentioned
+
+A program that acts on another process recognizes it by its name: its argv[0], the `$0`
+that `bash -c BODY NAME` gives it, or its comm. Never by a word somewhere in its command
+line. `pgrep -f` & `pkill -f` match the whole command line, so a `grep tlauncher-mon-`
+typed in another terminal was a candidate for `-K`'s kill.
+
+`monitor_named` decides for the monitors, & `find_orphan_pids` checks the comm of a
+leftover `inotifywait`. `pgrep -f` only narrows the list. `tests/lock-exclusion.sh` check
+"-K spares a process that only mentions the tag" fails without the rule. Why:
+`docs/DECISIONS.md`, entry of 2026-10-27 "A process is recognized by its name".

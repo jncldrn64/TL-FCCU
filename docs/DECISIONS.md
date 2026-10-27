@@ -1218,3 +1218,26 @@ The prose floor still reads it, because its corpus is every tracked `.md`, & rul
 to 0 with the heading it held.
 
 **Status:** `in force`
+
+## 2026-10-27: A process is recognized by its name
+
+**Context:** `find_orphan_pids` found monitors with `pgrep -f "tlauncher-mon-"`, which
+matches any process whose arguments contain the tag, & excluded only our own ancestors.
+A shell running a command that names the tag, or a `grep tlauncher-mon-` in another
+terminal, was a candidate for `-K`'s kill. `docs/TEMPORARY-CONTEXT.md` noted it on
+2026-10-20 as never seen happen. On 2026-10-25 a tool of the author's outside this repo
+made the same mistake for real, took a process that only named a file for one running it,
+& overwrote the file. `stop_monitors` & `cleanup()` had the same reach through `pkill -f`.
+
+**Decision:** A monitor is a process named with the tag. The name is its argv[0], as
+`exec -a` sets it, or the `$0` that `bash -c BODY NAME` gives the monitor shell, read from
+`/proc/PID/cmdline` by `monitor_named`, & `pgrep -f` only narrows the list. The leftover
+`inotifywait` backstop also checks the process's comm. Both safety nets kill through
+`kill_named_monitors`, with a prefix that ends in a dash, so session 12 no longer matches
+session 123.
+
+The rule is `docs/DESIGN.md`, section 13. `tests/lock-exclusion.sh` checks that `-K`
+spares a decoy that only mentions the tag & still kills a process named either way.
+Against the previous `run.sh`, the decoy dies.
+
+**Status:** `in force`.
